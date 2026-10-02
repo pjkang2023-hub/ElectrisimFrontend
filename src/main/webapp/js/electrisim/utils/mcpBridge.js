@@ -79,6 +79,16 @@
         return false;
     }
 
+    /**
+     * Whether this page should take the next diagram: a file is open and the
+     * user is looking at it. File > New opens the new diagram in another tab,
+     * and the tab left behind keeps polling - without this, whichever tab
+     * polled first drew the diagram, often the hidden one.
+     */
+    function readyToDraw() {
+        return diagramOpen() && document.visibilityState !== 'hidden';
+    }
+
     function schedule(ms) {
         setTimeout(poll, ms);
     }
@@ -144,10 +154,10 @@
     }
 
     function poll() {
-        // Still poll when no diagram is open, so the bridge knows the page is
-        // here, but say so: the diagram then stays queued instead of being drawn
-        // into the placeholder graph and lost.
-        fetch(base + '/next' + (diagramOpen() ? '' : '?ready=0'), { cache: 'no-store' })
+        // Still poll when no diagram is open or the tab is hidden, so the bridge
+        // knows the page is here, but say so: the diagram then stays queued
+        // for the tab in view instead of being drawn where nobody sees it.
+        fetch(base + '/next' + (readyToDraw() ? '' : '?ready=0'), { cache: 'no-store' })
             .then(function (resp) {
                 if (!announced) {
                     announced = true;
