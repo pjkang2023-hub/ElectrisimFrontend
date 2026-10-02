@@ -2922,6 +2922,10 @@ async function insertComponentsForData(grafka, a, target, point, data) {
             // ``verticalSwitchStackPerBusSide`` stacks switches close to the busbar in vertical SLD mode
             // (otherwise t-fraction places them mid-feeder, leaving a long disconnected-looking stub).
             const verticalSwitchStackPerBusSide = new Map();
+            // Three-winding transformers are drawn after the switches, so a switch
+            // on one cannot reach its transformer yet. Keep the switch here, keyed
+            // "row index|bus name", and the transformer wires itself to it.
+            const threeWSwitchVertex = new Map();
             (switchData.data || []).forEach((row, si) => {
                 if (!Array.isArray(row) || row.length < 8) return;
                 const [name, bus_name, element_name, etRaw, closed, type, z_ohm, in_ka] = row;
@@ -2941,7 +2945,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 let peerCell = null;
                 if (et === 'l') {
                     peerCell = importFindLineVertexPeer(importLineVertexByName, lineData, element_name);
-                } else if (et === 't' || et === 't3') {
+                } else if (et === 't') {
                     peerCell = importFindTrafoVertexForSwitch(
                         grafka,
                         parent,
@@ -2956,7 +2960,9 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 let swCx;
                 let swCy;
                 if (!peerCell) {
-                    console.warn(`Could not place switch ${name}: peer for et=${et} element "${element_name}" not found — using single-bus overlay`);
+                    if (et !== 't3') {
+                        console.warn(`Could not place switch ${name}: peer for et=${et} element "${element_name}" not found — using single-bus overlay`);
+                    }
                     const bx = busVertex.geometry.x;
                     const by = busVertex.geometry.y;
                     const topLX = bx + IMPORT_BUSBAR_W / 2 - swW / 2 + 48 + (si % 4) * 46;
@@ -3067,6 +3073,13 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                         peerCell,
                         importSwitchToPeerEdgeStyle(swVertex, peerCell, busVertex, importPandapowerVerticalSld),
                     );
+                }
+                if (et === 't3') {
+                    const ti = importResolveThreeWTrafoRowIndex(element_name, threeWindingTransformerData);
+                    if (ti >= 0) {
+                        threeWSwitchVertex.set(`${ti}|${importBusNameFromSwitchRow(bus_name, busData)}`,
+                            { swVertex, busVertex });
+                    }
                 }
             });
 
@@ -3533,9 +3546,21 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 const edgeStyleLV = "edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;exitPerimeter=0;entryX=0.4;entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;;shapeELXXX=NotEditableLine";
 
                 const switchedBuses3w = trafoSwitchBusSets.threeW[index];
-                const skipHv3 = switchedBuses3w && switchedBuses3w.has(String(hv_bus_name));
-                const skipMv3 = switchedBuses3w && switchedBuses3w.has(String(mv_bus_name));
-                const skipLv3 = switchedBuses3w && switchedBuses3w.has(String(lv_bus_name));
+                // A switched winding connects through its switch instead of
+                // straight to the bus - or straight to the bus after all if the
+                // switch was never drawn, so no winding is left hanging.
+                const viaSwitch = (busName) => {
+                    if (!(switchedBuses3w && switchedBuses3w.has(String(busName)))) return false;
+                    const sw = threeWSwitchVertex.get(`${index}|${String(busName)}`);
+                    if (!sw) return false;
+                    grafka.insertEdge(parent, null, '', sw.swVertex, vertex,
+                        importSwitchToPeerEdgeStyle(sw.swVertex, vertex, sw.busVertex,
+                            importPandapowerVerticalSld));
+                    return true;
+                };
+                const skipHv3 = viaSwitch(hv_bus_name);
+                const skipMv3 = viaSwitch(mv_bus_name);
+                const skipLv3 = viaSwitch(lv_bus_name);
 
                 if (hvBusVertex && !skipHv3) {
                     grafka.insertEdge(
