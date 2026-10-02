@@ -45,12 +45,22 @@ export function layoutRadialSld(busRows, lineRows, trafoRows, extRows, originX, 
     const lineChildren = (u) => lineAdj[u].filter((v) => parent[v] === u);
     const trafoChildren = (u) => trafoDown[u].filter((v) => parent[v] === u);
 
+    // Follow the single path from the grid down to the collector bus. A plant
+    // connected above the collector voltage reaches it through one main
+    // transformer, so the walk passes through a lone transformer as well as a
+    // lone line. Stopping at the transformer left the collector unfound and every
+    // feeder bus stacked in the fallback column below.
     const spine = [root];
     let cur = root;
     const guard = new Set([root]);
-    while (lineChildren(cur).length === 1 && trafoChildren(cur).length === 0) {
-        cur = lineChildren(cur)[0];
-        if (guard.has(cur)) break;
+    for (;;) {
+        const lc = lineChildren(cur);
+        const tc = trafoChildren(cur);
+        let next = null;
+        if (lc.length === 1 && tc.length === 0) next = lc[0];
+        else if (lc.length === 0 && tc.length === 1) next = tc[0];
+        if (next == null || guard.has(next)) break;
+        cur = next;
         guard.add(cur);
         spine.push(cur);
     }
@@ -137,10 +147,12 @@ export function layoutRadialSld(busRows, lineRows, trafoRows, extRows, originX, 
         };
     });
 
+    // Anything the walk above did not reach is stacked in one column. Mark it, so
+    // a caller can say the radial layout did not fit rather than report success.
     let uy = rowY + DROP + 280;
     for (let i = 0; i < n; i++) {
         if (!positions[i]) {
-            positions[i] = { x: cx - 100, y: uy, w: 200, leaf: true };
+            positions[i] = { x: cx - 100, y: uy, w: 200, leaf: true, unplaced: true };
             uy += 180;
         }
     }
