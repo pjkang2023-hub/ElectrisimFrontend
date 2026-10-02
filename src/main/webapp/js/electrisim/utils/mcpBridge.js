@@ -79,14 +79,56 @@
         return false;
     }
 
+    // Every Electrisim tab of this origin shares localStorage, so they can agree
+    // which one the user touched last.
+    var STORAGE_ACTIVE = 'electrisim.mcpBridge.activePage';
+    var pageId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+    function markActive() {
+        try {
+            localStorage.setItem(STORAGE_ACTIVE, pageId);
+        } catch (e) { /* storage blocked: isActivePage() then answers true */ }
+    }
+
+    function isActivePage() {
+        try {
+            var active = localStorage.getItem(STORAGE_ACTIVE);
+            return !active || active === pageId;
+        } catch (e) {
+            return true;
+        }
+    }
+
+    window.addEventListener('focus', markActive);
+    window.addEventListener('pointerdown', markActive, true);
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') markActive();
+    });
+    if (document.hasFocus()) markActive();
+
     /**
-     * Whether this page should take the next diagram: a file is open and the
-     * user is looking at it. File > New opens the new diagram in another tab,
-     * and the tab left behind keeps polling - without this, whichever tab
-     * polled first drew the diagram, often the hidden one.
+     * Whether this page should take the next diagram: a file is open, the tab
+     * is visible, and it is the Electrisim tab the user focused or clicked
+     * last. Visibility alone was not enough - a window partly behind another
+     * still counts as visible, and two such windows each took diagrams meant
+     * for the other.
      */
     function readyToDraw() {
-        return diagramOpen() && document.visibilityState !== 'hidden';
+        return diagramOpen() && document.visibilityState !== 'hidden' && isActivePage();
+    }
+
+    /** The open diagram's title, so the report says where a diagram went. */
+    function currentFileTitle() {
+        var app = window.App;
+        var candidates = [app && app._editorUi, app && app._instance, window.editorUi];
+        for (var i = 0; i < candidates.length; i++) {
+            var ui = candidates[i];
+            if (ui && typeof ui.getCurrentFile === 'function') {
+                var file = ui.getCurrentFile();
+                return file && typeof file.getTitle === 'function' ? String(file.getTitle()) : null;
+            }
+        }
+        return null;
     }
 
     function schedule(ms) {
@@ -94,6 +136,7 @@
     }
 
     function ack(body) {
+        body.file = currentFileTitle();
         return fetch(base + '/ack', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
