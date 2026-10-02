@@ -300,7 +300,10 @@ function elRadialFixSwitchLinks(graph, parent) {
     };
     const wire = (ed, ex, ey, nx, ny, pts) => {
         if (!ed || !ed.geometry) return;
-        model.setStyle(ed, `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=0;html=1;endArrow=none;exitX=${ex};exitY=${ey};exitDx=0;exitDy=0;exitPerimeter=0;entryX=${nx};entryY=${ny};entryDx=0;entryDy=0;entryPerimeter=0;shapeELXXX=NotEditableLine`);
+        // Rerouting must not change what the edge is: a bus-to-bus edge can be a
+        // real line, and as a NotEditableLine the load flow skips it.
+        const shape = /shapeELXXX=Line(;|$)/.test(String(ed.style || "")) ? "Line" : "NotEditableLine";
+        model.setStyle(ed, `edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=0;html=1;endArrow=none;exitX=${ex};exitY=${ey};exitDx=0;exitDy=0;exitPerimeter=0;entryX=${nx};entryY=${ny};entryDx=0;entryDy=0;entryPerimeter=0;shapeELXXX=${shape}`);
         const g = ed.geometry.clone();
         g.points = pts && pts.length ? pts : null;
         model.setGeometry(ed, g);
