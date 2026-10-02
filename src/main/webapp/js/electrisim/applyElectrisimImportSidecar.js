@@ -78,6 +78,7 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'vn_kv', g.vn_kv);
             setAttr(cell, 'xdss_pu', g.xdss_pu);
             setAttr(cell, 'rdss_ohm', g.rdss_ohm ?? g.rdss_pu);
+            setAttr(cell, 'cos_phi', g.cos_phi);
         }
         const sgRow = pick(sidecar.sgen);
         // Imported elements carry their own names, so recognise them by shape.
