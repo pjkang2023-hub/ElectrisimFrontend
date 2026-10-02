@@ -4081,6 +4081,12 @@ function collectNetworkDataStructured(graph) {
             
         // Add to network data if we successfully parsed it
         if (cellData && cellData.typ) {
+            // Most branches above send no label, so OpenDSS warnings named the
+            // canvas cell ("Load 'mxCell_214'") instead of what the diagram shows.
+            if (cellData.userFriendlyName == null && cellValue && typeof cellValue.getAttribute === 'function') {
+                const label = cellValue.getAttribute('name');
+                if (label) cellData.userFriendlyName = label;
+            }
             networkData.push(cellData);
         }
     }
