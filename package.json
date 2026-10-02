@@ -3,7 +3,9 @@
     "prepare-deploy": "node scripts/prepare-deploy.js",
     "deploy:dev": "cross-env NODE_ENV=development npm run prepare-deploy",
     "deploy:prod": "npm run minify && cross-env NODE_ENV=production npm run prepare-deploy",
-    "minify": "node scripts/minify-js.js"
+    "minify": "node scripts/minify-js.js",
+    "restore-sources": "node scripts/restore-sources.js",
+    "check-sources": "node scripts/restore-sources.js --check"
   },
   "devDependencies": {
     "terser": "^5.36.0"
