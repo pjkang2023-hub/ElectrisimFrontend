@@ -107,6 +107,20 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'vkr0_percent', tr.vkr0_percent);
             setAttr(cell, 'rn_ohm', tr.rn_ohm);
             setAttr(cell, 'xn_ohm', tr.xn_ohm);
+            setAttr(cell, 'mag0_percent', tr.mag0_percent);
+            setAttr(cell, 'mag0_rx', tr.mag0_rx);
+            setAttr(cell, 'si0_hv_partial', tr.si0_hv_partial);
+        }
+        // Zero sequence for earth faults; without it the drawing kept the
+        // canvas placeholders (0.1 ohm/km lines, a YNyn0yn0 three-winding
+        // transformer pandapower cannot fault).
+        const t3Row = pick(sidecar.trafo3w);
+        if (t3Row && style.includes('shapeELXXX=Three Winding Transformer')) {
+            Object.keys(t3Row).forEach((k) => setAttr(cell, k, t3Row[k]));
+        }
+        const lineRow = pick(sidecar.line);
+        if (lineRow && /shapeELXXX=Line(;|$)/.test(style)) {
+            Object.keys(lineRow).forEach((k) => setAttr(cell, k, lineRow[k]));
         }
         for (let ui = 0; ui < keys.length; ui++) {
             if (ufn[keys[ui]]) {
