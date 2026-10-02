@@ -4232,7 +4232,10 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 elTransmissionFixTrafoSwitches(grafka, parent);
             } catch (_rt) { /* layout tidy-up must never block the import */ }
             try {
-                if (globalPandaPowerData) elApplySidecar(grafka, globalPandaPowerData);
+                // The sidecar belongs to the model being imported; globalPandaPowerData
+                // only ever holds the bundled example network.
+                const sidecarModel = data?._object ? data : globalPandaPowerData;
+                if (sidecarModel) elApplySidecar(grafka, sidecarModel);
             } catch (_scErr) {
                 console.warn('Sidecar apply failed', _scErr);
             }

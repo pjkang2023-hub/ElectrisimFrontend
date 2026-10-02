@@ -80,7 +80,9 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'rdss_ohm', g.rdss_ohm ?? g.rdss_pu);
         }
         const sgRow = pick(sidecar.sgen);
-        if (sgRow && (objName === 'Static Generator' || objName === 'Wind Turbine' || style.includes('wind'))) {
+        // Imported elements carry their own names, so recognise them by shape.
+        if (sgRow && (objName === 'Static Generator' || objName === 'Wind Turbine' || style.includes('wind')
+            || style.includes('shapeELXXX=Static Generator'))) {
             const sg = sgRow;
             setAttr(cell, 'generator_type', sg.generator_type);
             setAttr(cell, 'max_ik_ka', sg.max_ik_ka);
@@ -90,7 +92,7 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'lrc_pu', sg.lrc_pu);
         }
         const stRow = pick(sidecar.storage);
-        if (stRow && (objName === 'Storage' || objName.includes('Storage'))) {
+        if (stRow && (objName === 'Storage' || objName.includes('Storage') || style.includes('shapeELXXX=Storage'))) {
             const st = stRow;
             setAttr(cell, 'max_ik_ka', st.max_ik_ka);
             setAttr(cell, 'rx', st.rx);
