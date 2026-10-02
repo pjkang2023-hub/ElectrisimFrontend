@@ -1319,7 +1319,8 @@ function importBusPositionsFromGeo(busData, anchorX, anchorY, scaleHint) {
     return o;
 }
 
-function importBuildBusAdjacencyForLayout(busCount, lineData, transformerData, switchData, busData) {
+function importBuildBusAdjacencyForLayout(busCount, lineData, transformerData, switchData, busData,
+    threeWindingTransformerData) {
     const adj = Array.from({ length: busCount }, () => []);
     const add = (a, b) => {
         if (a < 0 || b < 0 || a >= busCount || b >= busCount || a === b) return;
@@ -1332,6 +1333,13 @@ function importBuildBusAdjacencyForLayout(busCount, lineData, transformerData, s
     });
     (transformerData.data || []).forEach((t) => {
         const [, , hv, lv] = t;
+        add(hv, lv);
+    });
+    // Without these, every bus behind a three-winding transformer looks
+    // disconnected and the whole import drops to the voltage-band layout.
+    ((threeWindingTransformerData && threeWindingTransformerData.data) || []).forEach((t) => {
+        const [, , hv, mv, lv] = t;
+        add(hv, mv);
         add(hv, lv);
     });
     (switchData.data || []).forEach((row) => {
@@ -2396,6 +2404,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                         transformerData,
                         switchData,
                         busData,
+                        threeWindingTransformerData,
                     );
                     busPositions = importLayoutBfsVerticalFeeder(
                         busCount,
@@ -2474,6 +2483,23 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                         busPositions[hv_bus_no].x = avgX;
                         busPositions[lv_bus_no].x = avgX;
                     }
+                }
+            });
+
+            // That pulling can land two bars of one row on top of each other;
+            // walk each row left to right and push any overlap clear.
+            const rowsByY = new Map();
+            busPositions.forEach((pos, index) => {
+                if (!rowsByY.has(pos.y)) rowsByY.set(pos.y, []);
+                rowsByY.get(pos.y).push(index);
+            });
+            const minGap = Math.min(busSpacing, IMPORT_BUSBAR_W + 60);
+            rowsByY.forEach((row) => {
+                row.sort((a, b) => busPositions[a].x - busPositions[b].x || a - b);
+                for (let k = 1; k < row.length; k++) {
+                    const prev = busPositions[row[k - 1]];
+                    const cur = busPositions[row[k]];
+                    if (cur.x < prev.x + minGap) cur.x = prev.x + minGap;
                 }
             });
         }
