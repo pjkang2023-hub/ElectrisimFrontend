@@ -20,6 +20,24 @@ function defaultScaling(value) {
     return String(value);
 }
 
+/**
+ * Options with the values an import has no data for left out, so each field
+ * falls back to its default. Imports build options from pandapower rows with
+ * template strings, so an empty cell arrives as the text "null" - which is
+ * truthy, beat every `options.x || default`, and reached the engines as
+ * "null": OpenDSS stopped on float('null') for a transformer's tap position.
+ */
+function importedOptions(options) {
+    const out = {};
+    Object.keys(options || {}).forEach((key) => {
+        const v = options[key];
+        if (v == null) return;
+        if (typeof v === "string" && (v === "null" || v === "undefined" || v === "NaN")) return;
+        out[key] = v;
+    });
+    return out;
+}
+
 /** An imported element's name, or the type's default when the import has none
  *  (imports pass template strings, so a missing name arrives as "null"). */
 function nameOr(value, fallback) {
@@ -28,6 +46,7 @@ function nameOr(value, fallback) {
 }
 
 export function configureExternalGridAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     
     // Create XML document
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -79,6 +98,7 @@ export function configureExternalGridAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureGeneratorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     // Create XML document
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -170,6 +190,7 @@ export function configureGeneratorAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureStaticGeneratorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
 
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -241,6 +262,7 @@ export function configureStaticGeneratorAttributes(grafka, vertex, options = {})
 }
 
 export function configureWindTurbineAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     const windSpeed = options.wind_speed_ms != null ? String(options.wind_speed_ms) : String(DEFAULT_WIND_SPEED_MS);
     const curveJson = options.wind_power_curve_json || defaultWindPowerCurveJson;
     const approx = options.wind_curve_approx || 'linear';
@@ -324,6 +346,7 @@ export function configureWindTurbineAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureAsymmetricStaticGeneratorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Asymmetric Static Generator");
@@ -351,6 +374,7 @@ export function configureAsymmetricStaticGeneratorAttributes(grafka, vertex, opt
 }
 
 export function configureBusAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     // Create XML document
     var g = mxUtils.createXmlDocument().createElement("object");
 
@@ -386,6 +410,7 @@ export function configureBusAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureTransformerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
 
@@ -458,6 +483,7 @@ export function configureTransformerAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureThreeWindingTransformerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Three winding transformer");
 
@@ -536,6 +562,7 @@ export function configureThreeWindingTransformerAttributes(grafka, vertex, optio
 }
 
 export function configureShuntReactorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
   
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", nameOr(options.name, "Shunt Reactor"));
@@ -569,7 +596,8 @@ export function configureShuntReactorAttributes(grafka, vertex, options = {}) {
     // grafka.insertVertex(umieszczonaCell, null, 'Shunt Reactor', -0.25, 0, 0, 0, null, true);
 }
 
-export function configureCapacitorAttributes(grafka, vertex, options = {}) {            
+export function configureCapacitorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", nameOr(options.name, "Capacitor"));
@@ -596,6 +624,7 @@ export function configureCapacitorAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureLoadAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Load");
@@ -652,6 +681,7 @@ export function configureLoadAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureAsymmetricLoadAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var parametry = grafka.getModel().getValue(vertex);
 
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -682,6 +712,7 @@ export function configureAsymmetricLoadAttributes(grafka, vertex, options = {}) 
 }
 
 export function configureImpedanceAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Impedance");
@@ -702,6 +733,7 @@ export function configureImpedanceAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureWardAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Ward");
 
@@ -722,6 +754,7 @@ export function configureWardAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureExtendedWardAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Extended Ward");
@@ -750,6 +783,7 @@ export function configureExtendedWardAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureMotorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
    
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Motor");
@@ -794,6 +828,7 @@ export function configureMotorAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureStorageAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Storage");
@@ -891,6 +926,7 @@ export function configureStorageAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureLoad1phAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Load 1ph");
     g.setAttribute("OpenDSS_parameters", "");
@@ -909,6 +945,7 @@ export function configureLoad1phAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureSource1phAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Source 1ph");
     g.setAttribute("OpenDSS_parameters", "");
@@ -923,6 +960,7 @@ export function configureSource1phAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureGenerator1phAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Generator 1ph");
     g.setAttribute("OpenDSS_parameters", "");
@@ -940,6 +978,7 @@ export function configureGenerator1phAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureTransformer1phAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Transformer 1ph");
     g.setAttribute("OpenDSS_parameters", "");
@@ -957,6 +996,7 @@ export function configureTransformer1phAttributes(grafka, vertex, options = {}) 
 }
 
 export function configureLine1phAttributes(grafka, edge, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Line 1ph");
     g.setAttribute("OpenDSS_parameters", "");
@@ -971,6 +1011,7 @@ export function configureLine1phAttributes(grafka, edge, options = {}) {
 }
 
 export function configurePVSystemAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "PVSystem");
 
@@ -1021,6 +1062,7 @@ export function configurePVSystemAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureRegControlAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "RegControl");
     g.setAttribute("OpenDSS_parameters", "");
@@ -1037,6 +1079,7 @@ export function configureRegControlAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureCapControlAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "CapControl");
     g.setAttribute("OpenDSS_parameters", "");
@@ -1053,6 +1096,7 @@ export function configureCapControlAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureStorageControllerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "StorageController");
     g.setAttribute("OpenDSS_parameters", "");
@@ -1066,6 +1110,7 @@ export function configureStorageControllerAttributes(grafka, vertex, options = {
 }
 
 export function configureWindTurbineControllerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var name = options.name || "WindTurbineController (steady-state)";
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("label", name);
@@ -1083,6 +1128,7 @@ export function configureWindTurbineControllerAttributes(grafka, vertex, options
 }
 
 export function configureWindTurbineDynamicControllerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var name = options.name || "WindTurbineController (dynamic)";
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("label", name);
@@ -1100,6 +1146,7 @@ export function configureWindTurbineDynamicControllerAttributes(grafka, vertex, 
 }
 
 export function configureParkControllerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var name = options.name || "ParkController (steady-state)";
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("label", name);
@@ -1148,6 +1195,7 @@ export function configureParkControllerAttributes(grafka, vertex, options = {}) 
 }
 
 export function configureSVCAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "SVC");
@@ -1173,6 +1221,7 @@ export function configureSVCAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureTCSCAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
 
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "TCSC");
@@ -1198,6 +1247,7 @@ export function configureTCSCAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureSSCAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var parametry = grafka.getModel().getValue(vertex);
 
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1223,6 +1273,7 @@ export function configureSSCAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureDCLineAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var parametry = grafka.getModel().getValue(vertex);
 
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1260,6 +1311,7 @@ export function configureDCLineAttributes(grafka, vertex, options = {}) {
 
 
 export function configureLineAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var parametry = grafka.getModel().getValue(vertex);
 
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1300,6 +1352,7 @@ export function configureLineAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureDcBusAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     
     g.setAttribute("name", options.name || "DC Bus");
@@ -1315,6 +1368,7 @@ export function configureDcBusAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureLoadDcAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "Load DC");
     
@@ -1330,6 +1384,7 @@ export function configureLoadDcAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureSourceDcAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Source DC");
     
@@ -1357,6 +1412,7 @@ export function updateSwitchCellStyle(grafka, vertex, closed) {
 }
 
 export function configureSwitchAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "Switch");
     
@@ -1432,6 +1488,7 @@ export function configureSwitchAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureVscAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "VSC");
     
@@ -1455,6 +1512,7 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
 }
 
 export function configureB2bVscAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", options.name || "B2B VSC");
     
