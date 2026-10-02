@@ -70,7 +70,8 @@ const IMPORT_STUB_EDGE_STYLE =
 const IMPORT_GEO_SCALE = 88;
 /** Vertical step between BFS layers when geo is missing. */
 const IMPORT_VERTICAL_FEEDER_STEP = 152;
-const IMPORT_SIBLING_BUS_GAP = 170;
+/** Wider than a busbar, so buses on one layer do not run into each other. */
+const IMPORT_SIBLING_BUS_GAP = IMPORT_BUSBAR_W + 60;
 const IMPORT_MAX_BUSES_VERTICAL_FEEDER = 80;
 
 /** Rotate switch / transformer symbols for geo- or BFS-based **vertical** SLD import (pins align top/bottom). */
@@ -2325,7 +2326,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
         // Bus placement: pandapower geo (preferred) → vertical BFS feeder → legacy voltage bands
         // A large network needs the bands pulled apart, or the bars overlap.
         const levelHeight = busCount > 40 ? 480 : 200;
-        const busSpacing = busCount > 40 ? 400 : 180;
+        const busSpacing = busCount > 40 ? 400 : IMPORT_BUSBAR_W + 60;
         const startX = x + 100;
         const startY = y + 100;
         const layoutCenterX = startX + IMPORT_BUSBAR_W / 2;
