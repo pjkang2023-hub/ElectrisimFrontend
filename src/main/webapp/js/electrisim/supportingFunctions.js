@@ -1497,15 +1497,44 @@ const debouncedComponentInsertion = (() => {
  * Called from app (import .py / .dss) after backend returns pandapower-compatible JSON.
  * Uses the same insertion path as dropping a "Pandapower Network" shape.
  */
-window.buildDiagramFromModelJson = async function (graph, jsonText) {
+/** Layout names a caller may pass, mapped onto the importer's internal choice. */
+const IMPORT_LAYOUT_ALIASES = {
+    transmission: 'vertical',
+    radial: 'radial',
+};
+
+/**
+ * Resolve a caller-supplied layout ('transmission' | 'radial' | 'auto') the same
+ * way the prompt would: 'auto' takes the guess the "Other" button takes.
+ * Returns null for anything else.
+ */
+function resolveImportLayout(layout, model) {
+    const key = String(layout || '').trim().toLowerCase();
+    if (key === 'auto') return elSuggestSystem(model);
+    return IMPORT_LAYOUT_ALIASES[key] || null;
+}
+
+/**
+ * @param graph     the editor graph
+ * @param jsonText  the model JSON, as text or already parsed
+ * @param layout    optional. When given ('transmission' | 'radial' | 'auto') the
+ *                  layout prompt is skipped and drawing is awaited rather than
+ *                  debounced, so the caller learns when it finished and what it
+ *                  produced. The menu import passes nothing and behaves as before.
+ * @returns         with a layout: { layout, cellsAdded }. Without: undefined.
+ */
+window.buildDiagramFromModelJson = async function (graph, jsonText, layout) {
     if (!graph || !graph.view) {
         console.error('buildDiagramFromModelJson: invalid graph');
+        if (layout) throw new Error('No editor graph to draw into.');
         return;
     }
     let parsed;
     try {
         parsed = typeof jsonText === 'string' ? JSON.parse(jsonText) : jsonText;
     } catch (e) {
+        // A programmatic caller gets the reason back instead of a modal.
+        if (layout) throw new Error('Invalid model JSON: ' + e.message);
         if (typeof mxUtils !== 'undefined' && mxUtils.alert) {
             mxUtils.alert('Invalid JSON from import: ' + e.message);
         } else {
@@ -1515,6 +1544,7 @@ window.buildDiagramFromModelJson = async function (graph, jsonText) {
     }
     if (parsed && typeof parsed.error === 'string') {
         const msg = parsed.error;
+        if (layout) throw new Error('Import failed: ' + msg);
         if (typeof mxUtils !== 'undefined' && mxUtils.alert) {
             mxUtils.alert('Import failed: ' + msg);
         } else {
@@ -1523,6 +1553,7 @@ window.buildDiagramFromModelJson = async function (graph, jsonText) {
         return;
     }
     if (!parsed || !parsed._object) {
+        if (layout) throw new Error('Model JSON has no _object network model.');
         if (typeof mxUtils !== 'undefined' && mxUtils.alert) {
             mxUtils.alert('Import response missing network model.');
         }
@@ -1538,11 +1569,29 @@ window.buildDiagramFromModelJson = async function (graph, jsonText) {
     }
     const point = { x: (ip.x + tr.x) * scale, y: (ip.y + tr.y) * scale };
 
-    const layout = await promptImportNetworkLayout(parsed);
-    if (!layout) {
+    if (layout) {
+        const resolved = resolveImportLayout(layout, parsed);
+        if (!resolved) {
+            throw new Error(`Unknown layout '${layout}'. Use transmission, radial or auto.`);
+        }
+        parsed._object._import_layout = resolved;
+        const parent = graph.getDefaultParent();
+        const before = graph.getChildCells(parent, true, true).length;
+        window._elxxxRadialUnplaced = [];
+        await insertComponentsForData(graph, null, null, point, parsed);
+        return {
+            layout: resolved,
+            cellsAdded: graph.getChildCells(parent, true, true).length - before,
+            // Non-empty only for a radial layout that did not fit the network.
+            unplaced: (window._elxxxRadialUnplaced || []).slice(),
+        };
+    }
+
+    const chosen = await promptImportNetworkLayout(parsed);
+    if (!chosen) {
         return;
     }
-    parsed._object._import_layout = layout;
+    parsed._object._import_layout = chosen;
 
     debouncedComponentInsertion(graph, null, null, point, parsed);
 };
@@ -2292,6 +2341,9 @@ async function insertComponentsForData(grafka, a, target, point, data) {
         window._elxxxRadialImport = false;
         window._elxxxRadialLeaves = new Set();
         window._elxxxRadialSides = new Set();
+        // Buses the radial layout could not reach, reported back to a caller
+        // that asked for a layout (the MCP bridge) so it can say so.
+        window._elxxxRadialUnplaced = [];
         window._elxxxUfn = {};
 
         if (importLayoutChoice === 'radial') {
@@ -2316,6 +2368,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     if (!pos || !busData.data[busIndex]) return;
                     if (pos.leaf) window._elxxxRadialLeaves.add(String(busData.data[busIndex][0]));
                     if (pos.side) window._elxxxRadialSides.add(String(busData.data[busIndex][0]));
+                    if (pos.unplaced) window._elxxxRadialUnplaced.push(String(busData.data[busIndex][0]));
                 });
             } catch (err) {
                 console.warn('Radial layout failed', err);
