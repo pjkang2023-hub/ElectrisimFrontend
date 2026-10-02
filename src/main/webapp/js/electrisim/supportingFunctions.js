@@ -3494,8 +3494,10 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     threewindingtrafoStyle
                 );
 
-                // Configure transformer attributes
-                configureTransformerAttributes(grafka, vertex, {
+                // The three-winding configurer: the two-winding one used to be called
+                // here, which kept none of the 3W ratings, MV voltage or pair
+                // impedances and filled in two-winding defaults instead.
+                configureThreeWindingTransformerAttributes(grafka, vertex, {
                     name: `${name}`,
                     std_type: `${std_type}`,
                     sn_hv_mva: `${sn_hv_mva}`,

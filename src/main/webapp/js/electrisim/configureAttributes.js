@@ -495,16 +495,23 @@ export function configureThreeWindingTransformerAttributes(grafka, vertex, optio
 
 
     //OPTIONAL
+    // Keep a value an import supplies; otherwise the defaults a hand-placed
+    // transformer has always had. Imports pass template strings, so an absent
+    // pandapower value arrives as "null", "undefined" or "NaN".
+    const given = (v, d) => {
+        const s = v == null ? '' : String(v);
+        return (s === '' || s === 'null' || s === 'undefined' || s === 'NaN') ? d : s;
+    };
     g.setAttribute("Optional_parameters", "");
-    g.setAttribute("shift_mv_degree", "0");
-    g.setAttribute("shift_lv_degree", "0");
-    g.setAttribute("tap_step_percent", "0");
-    g.setAttribute("tap_side", "hv");
-    g.setAttribute("tap_neutral", "0");
-    g.setAttribute("tap_min", "0");
-    g.setAttribute("tap_max", "0");
-    g.setAttribute("tap_pos", "0");
-    g.setAttribute("tap_at_star_point", true);
+    g.setAttribute("shift_mv_degree", given(options.shift_mv_degree, "0"));
+    g.setAttribute("shift_lv_degree", given(options.shift_lv_degree, "0"));
+    g.setAttribute("tap_step_percent", given(options.tap_step_percent, "0"));
+    g.setAttribute("tap_side", given(options.tap_side, "hv"));
+    g.setAttribute("tap_neutral", given(options.tap_neutral, "0"));
+    g.setAttribute("tap_min", given(options.tap_min, "0"));
+    g.setAttribute("tap_max", given(options.tap_max, "0"));
+    g.setAttribute("tap_pos", given(options.tap_pos, "0"));
+    g.setAttribute("tap_at_star_point", given(options.tap_at_star_point, "true"));
     g.setAttribute("tap_changer_type", "Ratio"); // pandapower 3.0+: "Ratio", "Symmetrical", or "Ideal"
     // g.setAttribute("in_service", true); //in_service nie działa
 
