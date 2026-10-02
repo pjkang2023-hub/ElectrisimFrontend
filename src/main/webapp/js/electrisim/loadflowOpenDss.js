@@ -24,7 +24,7 @@ import { clearFaultLocationMarkers, placeFaultMarkersForScRows } from './utils/f
 import { highlightCalculationErrorElements, calculationErrorHighlightSuffix } from './utils/calculationErrorHighlight.js';
 import ENV from './config/environment.js';
 import { getConnectedBusId, getLineBusEndpointsForPayload, getThreeWindingConnections, confirmTransformerVoltageMismatches } from './loadFlow.js';
-import { computeWindTurbinePMw } from './windTurbineDialog.js';
+import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import { resolveStorageFixedPf } from './storageDialog.js';
 import { resolveStorageQSetpoint } from './utils/storageQCapability.js';
 import {
@@ -3904,7 +3904,8 @@ function collectNetworkDataStructured(graph) {
                         : true;
 
                     let pMw = staticGenParams.p_mw || 1.0;
-                    if (isWindTurbine) {
+                    if (isWindTurbine
+                        && windTurbineHasWindData(staticGenParams.wind_speed_ms, staticGenParams.wind_power_curve_json)) {
                         pMw = computeWindTurbinePMw(
                             staticGenParams.wind_speed_ms,
                             staticGenParams.wind_power_curve_json,

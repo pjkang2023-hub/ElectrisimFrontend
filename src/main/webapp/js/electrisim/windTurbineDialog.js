@@ -287,6 +287,17 @@ export function computeWindTurbinePMw(windSpeedMs, curveJson, approx = 'linear')
     return p != null && Number.isFinite(p) ? p : 0;
 }
 
+/**
+ * Whether a turbine carries the wind speed and power curve its output is
+ * computed from. An imported wind farm has neither - only a fixed p_mw - and
+ * computing from nothing gives 0 MW, so it must run at its stored p_mw.
+ */
+export function windTurbineHasWindData(windSpeedMs, curveJson) {
+    return windSpeedMs != null && String(windSpeedMs).trim() !== ''
+        && Number.isFinite(Number(windSpeedMs))
+        && !!parseWindPowerCurvePoints(curveJson);
+}
+
 const defaultComputedPMw = computeWindTurbinePMw(DEFAULT_WIND_SPEED_MS, defaultWindPowerCurveJson, 'linear');
 
 export const defaultWindTurbineData = {

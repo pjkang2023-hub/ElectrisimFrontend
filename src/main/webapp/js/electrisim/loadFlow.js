@@ -1793,7 +1793,7 @@ import {
 } from './utils/diagnosticElementResolve.js';
 import ENV from './config/environment.js';
 import { devLog, isDevEnvironment } from './utils/devLog.js';
-import { computeWindTurbinePMw } from './windTurbineDialog.js';
+import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import { resolveStorageFixedPf } from './storageDialog.js';
 import { resolveStorageQSetpoint } from './utils/storageQCapability.js';
 import {
@@ -3712,11 +3712,13 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
                             wind_curve_approx: { name: 'wind_curve_approx', optional: true },
                             in_service: { name: 'in_service', optional: true }
                         });
-                        windAttrs.p_mw = computeWindTurbinePMw(
-                            windAttrs.wind_speed_ms,
-                            windAttrs.wind_power_curve_json,
-                            windAttrs.wind_curve_approx || 'linear'
-                        );
+                        if (windTurbineHasWindData(windAttrs.wind_speed_ms, windAttrs.wind_power_curve_json)) {
+                            windAttrs.p_mw = computeWindTurbinePMw(
+                                windAttrs.wind_speed_ms,
+                                windAttrs.wind_power_curve_json,
+                                windAttrs.wind_curve_approx || 'linear'
+                            );
+                        }
                         const windTurbine = {
                             ...baseData,
                             typ: "Wind Turbine",
