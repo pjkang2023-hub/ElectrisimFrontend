@@ -20,6 +20,13 @@ function defaultScaling(value) {
     return String(value);
 }
 
+/** An imported element's name, or the type's default when the import has none
+ *  (imports pass template strings, so a missing name arrives as "null"). */
+function nameOr(value, fallback) {
+    const s = value == null ? "" : String(value).trim();
+    return (s === "" || s === "null" || s === "undefined") ? fallback : s;
+}
+
 export function configureExternalGridAttributes(grafka, vertex, options = {}) {
     
     // Create XML document
@@ -75,7 +82,7 @@ export function configureGeneratorAttributes(grafka, vertex, options = {}) {
 
     // Create XML document
     var g = mxUtils.createXmlDocument().createElement("object");
-    g.setAttribute("name", "Generator");                
+    g.setAttribute("name", nameOr(options.name, "Generator"));
     g.setAttribute("Load_flow_parameters", "");
     g.setAttribute("p_mw", options.p_mw || "0");
     g.setAttribute("vm_pu", options.vm_pu || "1");
@@ -166,7 +173,7 @@ export function configureStaticGeneratorAttributes(grafka, vertex, options = {})
 
 
     var g = mxUtils.createXmlDocument().createElement("object");
-    g.setAttribute("name", "Static Generator");
+    g.setAttribute("name", nameOr(options.name, "Static Generator"));
     g.setAttribute("Load_flow_parameters", "");
     g.setAttribute("p_mw", options.p_mw || "0");
     g.setAttribute("q_mvar", options.q_mvar ||  "0");
@@ -531,7 +538,7 @@ export function configureThreeWindingTransformerAttributes(grafka, vertex, optio
 export function configureShuntReactorAttributes(grafka, vertex, options = {}) {
   
     var g = mxUtils.createXmlDocument().createElement("object");
-    g.setAttribute("name", "Shunt Reactor");
+    g.setAttribute("name", nameOr(options.name, "Shunt Reactor"));
 
     //INPUT
     g.setAttribute("Load_flow_parameters", "");
@@ -565,7 +572,7 @@ export function configureShuntReactorAttributes(grafka, vertex, options = {}) {
 export function configureCapacitorAttributes(grafka, vertex, options = {}) {            
 
     var g = mxUtils.createXmlDocument().createElement("object");
-    g.setAttribute("name", "Capacitor");
+    g.setAttribute("name", nameOr(options.name, "Capacitor"));
 
     //INPUT     
     g.setAttribute("Load_flow_parameters", "");
