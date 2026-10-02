@@ -96,6 +96,8 @@
     
 
     <script type="module" src="js/electrisim/config/environment.js"></script>
+    <!-- Attaches the bearer token to simulation-backend calls. Classic script, so it installs before any deferred module can reach the backend; window.ENV is read per request, not at install time. -->
+    <script src="js/electrisim/utils/authFetch.js"></script>
     <!-- Removed duplicate scripts (domCache, batchDOM, performanceTracker, performance-optimizer) - loaded once in electrisimScripts -->
 
     <!-- Defer Smartlook analytics - load after page interactive to improve initial load -->
