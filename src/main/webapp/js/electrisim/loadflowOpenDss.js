@@ -23,7 +23,7 @@ import {
 import { clearFaultLocationMarkers, placeFaultMarkersForScRows } from './utils/faultLocationMarkers.js';
 import { highlightCalculationErrorElements, calculationErrorHighlightSuffix } from './utils/calculationErrorHighlight.js';
 import ENV from './config/environment.js';
-import { getConnectedBusId, getLineBusEndpointsForPayload, getThreeWindingConnections, confirmTransformerVoltageMismatches } from './loadFlow.js';
+import { getConnectedBusId, getLineBusEndpointsForPayload, getSwitchConnections, getThreeWindingConnections, confirmTransformerVoltageMismatches } from './loadFlow.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import { resolveStorageFixedPf } from './storageDialog.js';
 import { resolveStorageQSetpoint } from './utils/storageQCapability.js';
@@ -2468,12 +2468,50 @@ function collectNetworkDataStructured(graph) {
                         name: (cell.mxObjectId || cell.id) ? String(cell.mxObjectId || cell.id).replace('#', '_') : `mxCell_${cellId}`,
                         id: cell.id != null ? String(cell.id) : (cell.mxObjectId ? String(cell.mxObjectId) : `mxCell_${cellId}`),
                         vn_kv: getBusVoltage(cellValue),
-                        userFriendlyName: "Bus"
+                        // The bus's own label, as the pandapower payload sends it.
+                        userFriendlyName: (cellValue && typeof cellValue.getAttribute === 'function'
+                            && cellValue.getAttribute('name')) || "Bus"
                     };
                     index++;
+                } else if (styleObj && styleObj.shapeELXXX === 'Switch') {
+                    // The backend opens a line or disables a transformer for an
+                    // open switch, and joins two buses through a closed coupler.
+                    // Left out, every line behind a breaker had no bus at that end
+                    // and everything beyond it was dead.
+                    if (!cell.edges || cell.edges.length < 2) {
+                        const swEdges = graph.getModel().getEdges(cell);
+                        if (swEdges && swEdges.length) cell.edges = swEdges;
+                    }
+                    const sw = getSwitchConnections(cell, graph.getModel());
+                    const swAttrs = getAttributesAsObject(cell, {
+                        name: { name: 'name', optional: true },
+                        closed: { name: 'closed', optional: true }
+                    });
+                    if (sw && sw.bus && sw.element && ['l', 't', 'b'].includes(sw.et)) {
+                        const cellName = (cell.mxObjectId || cell.id) ? (cell.mxObjectId || cell.id).replace('#', '_') : `mxCell_${cellId}`;
+                        cellData = {
+                            typ: 'Switch',
+                            name: cellName,
+                            id: cell.id,
+                            userFriendlyName: swAttrs.name || cellName,
+                            bus: sw.bus,
+                            element: sw.element,
+                            et: sw.et,
+                            closed: swAttrs.closed != null ? swAttrs.closed : 'true'
+                        };
+                    } else {
+                        dssWarn(`Switch ${swAttrs.name || cell.id} not modelled in OpenDSS (et=${sw && sw.et})`);
+                    }
                 } else if (styleObj && styleObj.shapeELXXX === 'Line') {
                     // This is a line element - collect all necessary parameters like loadFlow.js
-                    const connections = getConnectedBusId(cell, true);
+                    let connections = getConnectedBusId(cell, true);
+                    if (!(connections?.busFrom && connections?.busTo)) {
+                        // A line drawn as a symbol has a switch, not a bus, at a
+                        // breaker end; follow it through to the bus as the
+                        // pandapower load flow does.
+                        const ends = getLineBusEndpointsForPayload(cell, graph.getModel());
+                        if (ends?.busFrom && ends?.busTo && ends.busFrom !== ends.busTo) connections = ends;
+                    }
                     
                     // Get line parameters from attributes
                     const lineParams = getAttributesAsObject(cell, {
