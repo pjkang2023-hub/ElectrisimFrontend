@@ -61,6 +61,24 @@
             null;
     }
 
+    /**
+     * Whether a diagram file is open. Until one is, the editor's graph is a
+     * placeholder behind the start dialog: anything drawn into it is thrown away
+     * when a file is created or opened, so drawing then would report success for
+     * a diagram the user never sees.
+     */
+    function diagramOpen() {
+        var app = window.App;
+        var candidates = [app && app._editorUi, app && app._instance, window.editorUi];
+        for (var i = 0; i < candidates.length; i++) {
+            var ui = candidates[i];
+            if (ui && typeof ui.getCurrentFile === 'function') return !!ui.getCurrentFile();
+        }
+        // No editor to ask yet (still starting up). Not ready: "a graph exists"
+        // is exactly the placeholder this check is here to rule out.
+        return false;
+    }
+
     function schedule(ms) {
         setTimeout(poll, ms);
     }
@@ -76,6 +94,13 @@
     /** Draw one job, collecting any console errors raised while it runs. */
     function draw(job) {
         var graph = editorGraph();
+        if (!diagramOpen()) {
+            // The file was closed between the poll and now.
+            return Promise.resolve({
+                id: job.id, ok: false,
+                error: 'No diagram is open in Electrisim. Open or create one and draw again.'
+            });
+        }
         if (!graph || typeof window.buildDiagramFromModelJson !== 'function') {
             return Promise.resolve({
                 id: job.id, ok: false,
@@ -119,7 +144,10 @@
     }
 
     function poll() {
-        fetch(base + '/next', { cache: 'no-store' })
+        // Still poll when no diagram is open, so the bridge knows the page is
+        // here, but say so: the diagram then stays queued instead of being drawn
+        // into the placeholder graph and lost.
+        fetch(base + '/next' + (diagramOpen() ? '' : '?ready=0'), { cache: 'no-store' })
             .then(function (resp) {
                 if (!announced) {
                     announced = true;
