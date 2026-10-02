@@ -1,8 +1,11 @@
 // Dependencies will be resolved from global scope when needed
 import ENV from './config/environment.js';
 import { resolveStudyOpfCostCurrency } from './utils/opfCostCurrency.js';
+import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import {
     getConnectedBusId,
+    getLineBusEndpointsForPayload,
+    getSwitchConnections,
     getTransformerConnections,
     getThreeWindingConnections,
     updateTransformerBusConnections,
@@ -117,6 +120,10 @@ const COMPONENT_TYPES = {
     STORAGE: 'Storage',
     STATIC_GENERATOR: 'Static Generator',
     DC_LINE: 'DC Line',
+    SWITCH: 'Switch',
+    WIND_TURBINE: 'Wind Turbine',
+    SHUNT_REACTOR: 'Shunt Reactor',
+    CAPACITOR: 'Capacitor',
 };
 
 function optimalPowerFlowPandaPower(a, b, c) {
@@ -132,6 +139,9 @@ function optimalPowerFlowPandaPower(a, b, c) {
         storage: 0,
         staticGenerator: 0,
         dcLine: 0,
+        switch: 0,
+        shuntReactor: 0,
+        capacitor: 0,
     };
 
     const componentArrays = {
@@ -146,6 +156,9 @@ function optimalPowerFlowPandaPower(a, b, c) {
         storage: [],
         staticGenerator: [],
         dcLine: [],
+        switch: [],
+        shuntReactor: [],
+        capacitor: [],
     };    
 
     // Cache commonly used functions and values
@@ -367,7 +380,11 @@ function optimalPowerFlowPandaPower(a, b, c) {
                             processedComponents++;
 
                             // Get user-friendly name from grid data if available
-                            let userFriendlyName = cell.mxObjectId.replace('#', '_'); // fallback to technical ID
+                            // The element's own label first; the data-grid lookups below
+                            // only exist while a grid dialog is open, so without this
+                            // every OPF result was named by its canvas cell.
+                            let userFriendlyName = (cell.value && typeof cell.value.getAttribute === 'function'
+                                && cell.value.getAttribute('name')) || cell.mxObjectId.replace('#', '_');
                             
                             // Try to get the actual user-friendly name from the grid
                             try {
@@ -578,13 +595,26 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     componentArrays.load.push(load);
                                     break;
 
-                                case COMPONENT_TYPES.LINE:
+                                case COMPONENT_TYPES.LINE: {
+                                    // A line drawn as a symbol has a switch, not a bus,
+                                    // at a breaker end: follow it through to the bus, as
+                                    // the load flow does. Read from the line's own ends,
+                                    // everything behind a breaker was isolated.
+                                    let ends = {
+                                        busFrom: cell.source?.mxObjectId?.replace('#', '_'),
+                                        busTo: cell.target?.mxObjectId?.replace('#', '_'),
+                                    };
+                                    if (!(ends.busFrom && ends.busTo)) {
+                                        const viaSwitches = getLineBusEndpointsForPayload(cell, model);
+                                        if (viaSwitches?.busFrom && viaSwitches?.busTo
+                                            && viaSwitches.busFrom !== viaSwitches.busTo) ends = viaSwitches;
+                                    }
                                     const line = {
                                         typ: `Line${counters.line++}`,
                                         name: cell.mxObjectId.replace('#', '_'),
                                         id: cell.id,
-                                        busFrom: cell.source?.mxObjectId?.replace('#', '_'),
-                                        busTo: cell.target?.mxObjectId?.replace('#', '_'),
+                                        busFrom: ends.busFrom,
+                                        busTo: ends.busTo,
                                         ...getAttributesAsObject(cell, {
                                             length_km: 'length_km',
                                             parallel: 'parallel',
@@ -600,6 +630,37 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     };
                                     componentArrays.line.push(line);
                                     break;
+                                }
+
+                                case COMPONENT_TYPES.SWITCH: {
+                                    // Sent as the load flow sends them, so an open breaker
+                                    // opens its line and a closed coupler joins its buses.
+                                    if (!cell.edges || cell.edges.length < 2) {
+                                        const swEdges = model.getEdges(cell);
+                                        if (swEdges && swEdges.length) cell.edges = swEdges;
+                                    }
+                                    const sw = getSwitchConnections(cell, model);
+                                    if (!sw || !sw.bus || !sw.element || sw.et === 'gen_stub') break;
+                                    const swAttrs = getAttributesAsObject(cell, {
+                                        name: { name: 'name', optional: true },
+                                        type: { name: 'type', optional: true },
+                                        closed: { name: 'closed', optional: true },
+                                        z_ohm: { name: 'z_ohm', optional: true },
+                                    });
+                                    const swName = swAttrs.name || cell.mxObjectId.replace('#', '_');
+                                    componentArrays.switch.push({
+                                        typ: `Switch${counters.switch++}`,
+                                        id: cell.id,
+                                        userFriendlyName: swName,
+                                        ...swAttrs,
+                                        name: swName,
+                                        bus: sw.bus,
+                                        element: sw.element,
+                                        et: sw.et,
+                                        ...(sw.elementCellId != null ? { elementCellId: sw.elementCellId } : {}),
+                                    });
+                                    break;
+                                }
 
                                 case COMPONENT_TYPES.STORAGE: {
                                     const storageObj = {
@@ -748,8 +809,23 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     }
                                     break;
 
+                                // A wind turbine is a static generator to the optimisation,
+                                // at the output its wind data gives (or its stored p_mw).
+                                // Neither it nor the shunts below used to be sent at all.
+                                case COMPONENT_TYPES.WIND_TURBINE:
                                 case COMPONENT_TYPES.STATIC_GENERATOR: {
-                                    const sgP = parseFloat(getAttributesAsObject(cell, { p_mw: 'p_mw' }).p_mw) || 0;
+                                    let sgP = parseFloat(getAttributesAsObject(cell, { p_mw: 'p_mw' }).p_mw) || 0;
+                                    if (componentType === COMPONENT_TYPES.WIND_TURBINE) {
+                                        const wind = getAttributesAsObject(cell, {
+                                            wind_speed_ms: { name: 'wind_speed_ms', optional: true },
+                                            wind_power_curve_json: { name: 'wind_power_curve_json', optional: true },
+                                            wind_curve_approx: { name: 'wind_curve_approx', optional: true },
+                                        });
+                                        if (windTurbineHasWindData(wind.wind_speed_ms, wind.wind_power_curve_json)) {
+                                            sgP = computeWindTurbinePMw(wind.wind_speed_ms, wind.wind_power_curve_json,
+                                                wind.wind_curve_approx || 'linear');
+                                        }
+                                    }
                                     const sgOpf = getAttributesAsObject(cell, {
                                         p_mw: 'p_mw',
                                         q_mvar: 'q_mvar',
@@ -787,12 +863,43 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         ...baseData,
                                         typ: 'Static Generator',
                                         ...sgOpf,
+                                        p_mw: sgP,
                                         min_p_mw: sgMinResolved,
                                         max_p_mw: sgMaxResolved,
                                     });
                                     counters.staticGenerator++;
                                     break;
                                 }
+
+                                case COMPONENT_TYPES.SHUNT_REACTOR:
+                                    componentArrays.shuntReactor.push({
+                                        ...baseData,
+                                        typ: `Shunt Reactor${counters.shuntReactor++}`,
+                                        ...getAttributesAsObject(cell, {
+                                            p_mw: 'p_mw',
+                                            q_mvar: 'q_mvar',
+                                            vn_kv: 'vn_kv',
+                                            step: { name: 'step', optional: true },
+                                            max_step: { name: 'max_step', optional: true },
+                                            in_service: { name: 'in_service', optional: true },
+                                        }),
+                                    });
+                                    break;
+
+                                case COMPONENT_TYPES.CAPACITOR:
+                                    componentArrays.capacitor.push({
+                                        ...baseData,
+                                        typ: `Capacitor${counters.capacitor++}`,
+                                        ...getAttributesAsObject(cell, {
+                                            q_mvar: 'q_mvar',
+                                            loss_factor: 'loss_factor',
+                                            vn_kv: 'vn_kv',
+                                            step: { name: 'step', optional: true },
+                                            max_step: { name: 'max_step', optional: true },
+                                            in_service: { name: 'in_service', optional: true },
+                                        }),
+                                    });
+                                    break;
 
                                 case COMPONENT_TYPES.DC_LINE: {
                                     const dcOpf = getAttributesAsObject(cell, {
@@ -970,7 +1077,10 @@ function optimalPowerFlowPandaPower(a, b, c) {
                             ...componentArrays.load,
                             ...componentArrays.storage,
                             ...componentArrays.dcLine,
-                            ...componentArrays.line
+                            ...componentArrays.line,
+                            ...componentArrays.switch,
+                            ...componentArrays.shuntReactor,
+                            ...componentArrays.capacitor
                         ];
 
                         const obj = Object.assign({}, array);
