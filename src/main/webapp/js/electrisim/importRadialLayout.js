@@ -85,14 +85,16 @@ export function layoutRadialSld(busRows, lineRows, trafoRows, extRows, originX, 
     const DROP = 190;
     const colHalf = collectorPos.w / 2;
 
-    const placeHorizontal = (start, dir, lane) => {
+    const placeHorizontal = (start, dir, lane, centred = false) => {
         let u = start;
         let step = 1;
         const seen = new Set();
         const yRow = rowY + lane * (DROP + 220);
         while (u != null && !seen.has(u)) {
             seen.add(u);
-            const x = cx + dir * (colHalf * 0.55 + (step - 1) * STEP) - BW / 2;
+            const x = centred && step === 1
+                ? cx - BW / 2
+                : cx + dir * (colHalf * 0.55 + (step - 1) * STEP) - BW / 2;
             if (!positions[u]) positions[u] = { x, y: yRow, w: BW, leaf: false };
             const tcs = trafoChildren(u);
             tcs.forEach((lv, k) => {
@@ -132,8 +134,20 @@ export function layoutRadialSld(busRows, lineRows, trafoRows, extRows, originX, 
     } else {
         feeders.forEach((f, i) => (i % 2 === 0 ? left : right).push(f));
     }
-    left.forEach((start, lane) => placeHorizontal(start, -1, lane));
-    right.forEach((start, lane) => placeHorizontal(start, 1, lane));
+    // The first feeder each side takes the top row. Further feeders each take a
+    // row of their own below; their connection drops from the collector, and in
+    // the side column it ran straight through the first feeder's bus. The one
+    // clear path down is the gap between the first left and right buses, so the
+    // first extra feeder starts in the centre column. (Later ones keep their
+    // side column, and may still cross the rows above.)
+    if (left.length) placeHorizontal(left[0], -1, 0);
+    if (right.length) placeHorizontal(right[0], 1, 0);
+    const extra = [];
+    for (let lane = 1; lane < Math.max(left.length, right.length); lane++) {
+        if (lane < left.length) extra.push([left[lane], -1]);
+        if (lane < right.length) extra.push([right[lane], 1]);
+    }
+    extra.forEach(([start, dir], i) => placeHorizontal(start, dir, i + 1, i === 0));
 
     sideTrafos.forEach((lv, k) => {
         if (positions[lv]) return;

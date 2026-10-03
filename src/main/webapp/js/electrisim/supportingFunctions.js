@@ -1181,12 +1181,13 @@ function importStraightShuntDropStyle(deviceVertex, busVertex) {
 }
 
 /** Fan successive devices on the same bus sideways so they do not overlap. */
-function importDeviceSlotX(busVertex) {
+/** Next x offset along a bus for a device hung under it: 0, +step, -step, +2 step... */
+function importDeviceSlotX(busVertex, step = 52) {
     const key = busVertex ? String(busVertex.id) : '';
     const slots = window._elxxxDevSlot || (window._elxxxDevSlot = new Map());
     const n = slots.get(key) || 0;
     slots.set(key, n + 1);
-    return n === 0 ? 0 : (n % 2 ? 1 : -1) * Math.ceil(n / 2) * 52;
+    return n === 0 ? 0 : (n % 2 ? 1 : -1) * Math.ceil(n / 2) * step;
 }
 
 function importTrafo3wToBusEdgeStyle(trafoVertex, busVertex, allocateBusPin) {
@@ -3283,13 +3284,13 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 const belowY = busVertex.geometry.y + (busVertex.geometry.height || 12) + 70;
                 const aboveY = busVertex.geometry.y - 200;
                 // Above the bus unless its stem would cross another busbar there and
-                // the side below is clear - a crossing reads as a connection. Moved
-                // below, it steps along the bar, clear of a load hung at its centre.
-                const belowX = anchorX + 80;
+                // the side below is clear - a crossing reads as a connection. Below,
+                // it takes the next device slot along the bar, like loads and shunts,
+                // so it does not land on a battery or load hung from the same bus.
                 const sgBelow = sgLeaf || (stemCrossesBusbar(grafka, parent, busVertex, anchorX, aboveY)
-                    && !stemCrossesBusbar(grafka, parent, busVertex, belowX, belowY));
+                    && !stemCrossesBusbar(grafka, parent, busVertex, anchorX, belowY));
                 const anchorY = sgBelow ? belowY : aboveY;
-                const sgX = sgBelow && !sgLeaf ? belowX : anchorX;
+                const sgX = sgBelow ? anchorX + importDeviceSlotX(busVertex, 64) : anchorX;
                 const styleStaticGenerator = (isWind
                     ? vertexStyleFromElectrisimSymbol(sgSymbol, 'Wind Turbine')
                     : vertexStyleFromElectrisimSymbol('sym-static-gen', 'Static Generator')
@@ -4004,7 +4005,9 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 const anchorX = stSide
                     ? busVertex.geometry.x + busVertex.geometry.width + 100
                     : (window._elxxxRadialImport
-                        ? busVertex.geometry.x + busVertex.geometry.width / 2
+                        // Hung under the bus: the next device slot, not the centre a
+                        // generator may already hold.
+                        ? busVertex.geometry.x + busVertex.geometry.width / 2 + importDeviceSlotX(busVertex, 64)
                         : busVertex.geometry.x + IMPORT_BUSBAR_W / 2 + 60);
                 const anchorY = stSide
                     ? busVertex.geometry.y - 6
