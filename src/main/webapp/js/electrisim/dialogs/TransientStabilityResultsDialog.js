@@ -132,10 +132,13 @@
             ];
             const poi = r.poi_metrics || {};
             if (poi.poi_bus) {
-                items.push(['POI bus', poi.poi_bus]);
-                items.push(['POI V min (pu)', poi.v_min_pu]);
-                items.push(['f nadir (Hz)', poi.frequency_nadir_hz]);
-                items.push(['f final (Hz)', poi.frequency_final_hz]);
+                // By the bus's diagram label, figures rounded (the cell id and
+                // 49.758666641011885 Hz were shown).
+                const round = (x, d) => (x == null || !isFinite(x) ? '—' : Number(x).toFixed(d));
+                items.push(['POI bus', poi.poi_bus_label || poi.poi_bus]);
+                items.push(['POI V min (pu)', round(poi.v_min_pu, 4)]);
+                items.push(['f nadir (Hz)', round(poi.frequency_nadir_hz, 3)]);
+                items.push(['f final (Hz)', round(poi.frequency_final_hz, 3)]);
             }
             const rt = r.ride_through || {};
             if (rt.enabled) {
@@ -249,7 +252,7 @@
             const poi = this.results.poi_metrics;
             if (poi) {
                 lines.push('');
-                lines.push(`poi_bus,${poi.poi_bus ?? ''}`);
+                lines.push(`poi_bus,${poi.poi_bus_label ?? poi.poi_bus ?? ''}`);
                 lines.push(`poi_v_min_pu,${poi.v_min_pu ?? ''}`);
                 lines.push(`frequency_nadir_hz,${poi.frequency_nadir_hz ?? ''}`);
                 lines.push(`frequency_final_hz,${poi.frequency_final_hz ?? ''}`);
