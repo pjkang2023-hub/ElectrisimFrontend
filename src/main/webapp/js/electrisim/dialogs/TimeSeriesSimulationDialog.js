@@ -10,7 +10,10 @@ import {
 import { attachBackdropCloseHandler } from '../utils/dialogStyles.js';
 
 const LOAD_TYPES = new Set(['Load', 'Asymmetric Load']);
-const GEN_TYPES = new Set(['Generator', 'Static Generator', 'Asymmetric Static Generator', 'PV System', 'PVSystem']);
+// A Wind Turbine is a static generator to the backend; leaving it out meant a
+// wind farm drawn with turbine symbols could not be given a profile at all.
+const GEN_TYPES = new Set(['Generator', 'Static Generator', 'Asymmetric Static Generator', 'PV System', 'PVSystem',
+    'Wind Turbine']);
 
 function parseCellStyle(style) {
     if (!style) return null;
