@@ -640,6 +640,21 @@ function elTransmissionFixTrafoSwitches(graph, parent) {
     });
 }
 
+/**
+ * Whether a vertical stem from busVertex at x to height y would cross another
+ * busbar drawn between them - or pass so close to a bar's end (margin) that it
+ * reads as a connection to it.
+ */
+function stemCrossesBusbar(grafka, parent, busVertex, x, y, margin = 40) {
+    const from = busVertex.geometry.y;
+    const lo = Math.min(from, y), hi = Math.max(from, y);
+    return (grafka.getChildCells(parent, true, false) || []).some((cell) => {
+        if (cell === busVertex || !cell.geometry || !/shapeELXXX=Bus(;|$)/.test(cell.style || '')) return false;
+        const g = cell.geometry;
+        return g.y > lo && g.y < hi && x >= g.x - margin && x <= g.x + g.width + margin;
+    });
+}
+
 function findVertexByBusId(grafka, parent, busName) {
     const want = String(busName);
     // The map is rebuilt once per import and cached on the parent; callers hit
@@ -3265,20 +3280,27 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     && window._elxxxRadialLeaves.has(String(bus_name));
                 const [sgW, sgH] = vertexSizeFromElectrisimSymbol(sgSymbol, isWind ? 58 : 45, isWind ? 58 : 45);
                 const anchorX = busVertex.geometry.x + busVertex.geometry.width / 2 + staticGenOffset;
-                const anchorY = sgLeaf
-                    ? busVertex.geometry.y + (busVertex.geometry.height || 12) + 70
-                    : busVertex.geometry.y - 200;
+                const belowY = busVertex.geometry.y + (busVertex.geometry.height || 12) + 70;
+                const aboveY = busVertex.geometry.y - 200;
+                // Above the bus unless its stem would cross another busbar there and
+                // the side below is clear - a crossing reads as a connection. Moved
+                // below, it steps along the bar, clear of a load hung at its centre.
+                const belowX = anchorX + 80;
+                const sgBelow = sgLeaf || (stemCrossesBusbar(grafka, parent, busVertex, anchorX, aboveY)
+                    && !stemCrossesBusbar(grafka, parent, busVertex, belowX, belowY));
+                const anchorY = sgBelow ? belowY : aboveY;
+                const sgX = sgBelow && !sgLeaf ? belowX : anchorX;
                 const styleStaticGenerator = (isWind
                     ? vertexStyleFromElectrisimSymbol(sgSymbol, 'Wind Turbine')
                     : vertexStyleFromElectrisimSymbol('sym-static-gen', 'Static Generator')
                         .replace('sym-static-gen.svg', 'sym-static-gen-down.svg'))
-                    + (sgLeaf ? ';portConstraint=north' : ';portConstraint=south');
+                    + (sgBelow ? ';portConstraint=north' : ';portConstraint=south');
 
                 const vertex = grafka.insertVertex(
                     parent,
                     null,
                     ``,
-                    anchorX - sgW / 2,
+                    sgX - sgW / 2,
                     anchorY - sgH / 2,
                     sgW,
                     sgH,
@@ -3303,7 +3325,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     const entryX = Math.max(0.05, Math.min(0.95, (mcx - bg.x) / (bg.width || 1)));
                     const dropEdge = grafka.insertEdge(parent, null, "", vertex, busVertex,
                         'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=0;html=1;endArrow=none;'
-                        + `exitX=0.5;exitY=${sgLeaf ? 0 : 1};exitDx=0;exitDy=0;exitPerimeter=0;`
+                        + `exitX=0.5;exitY=${sgBelow ? 0 : 1};exitDx=0;exitDy=0;exitPerimeter=0;`
                         + `entryX=${entryX};entryY=0.5;entryDx=0;entryDy=0;entryPerimeter=0;`
                         + 'jettySize=0;orthogonalLoop=0;shapeELXXX=NotEditableLine');
                     if (dropEdge && dropEdge.geometry) {
