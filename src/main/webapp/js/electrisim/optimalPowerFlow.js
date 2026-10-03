@@ -564,6 +564,7 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         typ: `Bus${counters.busbar++}`,
                                         name: cell.mxObjectId.replace('#', '_'),
                                         id: cell.id,
+                                        userFriendlyName: userFriendlyName,
                                         vn_kv: cell.value.attributes[2].nodeValue,
                                         ...getAttributesAsObject(cell, {
                                             min_vm_pu: { name: 'min_vm_pu', optional: true },
@@ -595,6 +596,7 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         typ: `Load${counters.load++}`,
                                         name: cell.mxObjectId.replace('#', '_'),
                                         id: cell.id,
+                                        userFriendlyName: userFriendlyName,
                                         bus: getConnectedBusId(cell),
                                         ...loadOpf,
                                     };
@@ -619,6 +621,10 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         typ: `Line${counters.line++}`,
                                         name: cell.mxObjectId.replace('#', '_'),
                                         id: cell.id,
+                                        // Results are named from this, as for buses and
+                                        // loads; without it every line came back as
+                                        // "Line no. N (mxCell_...)".
+                                        userFriendlyName: userFriendlyName,
                                         busFrom: ends.busFrom,
                                         busTo: ends.busTo,
                                         ...getAttributesAsObject(cell, {
