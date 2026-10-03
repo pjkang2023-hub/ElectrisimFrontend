@@ -111,6 +111,24 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'mag0_rx', tr.mag0_rx);
             setAttr(cell, 'si0_hv_partial', tr.si0_hv_partial);
         }
+        // Optimal power flow: prices and dispatch limits. Without them the
+        // drawing kept the canvas defaults - no grid export, generators
+        // limited to 1.2x their setpoint, every source priced at 20/MWh.
+        const OPF_KEYS = ['controllable', 'min_p_mw', 'max_p_mw', 'min_q_mvar', 'max_q_mvar',
+            'opf_marginal_cost_eur_per_mwh', 'opf_cp2_eur_per_mw2'];
+        const applyOpf = (row) => OPF_KEYS.forEach((k) => setAttr(cell, k, row[k]));
+        if (gen && style.includes('shapeELXXX=Generator')) applyOpf(gen);
+        if (sgRow && (style.includes('shapeELXXX=Static Generator') || style.includes('shapeELXXX=Wind Turbine'))) {
+            applyOpf(sgRow);
+        }
+        if (stRow && style.includes('shapeELXXX=Storage')) applyOpf(stRow);
+        const egRow = pick(sidecar.ext_grid);
+        if (egRow && style.includes('shapeELXXX=External Grid')) applyOpf(egRow);
+        const busRow = pick(sidecar.bus);
+        if (busRow && style.includes('shapeELXXX=Bus')) {
+            setAttr(cell, 'min_vm_pu', busRow.min_vm_pu);
+            setAttr(cell, 'max_vm_pu', busRow.max_vm_pu);
+        }
         // Zero sequence for earth faults; without it the drawing kept the
         // canvas placeholders (0.1 ohm/km lines, a YNyn0yn0 three-winding
         // transformer pandapower cannot fault).

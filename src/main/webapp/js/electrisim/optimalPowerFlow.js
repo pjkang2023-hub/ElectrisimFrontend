@@ -534,6 +534,12 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         opf_cost_currency: { name: 'opf_cost_currency', optional: true },
                                         min_p_mw: { name: 'min_p_mw', optional: true },
                                         max_p_mw: { name: 'max_p_mw', optional: true },
+                                        // Sent like the other sources': a generator's
+                                        // reactive limits shape the optimum as much as
+                                        // its active ones.
+                                        min_q_mvar: { name: 'min_q_mvar', optional: true },
+                                        max_q_mvar: { name: 'max_q_mvar', optional: true },
+                                        controllable: { name: 'controllable', optional: true },
                                     });
                                     const genMinP = parseFloat(genOpfAttr.min_p_mw);
                                     const genMaxP = parseFloat(genOpfAttr.max_p_mw);
