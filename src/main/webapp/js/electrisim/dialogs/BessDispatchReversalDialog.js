@@ -55,10 +55,17 @@ function _connectedBusId(cell) {
     return '';
 }
 
-function _defaultPocBusId(buses) {
+/**
+ * A bus named POC (the preliminary-design plant has one), else the battery's
+ * own bus. The highest-voltage non-source bus was the fallback: on the
+ * transmission reference grid a 110 kV bus a 0.1 MW battery on a 0.4 kV
+ * feeder does not move.
+ */
+function _defaultPocBusId(buses, storage) {
     if (!buses.length) return '';
     const namedPoc = buses.find((b) => /poc/i.test(b.name || b.label || ''));
     if (namedPoc) return namedPoc.value;
+    if (storage?.busId && buses.some((b) => b.value === storage.busId)) return storage.busId;
     const notSource = buses.filter((b) => !b.isSource);
     const pool = [...(notSource.length ? notSource : buses)];
     pool.sort((a, b) => (b.vnKv || 0) - (a.vnKv || 0));
@@ -95,6 +102,7 @@ function _scanGraph(graph) {
                 label: `${_cellLabel(cell, id)} (P=${pMw} MW)`,
                 pMw: parseFloat(pMw) || 0,
                 snMva: parseFloat(_attr(cell, 'sn_mva', '0')) || 0,
+                busId: _connectedBusId(cell),
                 curveOn,
                 voltDep: /^(true|1|yes|on)$/i.test(String(_attr(cell, 'q_cap_voltage_dependent', ''))),
                 qSource
@@ -140,6 +148,7 @@ export class BessDispatchReversalDialog extends Dialog {
         }
 
         this._storageMeta = Object.fromEntries(storages.map((s) => [s.value, s]));
+        this._buses = buses;
         const ramp = _rampFor(storages[0]) || { start: 45, end: -45 };
 
         this.parameters = [
@@ -154,7 +163,7 @@ export class BessDispatchReversalDialog extends Dialog {
                 id: 'pocBusId',
                 label: 'POC bus (plant HV / grid connection — not the source bus)',
                 type: 'select',
-                value: _defaultPocBusId(buses),
+                value: _defaultPocBusId(buses, storages[0]),
                 options: buses.length ? buses : [{ value: '', label: '(no buses found)' }]
             },
             {
@@ -349,17 +358,22 @@ export class BessDispatchReversalDialog extends Dialog {
         this._followStorageForRamp();
     }
 
-    /** Choosing another battery sets the ramp to its size, in the form. */
+    /** Choosing another battery sets the ramp to its size and the POC to its bus, in the form. */
     _followStorageForRamp() {
         const select = this.inputs?.get('storageId');
         const start = this.inputs?.get('pStartMw');
         const end = this.inputs?.get('pEndMw');
+        const poc = this.inputs?.get('pocBusId');
         if (!select || !start || !end) return;
         select.addEventListener('change', () => {
-            const ramp = _rampFor(this._storageMeta[select.value]);
-            if (!ramp) return;
-            start.value = String(ramp.start);
-            end.value = String(ramp.end);
+            const meta = this._storageMeta[select.value];
+            const ramp = _rampFor(meta);
+            if (ramp) {
+                start.value = String(ramp.start);
+                end.value = String(ramp.end);
+            }
+            const busId = _defaultPocBusId(this._buses || [], meta);
+            if (poc && busId) poc.value = busId;
         });
     }
 }
