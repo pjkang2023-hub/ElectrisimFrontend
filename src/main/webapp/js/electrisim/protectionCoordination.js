@@ -175,6 +175,7 @@ function downloadProtectionResultsText(dataJson) {
             lines.push(`Scenarios: ${s.n_scenarios}`);
             lines.push(`Tripped (total across scenarios): ${s.n_tripped}`);
             lines.push(`Miscoordination warnings: ${s.n_miscoordination}`);
+            if (s.n_unwanted_trips != null) lines.push(`Unwanted trips: ${s.n_unwanted_trips}`);
             lines.push(`Fault type: ${s.fault_type}, case: ${s.case}, t_diff: ${s.t_diff_s}s`);
             if (s.fault_location_mode) {
                 lines.push(`Fault location mode: ${s.fault_location_mode}`);
@@ -203,8 +204,15 @@ function downloadProtectionResultsText(dataJson) {
         scenarios.forEach((sc, idx) => {
             const loc = sc.fault_location_mode === 'bus'
                 ? `bus fault at ${sc.fault_bus ?? '?'}`
-                : `line ${sc.sc_line_id}, fraction=${sc.sc_fraction}, fault bus=${sc.fault_bus ?? '?'}`;
+                : `fault on ${sc.fault_label ?? `line ${sc.sc_line_id}, fraction=${sc.sc_fraction}`}`;
             lines.push(`--- SCENARIO ${idx + 1} (${loc}) ---`);
+            if (Array.isArray(sc.primary_switches)) {
+                lines.push(`  Cleared by: ${sc.primary_switches.join(', ') || '-'}` +
+                    (sc.clearing_time_s != null ? ` in ${sc.clearing_time_s} s` : ' (not all of them trip)'));
+            }
+            if (sc.unprotected_sources && sc.unprotected_sources.length) {
+                lines.push(`  WARNING: ${sc.unprotected_sources.join(', ')} feeds the fault with no relayed breaker in between`);
+            }
             if (sc.short_circuit && sc.short_circuit.ikss_ka != null) {
                 lines.push(`  Short-circuit at fault bus: Ikss=${sc.short_circuit.ikss_ka} kA`);
             }
@@ -229,7 +237,14 @@ function downloadProtectionResultsText(dataJson) {
         if (dataJson.miscoordination && dataJson.miscoordination.length) {
             lines.push('--- MISCOORDINATION ---');
             dataJson.miscoordination.forEach(m => {
-                lines.push(`  primary=${m.primary_user_friendly_name} (t=${m.primary_t_s}s) | backup=${m.backup_user_friendly_name} (t=${m.backup_t_s}s) | Δt=${m.delta_t_s}s (< ${m.required_t_diff_s}s)`);
+                lines.push(`  ${m.fault_label ?? `line ${m.sc_line_id}`}: primary=${m.primary_user_friendly_name} (t=${m.primary_t_s}s) | backup=${m.backup_user_friendly_name} (t=${m.backup_t_s}s) | Δt=${m.delta_t_s}s (< ${m.required_t_diff_s}s)`);
+            });
+            lines.push('');
+        }
+        if (dataJson.unwanted_trips && dataJson.unwanted_trips.length) {
+            lines.push('--- UNWANTED TRIPS ---');
+            dataJson.unwanted_trips.forEach(m => {
+                lines.push(`  ${m.fault_label ?? `line ${m.sc_line_id}`}: ${m.user_friendly_name} trips at ${m.t_trip_s}s; fault cleared by ${(m.primary_switches || []).join(', ')} at ${m.clearing_time_s}s (needs +${m.required_t_diff_s}s)`);
             });
             lines.push('');
         }

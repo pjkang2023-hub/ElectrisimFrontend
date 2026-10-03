@@ -47,7 +47,10 @@ export class ProtectionCoordinationResultsDialog {
             const output = this.results.output || {};
             if (output.show_table !== false) this._renderTrippingTable(dialog);
             this._renderSettingsTable(dialog);
-            if (output.show_miscoordination !== false) this._renderMiscoordination(dialog);
+            if (output.show_miscoordination !== false) {
+                this._renderMiscoordination(dialog);
+                this._renderUnwantedTrips(dialog);
+            }
             if (output.show_curves !== false) this._renderChartPlaceholder(dialog);
         }
 
@@ -128,6 +131,7 @@ export class ProtectionCoordinationResultsDialog {
                 <div><b>Scenarios:</b> ${this._safe(s.n_scenarios)}</div>
                 <div><b>Trips:</b> ${this._safe(s.n_tripped)}</div>
                 <div><b>Miscoordinations:</b> ${this._safe(s.n_miscoordination)}</div>
+                <div><b>Unwanted trips:</b> ${this._safe(s.n_unwanted_trips)}</div>
                 <div><b>Fault type:</b> ${this._safe(s.fault_type)} (case ${this._safe(s.case)})</div>
                 <div><b>Fault location:</b> ${s.fault_location_mode === 'bus' ? 'Selected busbar' : 'Line fault'}</div>
                 <div><b>Grading margin t_diff:</b> ${this._safe(s.t_diff_s)} s</div>
@@ -178,9 +182,26 @@ export class ProtectionCoordinationResultsDialog {
             if (sc.fault_location_mode === 'bus') {
                 header.textContent = `Scenario ${idx + 1} — busbar fault at ${sc.fault_bus ?? '?'}`;
             } else {
-                header.textContent = `Scenario ${idx + 1} — line ${sc.sc_line_id}, fraction=${sc.sc_fraction}, fault bus=${sc.fault_bus ?? '?'}`;
+                header.textContent = `Scenario ${idx + 1} — fault on ${sc.fault_label ?? `line ${sc.sc_line_id} @ ${sc.sc_fraction}`}`;
             }
             section.appendChild(header);
+
+            // Which breakers must clear the fault, and sources nothing can cut off.
+            if (Array.isArray(sc.primary_switches)) {
+                const clear = document.createElement('div');
+                clear.style.cssText = 'font-size:12px;color:#495057;margin:0 0 6px 0;';
+                clear.textContent = sc.primary_switches.length
+                    ? `Cleared by ${sc.primary_switches.join(', ')}` +
+                      (sc.clearing_time_s != null ? ` in ${this._fmt(sc.clearing_time_s)} s` : ' - not all of them trip')
+                    : 'No relay lies between this fault and a source.';
+                section.appendChild(clear);
+            }
+            if (sc.unprotected_sources && sc.unprotected_sources.length) {
+                const unprot = document.createElement('div');
+                unprot.style.cssText = 'padding:6px 8px;border:1px solid #ffecb5;background:#fff3cd;color:#664d03;border-radius:4px;margin-bottom:6px;font-size:12px;';
+                unprot.textContent = `${sc.unprotected_sources.join(', ')} keeps feeding this fault: no breaker with a relay lies between it and the fault.`;
+                section.appendChild(unprot);
+            }
 
             if (sc.short_circuit && sc.short_circuit.ikss_ka != null) {
                 const scBox = document.createElement('div');
@@ -328,7 +349,46 @@ export class ProtectionCoordinationResultsDialog {
                 <td style="border:1px solid #f5c2c7;padding:6px;text-align:right;">${this._fmt(m.backup_t_s)}</td>
                 <td style="border:1px solid #f5c2c7;padding:6px;text-align:right;color:#b02a37;font-weight:600;">${this._fmt(m.delta_t_s)}</td>
                 <td style="border:1px solid #f5c2c7;padding:6px;text-align:right;">${this._fmt(m.required_t_diff_s)}</td>
-                <td style="border:1px solid #f5c2c7;padding:6px;">line ${this._escape(m.sc_line_id)} @ ${this._fmt(m.sc_fraction)}</td>
+                <td style="border:1px solid #f5c2c7;padding:6px;">${this._escape(m.fault_label ?? `line ${m.sc_line_id} @ ${m.sc_fraction}`)}</td>
+            `;
+            table.appendChild(tr);
+        });
+        section.appendChild(table);
+        dialog.appendChild(section);
+    }
+
+    /**
+     * Relays that are neither the fault's primaries nor their backups but trip
+     * before the fault is cleared (plus the grading margin) - on a meshed
+     * network, fault current also flows round the healthy side.
+     */
+    _renderUnwantedTrips(dialog) {
+        const rows = this.results.unwanted_trips || [];
+        if (!rows.length) return;
+        const section = document.createElement('div');
+        section.innerHTML = '<h3 style="margin:16px 0 12px 0;color:#b02a37;">Unwanted trips</h3>';
+        const table = document.createElement('table');
+        table.style.cssText = 'border-collapse:collapse;width:100%;border:1px solid #f5c2c7;font-size:12px;';
+        const td = 'border:1px solid #f5c2c7;padding:6px;';
+        table.innerHTML = `
+            <tr style="background:#f8d7da;color:#842029;">
+                <th style="${td}text-align:left;">Relay</th>
+                <th style="${td}text-align:right;">t_trip [s]</th>
+                <th style="${td}text-align:left;">Fault cleared by</th>
+                <th style="${td}text-align:right;">t_clear [s]</th>
+                <th style="${td}text-align:right;">Required t_diff [s]</th>
+                <th style="${td}text-align:left;">Scenario</th>
+            </tr>
+        `;
+        rows.forEach(m => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="${td}">${this._escape(m.user_friendly_name || m.switch_id || '?')}</td>
+                <td style="${td}text-align:right;color:#b02a37;font-weight:600;">${this._fmt(m.t_trip_s)}</td>
+                <td style="${td}">${this._escape((m.primary_switches || []).join(', '))}</td>
+                <td style="${td}text-align:right;">${this._fmt(m.clearing_time_s)}</td>
+                <td style="${td}text-align:right;">${this._fmt(m.required_t_diff_s)}</td>
+                <td style="${td}">${this._escape(m.fault_label ?? `line ${m.sc_line_id} @ ${m.sc_fraction}`)}</td>
             `;
             table.appendChild(tr);
         });
@@ -482,15 +542,15 @@ export class ProtectionCoordinationResultsDialog {
 
         const trips = [];
         (this.results.scenarios || []).forEach((sc, sci) => {
-            const lineId = sc.sc_line_id != null ? String(sc.sc_line_id) : '?';
-            const frac = sc.sc_fraction != null ? String(sc.sc_fraction) : '?';
+            const where = sc.fault_label
+                || `line ${sc.sc_line_id != null ? sc.sc_line_id : '?'} @ ${sc.sc_fraction != null ? sc.sc_fraction : '?'}`;
             (sc.trip || []).forEach(t => {
                 if (t.ikss_ka != null && isFinite(t.ikss_ka) && t.t_trip_s != null && isFinite(t.t_trip_s)) {
                     const name = t.user_friendly_name || t.switch_name || t.switch_id || 'trip';
                     trips.push({
                         x: t.ikss_ka * 1000.0,
                         y: t.t_trip_s,
-                        meta: `Scenario ${sci + 1} · line ${lineId} @ ${frac} · ${name}`
+                        meta: `Scenario ${sci + 1} · ${where} · ${name}`
                     });
                 }
             });
