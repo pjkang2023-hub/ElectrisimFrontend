@@ -805,8 +805,59 @@ function ratingOr(value, fallback) {
  * @param {Object} params - wizard inputs
  * @returns {{ created: boolean, cellIds: Object }}
  */
+const DEFAULT_CENTER_X = 520;
+const DEFAULT_START_Y = 40;
+const CLEAR_GAP = 200;
+
+/** Union of the geometries of top-level vertices (absolute on the default layer). */
+function topLevelBounds(graph, cells) {
+    let box = null;
+    cells.forEach((cell) => {
+        const g = graph.getCellGeometry(cell);
+        if (!g || g.relative) return;
+        const b = { x1: g.x, y1: g.y, x2: g.x + g.width, y2: g.y + g.height };
+        box = box
+            ? { x1: Math.min(box.x1, b.x1), y1: Math.min(box.y1, b.y1), x2: Math.max(box.x2, b.x2), y2: Math.max(box.y2, b.y2) }
+            : b;
+    });
+    return box;
+}
+
+function topLevelVertices(graph) {
+    const model = graph.getModel();
+    return model.getChildren(graph.getDefaultParent())?.filter((c) => model.isVertex(c)) || [];
+}
+
+/**
+ * Build or update the plant. A new plant was always drawn at the same fixed
+ * spot, on top of whatever the page already held; it now goes to the right
+ * of that, and its origin is kept on the plant's External Grid so an update
+ * leaves it where it is.
+ */
 export function buildOrUpdateBessPlant(graph, params) {
     if (!graph) throw new Error('Graph not available');
+    const isNew = !findPlantCells(graph).extGrid;
+    const explicit = Number(params.layoutCenterX) || Number(params.layoutStartY);
+    if (!isNew || explicit) return buildPlant(graph, params);
+
+    const before = new Set(topLevelVertices(graph));
+    const result = buildPlant(graph, params);
+    const others = topLevelBounds(graph, [...before]);
+    const plant = topLevelBounds(graph, topLevelVertices(graph).filter((c) => !before.has(c)));
+    if (!others || !plant) return result;
+    const overlaps = plant.x1 < others.x2 && others.x1 < plant.x2 && plant.y1 < others.y2 && others.y1 < plant.y2;
+    if (!overlaps) return result;
+    const dx = others.x2 + CLEAR_GAP - plant.x1;
+    const dy = others.y1 - plant.y1;
+    buildPlant(graph, {
+        ...params,
+        layoutCenterX: (Number(params.layoutCenterX) || DEFAULT_CENTER_X) + dx,
+        layoutStartY: (Number(params.layoutStartY) || DEFAULT_START_Y) + dy,
+    });
+    return result;
+}
+
+function buildPlant(graph, params) {
     const parent = graph.getDefaultParent();
     const existing = findPlantCells(graph);
     const nUnits = Math.max(1, Math.min(20, parseInt(params.numUnits, 10) || 1));
@@ -827,8 +878,12 @@ export function buildOrUpdateBessPlant(graph, params) {
     const hvKv = Number(params.hvVoltage_kV) || 132;
     const mvKv = Number(params.mvVoltage_kV) || 33;
     const lvKv = Number(params.lvVoltage_kV) || 0.69;
-    const centerX = Number(params.layoutCenterX) || 520;
-    const y = Number(params.layoutStartY) || 40;
+    // As asked, else where this plant was put before, else the default spot.
+    const extCell = findPlantCells(graph).extGrid;
+    const centerX = Number(params.layoutCenterX)
+        || Number(extCell?.value?.getAttribute?.('bessLayoutCenterX')) || DEFAULT_CENTER_X;
+    const y = Number(params.layoutStartY)
+        || Number(extCell?.value?.getAttribute?.('bessLayoutStartY')) || DEFAULT_START_Y;
 
     graph.getModel().beginUpdate();
     try {
@@ -960,6 +1015,8 @@ export function buildOrUpdateBessPlant(graph, params) {
             graph.getModel().setStyle(extGrid, EXT_GRID_STYLE);
             placeCell(graph, extGrid, extX, extY);
         }
+        setCellAttr(graph, extGrid, 'bessLayoutCenterX', centerX);
+        setCellAttr(graph, extGrid, 'bessLayoutStartY', y);
         if (pocBus) {
             removeEdgesBetween(graph, extGrid, existing.mvBus);
             const extEdge = ensureEdge(graph, parent, extGrid, pocBus, edgeStyleDeviceToBus(extGrid, pocBus));
