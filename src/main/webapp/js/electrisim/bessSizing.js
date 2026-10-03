@@ -505,9 +505,17 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
-/** Heading for the battery's P/Q: only a reached target is a requirement. */
+/**
+ * Heading for the battery's P/Q: only a target reached within the network's
+ * limits is a requirement. A load flow can converge numerically at a point
+ * no network carries (a 0.63 MVA transformer at 3920 %, a bus at 2.5 pu).
+ */
 function bessPowerHeading(r) {
-    return r.converged ? 'Required BESS Power' : 'BESS Power at the last solved point (target not reached)';
+    if (!r.converged) return 'BESS Power at the last solved point (target not reached)';
+    if (Array.isArray(r.violations) && r.violations.length) {
+        return 'BESS Power for this target (not feasible: network limits exceeded)';
+    }
+    return 'Required BESS Power';
 }
 
 /**
