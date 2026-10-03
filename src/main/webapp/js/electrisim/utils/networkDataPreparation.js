@@ -618,6 +618,10 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         XRdp: { name: 'XRdp', optional: true },
                         in_service: { name: 'in_service', optional: true },
                         slack: { name: 'slack', optional: true },
+                        // Reactive limits: studies that drive voltages hard
+                        // (grid-code P-Q / V-Q) hold the machine to them.
+                        min_q_mvar: { name: 'min_q_mvar', optional: true },
+                        max_q_mvar: { name: 'max_q_mvar', optional: true },
                         cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true },
                         opf_marginal_cost_eur_per_mwh: { name: 'opf_marginal_cost_eur_per_mwh', optional: true },
                         opf_cp2_eur_per_mw2: { name: 'opf_cp2_eur_per_mw2', optional: true },
