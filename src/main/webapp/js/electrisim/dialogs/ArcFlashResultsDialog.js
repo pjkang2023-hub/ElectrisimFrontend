@@ -205,9 +205,12 @@ export class ArcFlashResultsDialog {
         title.style.cssText = 'font-weight:700; margin-bottom:6px;';
         title.textContent = 'Study parameters';
         box.appendChild(title);
+        const equipment = p.equipment_mode === 'uniform'
+            ? `Working distance ${p.working_distance_mm ?? '—'} mm · Gap ${p.conductor_gap_mm ?? '—'} mm · ` +
+              `Enclosure ${p.enclosure_height_mm ?? '—'}×${p.enclosure_width_mm ?? '—'}×${p.enclosure_depth_mm ?? '—'} mm`
+            : 'Gap, enclosure and working distance typical for each bus voltage (IEEE 1584-2018 Table 8)';
         box.appendChild(document.createTextNode(
-            `Electrode ${p.electrode_config || 'VCB'} · Working distance ${p.working_distance_mm ?? '—'} mm · ` +
-            `Gap ${p.conductor_gap_mm ?? '—'} mm · Enclosure ${p.enclosure_height_mm ?? '—'}×${p.enclosure_width_mm ?? '—'}×${p.enclosure_depth_mm ?? '—'} mm · ` +
+            `Electrode ${p.electrode_config || 'VCB'} · ${equipment} · ` +
             `Clearing ${p.clearing_time_s ?? '—'} s / Iarc-min ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s · Fault 3ph max`
         ));
         container.appendChild(box);
@@ -308,6 +311,9 @@ export class ArcFlashResultsDialog {
         const cols = [
             { key: 'name', label: 'Bus', align: 'left' },
             { key: 'vn_kv', label: 'V [kV]', align: 'right', dec: 2 },
+            { key: 'equipment_class', label: 'Equipment', align: 'left' },
+            { key: 'working_distance_mm', label: 'D [mm]', align: 'right', dec: 0 },
+            { key: 'conductor_gap_mm', label: 'Gap [mm]', align: 'right', dec: 0 },
             { key: 'ikss_ka', label: 'Ikss [kA]', align: 'right', dec: 3 },
             { key: 'ia_ka', label: 'Ia [kA]', align: 'right', dec: 3 },
             { key: 'incident_energy_cal_cm2', label: 'IE [cal/cm²]', align: 'right', dec: 2 },
@@ -439,7 +445,9 @@ export class ArcFlashResultsDialog {
     _downloadCSV() {
         const rows = this._filteredSorted();
         const headers = [
-            'name', 'dialogName', 'id', 'object_id', 'vn_kv', 'ikss_ka', 'ia_ka', 'ia_full_ka', 'ia_min_ka',
+            'name', 'dialogName', 'id', 'object_id', 'vn_kv', 'equipment_class', 'working_distance_mm',
+            'conductor_gap_mm', 'enclosure_height_mm', 'enclosure_width_mm', 'enclosure_depth_mm',
+            'ikss_ka', 'ia_ka', 'ia_full_ka', 'ia_min_ka',
             'incident_energy_cal_cm2', 'arc_flash_boundary_mm', 'ppe_category', 'method', 'note'
         ];
         const lines = [headers.join(',')];
@@ -472,16 +480,20 @@ export class ArcFlashResultsDialog {
         t += `Standard: IEEE 1584-2018 (208 V–15 kV); Ralph Lee above 15 kV\n\n`;
         t += '--- PARAMETERS ---\n';
         t += `Electrode configuration : ${p.electrode_config || 'VCB'}\n`;
-        t += `Working distance        : ${p.working_distance_mm ?? '—'} mm\n`;
-        t += `Conductor gap           : ${p.conductor_gap_mm ?? '—'} mm\n`;
-        t += `Enclosure H×W×D         : ${p.enclosure_height_mm ?? '—'} × ${p.enclosure_width_mm ?? '—'} × ${p.enclosure_depth_mm ?? '—'} mm\n`;
+        if (p.equipment_mode === 'uniform') {
+            t += `Working distance        : ${p.working_distance_mm ?? '—'} mm\n`;
+            t += `Conductor gap           : ${p.conductor_gap_mm ?? '—'} mm\n`;
+            t += `Enclosure H×W×D         : ${p.enclosure_height_mm ?? '—'} × ${p.enclosure_width_mm ?? '—'} × ${p.enclosure_depth_mm ?? '—'} mm\n`;
+        } else {
+            t += `Equipment               : typical for each bus voltage (IEEE 1584-2018 Table 8)\n`;
+        }
         t += `Clearing time Iarc      : ${p.clearing_time_s ?? '—'} s\n`;
         t += `Clearing time Iarc-min  : ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s\n`;
         t += `Fault                   : 3-phase maximum\n\n`;
 
         t += '--- BUS RESULTS ---\n';
-        const widths = [22, 8, 10, 10, 12, 10, 12, 14];
-        const headers = ['Bus', 'V[kV]', 'Ikss[kA]', 'Ia[kA]', 'IE[cal/cm2]', 'AFB[mm]', 'PPE', 'Method'];
+        const widths = [22, 8, 17, 7, 7, 10, 10, 12, 10, 12, 14];
+        const headers = ['Bus', 'V[kV]', 'Equipment', 'D[mm]', 'Gap[mm]', 'Ikss[kA]', 'Ia[kA]', 'IE[cal/cm2]', 'AFB[mm]', 'PPE', 'Method'];
         const pad = (s, w) => String(s).padEnd(w).slice(0, w);
         t += headers.map((h, i) => pad(h, widths[i])).join(' | ') + '\n';
         t += widths.map(w => '-'.repeat(w)).join('-+-') + '\n';
@@ -490,6 +502,9 @@ export class ArcFlashResultsDialog {
             const row = [
                 displayName,
                 fmt(b.vn_kv, 2),
+                b.equipment_class || '',
+                fmt(b.working_distance_mm, 0),
+                fmt(b.conductor_gap_mm, 0),
                 fmt(b.ikss_ka, 3),
                 fmt(b.ia_ka, 3),
                 fmt(b.incident_energy_cal_cm2, 2),

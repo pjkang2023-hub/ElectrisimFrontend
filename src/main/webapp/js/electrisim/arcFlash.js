@@ -233,6 +233,7 @@ PPE Cat ${cell.ppe_category ?? 'N/A'}${methodTag}`;
             const simulationParameters = {
                 typ: 'ArcFlashPandaPower Parameters',
                 electrode_config: values.electrode_config || 'VCB',
+                equipment_mode: values.equipment_mode || 'by_voltage',
                 working_distance_mm: values.working_distance_mm || '455',
                 conductor_gap_mm: values.conductor_gap_mm || '25',
                 enclosure_height_mm: values.enclosure_height_mm || '508',

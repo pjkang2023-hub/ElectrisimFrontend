@@ -26,6 +26,15 @@ export class ArcFlashDialog extends Dialog {
                 ]
             },
             {
+                id: 'equipment_mode',
+                label: 'Gap, enclosure and working distance',
+                type: 'radio',
+                options: [
+                    { value: 'by_voltage', label: 'Typical for each bus voltage (IEEE 1584-2018 Table 8)', default: true },
+                    { value: 'uniform', label: 'The values below for every bus' }
+                ]
+            },
+            {
                 id: 'working_distance_mm',
                 label: 'Working Distance (mm)',
                 type: 'number',
@@ -88,7 +97,15 @@ export class ArcFlashDialog extends Dialog {
         return '<strong>Configure IEEE 1584-2018 arc flash parameters</strong><br>' +
             'A 3-phase max short-circuit study is run first, then incident energy, arc-flash boundary, ' +
             'and PPE category are calculated for each bus. Buses above 15&nbsp;kV use the Ralph Lee method. ' +
-            'Typical working distance: LV 455&nbsp;mm, MV 610&nbsp;mm.';
+            'Typical for each bus voltage: LV switchgear 32&nbsp;mm gap at 610&nbsp;mm, 5&nbsp;kV switchgear ' +
+            '104&nbsp;mm at 910&nbsp;mm, 15&nbsp;kV switchgear 152&nbsp;mm at 910&nbsp;mm, above 15&nbsp;kV 910&nbsp;mm.';
+    }
+
+    /** Values keyed by parameter id; mapping the array by position broke whenever a field was added. */
+    getFormValues() {
+        const values = super.getFormValues();
+        const ids = this.parameters.filter(p => p.type !== 'section').map(p => p.id);
+        return Object.fromEntries(ids.map((id, i) => [id, values[i]]));
     }
 
     show(callback) {
@@ -108,17 +125,6 @@ export class ArcFlashDialog extends Dialog {
                 let params;
                 if (values && typeof values === 'object' && !Array.isArray(values) && ('electrode_config' in values || 'working_distance_mm' in values)) {
                     params = values;
-                } else if (Array.isArray(values)) {
-                    params = {
-                        electrode_config: values[0],
-                        working_distance_mm: values[1],
-                        conductor_gap_mm: values[2],
-                        enclosure_height_mm: values[3],
-                        enclosure_width_mm: values[4],
-                        enclosure_depth_mm: values[5],
-                        clearing_time_s: values[6],
-                        clearing_time_min_s: values[7]
-                    };
                 } else {
                     params = values || {};
                 }
