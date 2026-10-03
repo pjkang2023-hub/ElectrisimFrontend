@@ -800,11 +800,6 @@ function ratingOr(value, fallback) {
     return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
-/**
- * @param {mxGraph} graph
- * @param {Object} params - wizard inputs
- * @returns {{ created: boolean, cellIds: Object }}
- */
 const DEFAULT_CENTER_X = 520;
 const DEFAULT_START_Y = 40;
 const CLEAR_GAP = 200;
@@ -833,6 +828,10 @@ function topLevelVertices(graph) {
  * spot, on top of whatever the page already held; it now goes to the right
  * of that, and its origin is kept on the plant's External Grid so an update
  * leaves it where it is.
+ *
+ * @param {mxGraph} graph
+ * @param {Object} params - wizard inputs
+ * @returns {{ created: boolean, cellIds: Object }}
  */
 export function buildOrUpdateBessPlant(graph, params) {
     if (!graph) throw new Error('Graph not available');
