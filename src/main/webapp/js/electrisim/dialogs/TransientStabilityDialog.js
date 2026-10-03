@@ -21,11 +21,26 @@ function getCellAttr(cell, attrName) {
     return null;
 }
 
+function technicalNameOf(cell) {
+    return cell.mxObjectId?.replace('#', '_') || String(cell.id);
+}
+
+/** The bus a device is drawn on. */
+function connectedBusName(cell) {
+    for (const edge of cell.edges || []) {
+        const other = edge.source === cell ? edge.target : edge.source;
+        const style = other?.getStyle?.() || '';
+        if (style.includes('shapeELXXX=Bus')) return technicalNameOf(other);
+    }
+    return '';
+}
+
 function collectBusesGeneratorsLines(graph) {
     const buses = [{ value: '', label: '(none)' }];
     const lines = [{ value: '', label: '(none)' }];
     const generators = [{ value: '', label: '(none — no trip)' }];
-    if (!graph?.getModel) return { buses, lines, generators };
+    let generatorBus = '';
+    if (!graph?.getModel) return { buses, lines, generators, generatorBus };
     const cells = graph.getModel().getChildCells(graph.getDefaultParent(), true, true) || [];
     for (const cell of cells) {
         const styleStr = cell.getStyle?.() || '';
@@ -40,9 +55,10 @@ function collectBusesGeneratorsLines(graph) {
             lines.push({ value: technicalName, label });
         } else if (componentType === 'Generator' || styleStr.includes('shapeELXXX=Generator')) {
             generators.push({ value: technicalName, label });
+            generatorBus = generatorBus || connectedBusName(cell);
         }
     }
-    return { buses, lines, generators };
+    return { buses, lines, generators, generatorBus };
 }
 
 export class TransientStabilityDialog extends Dialog {
@@ -54,7 +70,11 @@ export class TransientStabilityDialog extends Dialog {
         this.studyModalBoxWidth = 720;
         this.ui = editorUi || window.App?.main?.editor?.editorUi;
         this.graph = this.ui?.editor?.graph;
-        const { buses, lines, generators } = collectBusesGeneratorsLines(this.graph);
+        const { buses, lines, generators, generatorBus } = collectBusesGeneratorsLines(this.graph);
+        // A fault at the first generator's terminals by default. The second
+        // bus in the list was the default: often the External Grid's, which
+        // ANDES holds at its set voltage, so the fault did nothing.
+        const defaultBus = buses.some((b) => b.value === generatorBus) ? generatorBus : '';
 
         this.parameters = [
             {
@@ -93,10 +113,10 @@ export class TransientStabilityDialog extends Dialog {
                 id: 'fault_bus',
                 label: 'Fault Bus',
                 type: 'select',
-                options: buses.map((b, i) => ({
+                options: buses.map((b) => ({
                     value: b.value,
                     label: b.label,
-                    default: i === 1
+                    default: b.value === defaultBus
                 }))
             },
             {
@@ -155,13 +175,24 @@ export class TransientStabilityDialog extends Dialog {
                 id: 'poi_bus',
                 label: 'POI bus (voltage / ride-through check)',
                 type: 'select',
-                options: buses.map((b, i) => ({
+                options: buses.map((b) => ({
                     value: b.value,
                     label: b.label,
-                    default: i === 1
+                    default: b.value === defaultBus
                 }))
             }
         ];
+    }
+
+    /**
+     * Values keyed by parameter id. The base Dialog returns them as an array,
+     * which the caller read by name - so every field fell back to its
+     * default and nothing entered here reached the study.
+     */
+    getFormValues() {
+        const values = super.getFormValues();
+        const ids = this.parameters.filter((p) => p.type !== 'section').map((p) => p.id);
+        return Object.fromEntries(ids.map((id, i) => [id, values[i]]));
     }
 
     getDescription() {
