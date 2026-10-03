@@ -151,13 +151,39 @@
                 h.textContent = 'Participation (top states)';
                 h.style.cssText = 'margin:16px 0 8px;font-size:14px;';
                 wrap.appendChild(h);
+                const byIndex = new Map(modes.map((m) => [m.index, m]));
                 this.results.participation.forEach((p) => {
+                    const m = byIndex.get(p.mode_index);
                     const div = document.createElement('div');
                     div.style.cssText = 'font-size:12px;margin-bottom:8px;';
-                    div.innerHTML = `<strong>Mode ${p.mode_index}:</strong> ` +
-                        (p.states || []).map((s) => `${s.state} (${Number(s.factor).toFixed(3)})`).join(', ');
+                    const head = m
+                        ? `Mode ${p.mode_index} (${Number(m.freq_hz).toFixed(3)} Hz, ζ ${Number(m.damping_ratio).toFixed(3)})`
+                        : `Mode ${p.mode_index}`;
+                    const strong = document.createElement('strong');
+                    strong.textContent = `${head}: `;
+                    div.appendChild(strong);
+                    div.appendChild(document.createTextNode(
+                        (p.states || []).map((s) => `${s.state} (${Number(s.factor).toFixed(3)})`).join(', ')));
                     wrap.appendChild(div);
                 });
+            }
+
+            // How the model was built: plants with no dynamic model, for one.
+            if (this.results.warnings?.length) {
+                const box = document.createElement('div');
+                box.style.cssText = 'margin-top:12px;padding:8px 10px;background:#fff3cd;border:1px solid #ffecb5;border-radius:4px;color:#664d03;font-size:12px;';
+                const title = document.createElement('strong');
+                title.textContent = `Model notes (${this.results.warnings.length})`;
+                const list = document.createElement('ul');
+                list.style.cssText = 'margin:4px 0 0 18px;padding:0;';
+                this.results.warnings.forEach((w) => {
+                    const li = document.createElement('li');
+                    li.textContent = w;
+                    list.appendChild(li);
+                });
+                box.appendChild(title);
+                box.appendChild(list);
+                wrap.appendChild(box);
             }
 
             if (this.results.defaults_applied?.length) {
