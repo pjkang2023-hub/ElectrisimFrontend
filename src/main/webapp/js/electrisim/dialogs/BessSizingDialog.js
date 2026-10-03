@@ -67,20 +67,6 @@ export class BessSizingDialog extends Dialog {
                 placeholder: '50'
             },
             {
-                id: 'kpP',
-                label: 'Proportional Gain (P)',
-                type: 'number',
-                value: '0.5',
-                placeholder: '0.5'
-            },
-            {
-                id: 'kpQ',
-                label: 'Proportional Gain (Q)',
-                type: 'number',
-                value: '0.5',
-                placeholder: '0.5'
-            },
-            {
                 id: 'frequency',
                 label: 'Frequency',
                 type: 'radio',

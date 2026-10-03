@@ -84,8 +84,6 @@ function bessSizing(a, b, c) {
                 calculationMode: calculationMode,
                 tolerance: parseFloat(values.tolerance || '0.001'),
                 maxIterations: parseInt(values.maxIterations || '50'),
-                kpP: parseFloat(values.kpP || '0.5'),
-                kpQ: parseFloat(values.kpQ || '0.5'),
                 frequency: parseFloat(values.frequency || '50'),
                 algorithm: values.algorithm || 'nr'
             };
@@ -122,8 +120,6 @@ function bessSizing(a, b, c) {
                         calculationMode: item.calculationMode || 'single',
                         tolerance: item.tolerance,
                         maxIterations: item.maxIterations,
-                        kpP: item.kpP,
-                        kpQ: item.kpQ,
                         frequency: item.frequency,
                         algorithm: item.algorithm,
                         user_email: item.user_email
@@ -505,6 +501,47 @@ function drawScatterPlot(canvas, scenarios, plotType) {
 /**
  * Process and display BESS sizing results
  */
+function escapeHtml(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/** Heading for the battery's P/Q: only a reached target is a requirement. */
+function bessPowerHeading(r) {
+    return r.converged ? 'Required BESS Power' : 'BESS Power at the last solved point (target not reached)';
+}
+
+/**
+ * The battery's rating against what the target needs, and what that
+ * operating point does to the network (overloads, voltages).
+ */
+function bessChecksHtml(r, compact) {
+    const pad = compact ? '10px' : '15px';
+    const margin = compact ? '3px 0' : '5px 0';
+    const rating = r.storage_rating_mva;
+    let ratingText;
+    if (rating == null) {
+        ratingText = `${escapeHtml(r.storage_name || 'The battery')} has no MVA rating.`;
+    } else {
+        ratingText = `${escapeHtml(r.storage_name || 'Battery')} rated ${Number(rating).toFixed(3)} MVA: `
+            + (r.within_rating ? 'covers this target.' : 'too small for this target.');
+    }
+    const violations = Array.isArray(r.violations) ? r.violations : [];
+    const ok = r.within_rating !== false && !violations.length;
+    const rows = violations.map((v) =>
+        `<li>${escapeHtml(v.kind)} ${escapeHtml(v.name)}: ${v.value} ${escapeHtml(v.unit)} (limit ${v.limit} ${escapeHtml(v.unit)})</li>`).join('');
+    const notes = (Array.isArray(r.warnings) ? r.warnings : [])
+        .filter((w) => !/MVA rating|is rated|at this operating point/.test(w))
+        .map((w) => `<li>${escapeHtml(w)}</li>`).join('');
+    return `
+        <div style="margin-bottom: ${compact ? '15px' : '20px'}; padding: ${pad}; background-color: ${ok ? '#d4edda' : '#fff3cd'}; border-radius: 4px; border: 1px solid ${ok ? '#c3e6cb' : '#ffeaa7'};">
+            <h${compact ? 4 : 3} style="margin-top: 0; color: ${ok ? '#155724' : '#856404'};">Checks</h${compact ? 4 : 3}>
+            <p style="margin: ${margin};">${ratingText}</p>
+            <p style="margin: ${margin};">${violations.length ? 'Network limits exceeded at this operating point:' : 'No line, transformer or voltage limit exceeded.'}</p>
+            ${rows ? `<ul style="margin: 4px 0 0 18px; padding: 0;">${rows}</ul>` : ''}
+            ${notes ? `<ul style="margin: 4px 0 0 18px; padding: 0;">${notes}</ul>` : ''}
+        </div>`;
+}
+
 function processBessSizingResults(dataJson, graph, editorUi, values) {
     console.log('Processing BESS sizing results:', dataJson);
 
@@ -578,11 +615,13 @@ function processBessSizingResults(dataJson, graph, editorUi, values) {
                     </div>
 
                     <div style="margin-bottom: 15px; padding: 10px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
-                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #155724; font-size: 13px;">Required BESS Power</h4>
+                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #155724; font-size: 13px;">${bessPowerHeading(scenario)}</h4>
                         <p style="margin: 3px 0;"><strong>Active Power (P):</strong> ${scenario.bess_p_mw?.toFixed(4) || 'N/A'} MW</p>
                         <p style="margin: 3px 0;"><strong>Reactive Power (Q):</strong> ${scenario.bess_q_mvar?.toFixed(4) || 'N/A'} Mvar</p>
                         <p style="margin: 3px 0;"><strong>Apparent Power (S):</strong> ${bessS.toFixed(4)} MVA</p>
                     </div>
+
+                    ${bessChecksHtml(scenario, true)}
 
                     <div style="margin-bottom: 15px; padding: 10px; background-color: #e7f3ff; border-radius: 4px; border: 1px solid #b3d9ff;">
                         <h4 style="margin-top: 0; margin-bottom: 8px; color: #004085; font-size: 13px;">Achieved at POC</h4>
@@ -615,11 +654,13 @@ function processBessSizingResults(dataJson, graph, editorUi, values) {
             </div>
 
             <div style="margin-bottom: 20px; padding: 15px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
-                <h3 style="margin-top: 0; color: #155724;">Required BESS Power</h3>
+                <h3 style="margin-top: 0; color: #155724;">${bessPowerHeading(dataJson)}</h3>
                 <p style="margin: 5px 0;"><strong>Active Power (P):</strong> ${dataJson.bess_p_mw?.toFixed(4) || 'N/A'} MW</p>
                 <p style="margin: 5px 0;"><strong>Reactive Power (Q):</strong> ${dataJson.bess_q_mvar?.toFixed(4) || 'N/A'} Mvar</p>
                 <p style="margin: 5px 0;"><strong>Apparent Power (S):</strong> ${dataJson.bess_s_mva?.toFixed(4) || 'N/A'} MVA</p>
             </div>
+
+            ${bessChecksHtml(dataJson, false)}
 
             <div style="margin-bottom: 20px; padding: 15px; background-color: #e7f3ff; border-radius: 4px; border: 1px solid #b3d9ff;">
                 <h3 style="margin-top: 0; color: #004085;">Achieved at POC</h3>
@@ -717,7 +758,7 @@ function processBessSizingResults(dataJson, graph, editorUi, values) {
     } else {
         // Fallback: use alert if showDialog is not available
         alert('BESS Sizing completed!\n\n' + 
-              `Required BESS Power:\nP: ${dataJson.bess_p_mw?.toFixed(4)} MW\nQ: ${dataJson.bess_q_mvar?.toFixed(4)} Mvar\nS: ${dataJson.bess_s_mva?.toFixed(4)} MVA\n\n` +
+              `${bessPowerHeading(dataJson)}:\nP: ${dataJson.bess_p_mw?.toFixed(4)} MW\nQ: ${dataJson.bess_q_mvar?.toFixed(4)} Mvar\nS: ${dataJson.bess_s_mva?.toFixed(4)} MVA\n\n` +
               `Converged: ${dataJson.converged ? 'Yes' : 'No'}\nIterations: ${dataJson.iterations}`);
     }
 }
