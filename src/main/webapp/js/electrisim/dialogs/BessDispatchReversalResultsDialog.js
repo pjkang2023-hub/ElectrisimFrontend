@@ -71,7 +71,7 @@ export class BessDispatchReversalResultsDialog {
         sum.style.cssText = 'font-size:13px;color:#444;display:flex;flex-wrap:wrap;gap:12px 20px;';
         sum.innerHTML = `
             <span><strong>Engine:</strong> ${r.engine || '—'}</span>
-            <span><strong>POC:</strong> ${r.poc_bus || '—'}</span>
+            <span><strong>POC:</strong> ${r.poc_bus_label || r.poc_bus || '—'}</span>
             <span><strong>V(t):</strong> ${fmt(r.v_min, 4)} – ${fmt(r.v_max, 4)} pu</span>
             <span><strong>Limits:</strong> ${fmt(r.vmin_pu, 3)} – ${fmt(r.vmax_pu, 3)} pu</span>
             <span><strong>Check:</strong> ${passBadge(r.within_limits)}</span>
