@@ -66,10 +66,18 @@ export class EconomicAnalysisResultsDialog extends Dialog {
             periodEl.style.cssText = 'font-size: 11px; color: #6c757d; margin-top: 4px;';
             periodEl.textContent = periodHours > 1 ? `Integrated over ${periodHours.toLocaleString()} hour steps (Δt = 1 h)` : '1 hour (snapshot)';
             energyCard.appendChild(periodEl);
+            const annualMwh = this.results.total_energy_losses_annual_mwh;
+            if (annualMwh != null && periodHours !== 8760) {
+                const annualEl = document.createElement('div');
+                annualEl.style.cssText = 'font-size: 11px; color: #6c757d; margin-top: 2px;';
+                annualEl.textContent = `Per year: ${Number(annualMwh).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MWh (period × 8760 / ${periodHours.toLocaleString()})`;
+                energyCard.appendChild(annualEl);
+            }
             if (periodMwh != null && lifetimeYears >= 1) {
                 const lifetimeEl = document.createElement('div');
                 lifetimeEl.style.cssText = 'font-size: 11px; color: #6c757d; margin-top: 2px; font-weight: 500;';
-                lifetimeEl.textContent = `${lifetimeYears}-year lifetime total: ${Number(totalEnergyMwh).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MWh (= simulation period × ${lifetimeYears})`;
+                // The lifetime is losses per year × years; it was the period × years.
+                lifetimeEl.textContent = `${lifetimeYears}-year lifetime total: ${Number(totalEnergyMwh).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })} MWh (= per year × ${lifetimeYears})`;
                 energyCard.appendChild(lifetimeEl);
             }
             grid.appendChild(energyCard);
@@ -301,9 +309,25 @@ export class EconomicAnalysisResultsDialog extends Dialog {
             const footnote = document.createElement('p');
             footnote.style.cssText = 'margin: 16px 0 0 0; color: #6c757d; font-size: 12px; font-style: italic;';
             footnote.textContent = periodHours > 1
-                ? `Loss energy integrates simulated hourly losses over ${periodHours} steps (Δt = 1 h). Lifetime total scales by ${lifetimeYears} years; cost uses lifetime MWh × price.`
+                ? `Loss energy integrates simulated hourly losses over ${periodHours} steps (Δt = 1 h). Lifetime total is losses per year × ${lifetimeYears} years; cost uses lifetime MWh × price.`
                 : '1 hour equivalent, instantaneous snapshot.';
             form.appendChild(footnote);
+        }
+
+        // How the energy figure was obtained: a short period scaled to a year,
+        // hours whose power flow failed.
+        if (Array.isArray(this.results.warnings) && this.results.warnings.length) {
+            const notes = document.createElement('div');
+            notes.style.cssText = 'margin-top: 12px; padding: 8px 10px; background: #fff3cd; border: 1px solid #ffecb5; border-radius: 4px; color: #664d03; font-size: 12px;';
+            const list = document.createElement('ul');
+            list.style.cssText = 'margin: 0 0 0 18px; padding: 0;';
+            this.results.warnings.forEach((w) => {
+                const li = document.createElement('li');
+                li.textContent = w;
+                list.appendChild(li);
+            });
+            notes.appendChild(list);
+            form.appendChild(notes);
         }
 
         if (capexBreakdown.length === 0 && lossesBreakdown.length === 0 && totalEnergyMwh == null && !this.results.error) {
