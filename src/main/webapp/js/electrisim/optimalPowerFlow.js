@@ -124,6 +124,7 @@ const COMPONENT_TYPES = {
     WIND_TURBINE: 'Wind Turbine',
     SHUNT_REACTOR: 'Shunt Reactor',
     CAPACITOR: 'Capacitor',
+    MOTOR: 'Motor',
 };
 
 function optimalPowerFlowPandaPower(a, b, c) {
@@ -142,6 +143,7 @@ function optimalPowerFlowPandaPower(a, b, c) {
         switch: 0,
         shuntReactor: 0,
         capacitor: 0,
+        motor: 0,
     };
 
     const componentArrays = {
@@ -159,6 +161,7 @@ function optimalPowerFlowPandaPower(a, b, c) {
         switch: [],
         shuntReactor: [],
         capacitor: [],
+        motor: [],
     };    
 
     // Cache commonly used functions and values
@@ -705,6 +708,31 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     break;
                                 }
 
+                                // A motor is load; without it the dispatch ignored its demand.
+                                case COMPONENT_TYPES.MOTOR: {
+                                    componentArrays.motor.push({
+                                        typ: `Motor${counters.motor++}`,
+                                        name: cell.mxObjectId.replace('#', '_'),
+                                        id: cell.id,
+                                        userFriendlyName: userFriendlyName,
+                                        bus: getConnectedBusId(cell),
+                                        ...getAttributesAsObject(cell, {
+                                            pn_mech_mw: 'pn_mech_mw',
+                                            cos_phi: 'cos_phi',
+                                            efficiency_percent: 'efficiency_percent',
+                                            loading_percent: 'loading_percent',
+                                            scaling: 'scaling',
+                                            cos_phi_n: 'cos_phi_n',
+                                            efficiency_n_percent: 'efficiency_n_percent',
+                                            lrc_pu: 'lrc_pu',
+                                            rx: 'rx',
+                                            vn_kv: 'vn_kv',
+                                            in_service: { name: 'in_service', optional: true },
+                                        }),
+                                    });
+                                    break;
+                                }
+
                                 case COMPONENT_TYPES.TRANSFORMER:
                                 case 'Two Winding Transformer': {
                                     const { hv_bus, lv_bus } = getTransformerConnections(cell);
@@ -1088,6 +1116,7 @@ function optimalPowerFlowPandaPower(a, b, c) {
                             ...componentArrays.threeWindingTransformer,
                             ...componentArrays.load,
                             ...componentArrays.storage,
+                            ...componentArrays.motor,
                             ...componentArrays.dcLine,
                             ...componentArrays.line,
                             ...componentArrays.switch,

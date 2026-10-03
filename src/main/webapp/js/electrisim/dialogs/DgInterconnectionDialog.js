@@ -31,7 +31,8 @@ export class DgInterconnectionDialog extends Dialog {
             cells.forEach((cell) => {
                 if (!cell || cell.isEdge?.()) return;
                 const shape = _shapeOf(cell);
-                const id = cell.mxObjectId || cell.id;
+                // The payload names elements mxCell_N; the backend finds the DER by that name.
+                const id = cell.mxObjectId ? cell.mxObjectId.replace('#', '_') : cell.id;
                 const label = _cellLabel(cell, id);
                 if (shape === 'Bus' || shape === 'Busbar') {
                     buses.push({ value: String(id), label: `${label} (${id})` });
@@ -130,6 +131,17 @@ export class DgInterconnectionDialog extends Dialog {
             'Screens a proposed DER at a POC for voltage band, thermal loading, and reverse power. ' +
             'Optionally compares Volt-VAR InvControl mitigation and estimates hosting capacity by binary search. ' +
             'Related: BESS sizing (pandapower) and Grid Code Compliance (P-Q).';
+    }
+
+    /**
+     * Values keyed by parameter id. The base dialog returns them as an array,
+     * so values.derId was always undefined and every run stopped at
+     * "Please select a DER element".
+     */
+    getFormValues() {
+        const list = super.getFormValues();
+        const ids = this.parameters.filter((p) => p.type !== 'section').map((p) => p.id);
+        return Object.fromEntries(ids.map((id, i) => [id, list[i]]));
     }
 
     async checkSubscriptionStatus() {

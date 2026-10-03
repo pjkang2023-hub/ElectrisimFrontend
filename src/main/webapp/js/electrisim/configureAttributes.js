@@ -786,7 +786,7 @@ export function configureMotorAttributes(grafka, vertex, options = {}) {
     options = importedOptions(options);
    
     var g = mxUtils.createXmlDocument().createElement("object");
-    g.setAttribute("name", "Motor");
+    g.setAttribute("name", nameOr(options.name, "Motor"));
 
     //g.setAttribute("parameters", true);  //na potrzeby wyboru elementu z biblioteki
 

@@ -23,7 +23,7 @@ import {
 import { clearFaultLocationMarkers, placeFaultMarkersForScRows } from './utils/faultLocationMarkers.js';
 import { highlightCalculationErrorElements, calculationErrorHighlightSuffix } from './utils/calculationErrorHighlight.js';
 import ENV from './config/environment.js';
-import { getConnectedBusId, getLineBusEndpointsForPayload, getSwitchConnections, getThreeWindingConnections, confirmTransformerVoltageMismatches } from './loadFlow.js';
+import { getConnectedBusId, getLineBusEndpointsForPayload, getSwitchConnections, getThreeWindingConnections, confirmTransformerVoltageMismatches, getTransformerConnections as getTransformerBusesPP } from './loadFlow.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import { resolveStorageFixedPf } from './storageDialog.js';
 import { resolveStorageQSetpoint } from './utils/storageQCapability.js';
@@ -548,97 +548,13 @@ const downloadOpenDSSShortCircuitResults = (dataJson, graph) => {
     }
 };
 
-// Helper to get bus voltage from a bus cell (used by transformer connections)
-const getBusVoltageLevel = (busId, graph) => {
-    if (!busId || !graph) return 0;
-    const normalized = String(busId).replace(/#/g, '_');
-    const cells = graph.getModel().cells;
-    for (const cellId in cells) {
-        const busCell = cells[cellId];
-        if (!busCell) continue;
-        const cellName = busCell.mxObjectId
-            ? String(busCell.mxObjectId).replace(/#/g, '_')
-            : '';
-        if (cellName !== normalized && String(cellId) !== busId && `mxCell_${cellId}` !== normalized) {
-            continue;
-        }
-        const style = busCell.getStyle ? busCell.getStyle() : '';
-        if (style && style.includes('shapeELXXX=Bus')) {
-            if (busCell.value && busCell.value.attributes) {
-                for (let i = 0; i < busCell.value.attributes.length; i++) {
-                    const attr = busCell.value.attributes[i];
-                    if (attr.nodeName === 'vn_kv') {
-                        return parseFloat(attr.nodeValue) || 0;
-                    }
-                }
-            }
-        }
-    }
-    return 0;
-};
-
-// Add helper function for transformer bus connections (same as loadFlow.js)
-// Fixed to ensure HV bus is always busFrom and LV bus is always busTo
-const getTransformerConnections = (cell, graph) => {
-    if (cell.edges && cell.edges.length >= 2) {
-        const edge1 = cell.edges[0];
-        const edge2 = cell.edges[1];
-
-        const bus1Id = formatBusId(edge1.target && edge1.target.mxObjectId !== cell.mxObjectId ?
-            edge1.target.mxObjectId : 
-            edge1.source.mxObjectId);
-        const bus2Id = formatBusId(edge2.target && edge2.target.mxObjectId !== cell.mxObjectId ?
-            edge2.target.mxObjectId : 
-            edge2.source.mxObjectId);
-        
-        // Get voltage levels for both buses
-        const voltage1 = getBusVoltageLevel(bus1Id, graph);
-        const voltage2 = getBusVoltageLevel(bus2Id, graph);
-        
-        // Ensure HV bus is busFrom and LV bus is busTo
-        if (voltage1 >= voltage2) {
-            return {
-                busFrom: bus1Id,  // HV side
-                busTo: bus2Id     // LV side
-            };
-        } else {
-            return {
-                busFrom: bus2Id,  // HV side
-                busTo: bus1Id     // LV side
-            };
-        }
-    }
-    
-    // Fallback for single edge transformers
-    if (cell.edges && cell.edges.length === 1) {
-        const edge = cell.edges[0];
-        if (edge.source && edge.target) {
-            const sourceId = formatBusId(edge.source.mxObjectId);
-            const targetId = formatBusId(edge.target.mxObjectId);
-            
-            // Get voltage levels
-            const voltageSource = getBusVoltageLevel(sourceId, graph);
-            const voltageTarget = getBusVoltageLevel(targetId, graph);
-            
-            // Ensure HV bus is busFrom and LV bus is busTo
-            if (voltageSource >= voltageTarget) {
-                return {            
-                    busFrom: sourceId,  // HV side
-                    busTo: targetId     // LV side
-                };
-            } else {
-                return {            
-                    busFrom: targetId,  // HV side
-                    busTo: sourceId     // LV side
-                };
-            }
-        }
-    }
-    
-    return {            
-        busFrom: null,
-        busTo: null
-    };
+// Transformer terminals through the pandapower builder's resolver: it walks
+// through a switch (or line) to the bus and orders HV/LV by bus voltage. Taking
+// each edge's far end instead connected a switched transformer to its switch,
+// and the transformer was left out of the circuit.
+const getTransformerConnections = (cell) => {
+    const { hv_bus, lv_bus } = getTransformerBusesPP(cell);
+    return { busFrom: hv_bus || null, busTo: lv_bus || null, hv_bus, lv_bus };
 };
 
 const parseCellStyle = (style) => {
@@ -2621,6 +2537,7 @@ function collectNetworkDataStructured(graph) {
                         pfe_kw: 'pfe_kw',
                         i0_percent: 'i0_percent',
                         shift_degree: 'shift_degree',
+                        vector_group: { name: 'vector_group', optional: true },
                         tap_side: 'tap_side',
                         tap_neutral: 'tap_neutral',
                         tap_min: 'tap_min',
@@ -2653,6 +2570,9 @@ function collectNetworkDataStructured(graph) {
                         pfe_kw: transParams.pfe_kw || 0.0,
                         i0_percent: transParams.i0_percent || 0.0,
                         shift_degree: transParams.shift_degree || 0.0,
+                        // Sets the winding connections; without it every transformer
+                        // was built delta-wye, phase-shifting ones that are not.
+                        ...(transParams.vector_group ? { vector_group: transParams.vector_group } : {}),
                         tap_side: transParams.tap_side || 'hv',
                         tap_neutral: transParams.tap_neutral || 0,
                         tap_min: transParams.tap_min || -10,
@@ -3680,8 +3600,13 @@ function collectNetworkDataStructured(graph) {
                     }
                 } else if (styleObj && styleObj.shapeELXXX === 'Motor') {
                     // This is a motor element
+                    // The diagram's motor stores pn_mech_mw, cos_phi and loading_percent;
+                    // reading a pn_mw attribute that does not exist made every motor a
+                    // 1 MW load.
                     const motorParams = getAttributesAsObject(cell, {
-                        pn_mw: 'pn_mw',
+                        pn_mech_mw: 'pn_mech_mw',
+                        cos_phi: 'cos_phi',
+                        loading_percent: { name: 'loading_percent', optional: true },
                         cos_phi_n: 'cos_phi_n',
                         efficiency_percent: 'efficiency_percent',
                         scaling: 'scaling',
@@ -3704,9 +3629,10 @@ function collectNetworkDataStructured(graph) {
                         name: (cell.mxObjectId || cell.id) ? (cell.mxObjectId || cell.id).replace('#', '_') : `mxCell_${cellId}`,
                         id: (cell.mxObjectId || cell.id) ? (cell.mxObjectId || cell.id) : `mxCell_${cellId}`,
                         bus: getConnectedBusId(cell),
-                        // Use extracted parameters or defaults for critical values
-                        pn_mw: motorParams.pn_mw || 1.0,      // Default power
-                        cos_phi_n: motorParams.cos_phi_n || 0.9, // Default power factor
+                        pn_mech_mw: motorParams.pn_mech_mw || 0.0,
+                        cos_phi: motorParams.cos_phi || motorParams.cos_phi_n || 0.85,
+                        loading_percent: motorParams.loading_percent || 100.0,
+                        cos_phi_n: motorParams.cos_phi_n || motorParams.cos_phi || 0.85,
                         // Other parameters
                         efficiency_percent: motorParams.efficiency_percent || 95.0,
                         scaling: motorParams.scaling || 1.0,
@@ -3720,7 +3646,7 @@ function collectNetworkDataStructured(graph) {
                     
                     // Validate bus connection
                     if (cellData.bus) {
-                        dssLog(`Motor ${cellData.name}: bus=${cellData.bus}, Pn=${cellData.pn_mw}MW, cos_phi=${cellData.cos_phi_n}`);
+                        dssLog(`Motor ${cellData.name}: bus=${cellData.bus}, Pn=${cellData.pn_mech_mw}MW, cos_phi=${cellData.cos_phi}`);
                     } else {
                         dssWarn(`Motor ${cellData.name} missing bus connection`);
                     }

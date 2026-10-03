@@ -21,7 +21,7 @@ import {
     COMPONENT_TYPES,
     isSwitchClosedForPowerFlow
 } from '../loadFlow.js';
-import { computeWindTurbinePMw } from '../windTurbineDialog.js';
+import { computeWindTurbinePMw, windTurbineHasWindData } from '../windTurbineDialog.js';
 import { resolveStorageFixedPf } from '../storageDialog.js';
 import { resolveStorageQSetpoint } from './storageQCapability.js';
 import {
@@ -769,11 +769,15 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                     dyn_wt_DAMP: { name: 'dyn_wt_DAMP', optional: true },
                     dyn_dg_Tg: { name: 'dyn_dg_Tg', optional: true },
                 });
-                windAttrs.p_mw = computeWindTurbinePMw(
-                    windAttrs.wind_speed_ms,
-                    windAttrs.wind_power_curve_json,
-                    windAttrs.wind_curve_approx || 'linear'
-                );
+                // A turbine imported with a fixed output has no wind data; computing
+                // from that gave 0 MW, so every study built here lost the turbine.
+                if (windTurbineHasWindData(windAttrs.wind_speed_ms, windAttrs.wind_power_curve_json)) {
+                    windAttrs.p_mw = computeWindTurbinePMw(
+                        windAttrs.wind_speed_ms,
+                        windAttrs.wind_power_curve_json,
+                        windAttrs.wind_curve_approx || 'linear'
+                    );
+                }
                 const windTurbine = {
                     ...baseData,
                     typ: "Wind Turbine",
