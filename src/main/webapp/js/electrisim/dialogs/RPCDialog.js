@@ -1022,7 +1022,7 @@ export class RPCDialog extends Dialog {
             if (!isNaN(pn) && pn > 0) pRated = pn;
         }
         if (!(pRated > 0) && this.graph) {
-            pRated = estimateRpcInstalledMw(this.graph);
+            pRated = this._estimateInstalledCapacity();
         }
         if (!(pRated > 0)) {
             if (!silent) {
@@ -1037,6 +1037,7 @@ export class RPCDialog extends Dialog {
         this.uqRequirementRows.forEach(r => { if (r.tr.parentNode) tbody.removeChild(r.tr); });
         this.uqRequirementRows = [];
         scaled.forEach(row => this._addUqRequirementRow(tbody, row.u, row.qMin, row.qMax));
+        this._uqTemplateKey = templateKey;
         if (options.fillVoltageLevels !== false) {
             this._fillVoltageLevelsFromUqRows();
         }
@@ -1074,6 +1075,7 @@ export class RPCDialog extends Dialog {
             inp.type = 'number';
             inp.step = 'any';
             inp.value = val !== '' ? String(val) : '';
+            inp.addEventListener('input', () => { this._uqTemplateKey = null; });
             Object.assign(inp.style, {
                 width: '100%', padding: '4px 6px', border: '1px solid #ced4da',
                 borderRadius: '3px', fontSize: '13px', boxSizing: 'border-box'
@@ -1094,7 +1096,9 @@ export class RPCDialog extends Dialog {
         delBtn.onclick = () => {
             tbody.removeChild(tr);
             this.uqRequirementRows = this.uqRequirementRows.filter(r => r.tr !== tr);
+            this._uqTemplateKey = null;
         };
+        if (uVal === '' && qMinVal === '' && qMaxVal === '') this._uqTemplateKey = null;
         tdDel.appendChild(delBtn);
         tr.appendChild(tdDel);
         tbody.appendChild(tr);
@@ -1381,6 +1385,7 @@ export class RPCDialog extends Dialog {
             const qMax = +(r.q_max_pu * pRated).toFixed(2);
             this._addRequirementRow(this._requirementsBody, pMw, qMin, qMax);
         });
+        this._pqTemplateKey = templateKey;
 
         const pairedUq = PQ_TO_UQ_TEMPLATE[templateKey];
         if (pairedUq && this._uqTemplateSelect) {
@@ -1393,9 +1398,32 @@ export class RPCDialog extends Dialog {
                     this._uqTemplateDescEl.style.display = 'block';
                 }
                 this._renderUqTemplatePreview(pairedUq);
-                this._applyUqTemplate(pairedUq, { silent: true });
+                this._applyUqTemplate(pairedUq, { silent: true, fillVoltageLevels: options.fillVoltageLevels });
             }
         }
+    }
+
+    /**
+     * Keep template-filled requirement tables scaled to the plant. They hold
+     * MW / Mvar, computed from Pn when the template was applied; choosing other
+     * units or another Pn left them sized for the old plant (the default 2.3 MW
+     * of PV and wind for a 2.0 MW wind farm alone). A table edited by hand is
+     * left alone.
+     */
+    _followPlantForTemplates() {
+        const rescale = () => {
+            if (this._pqTemplateKey) {
+                this._applyTemplate(this._pqTemplateKey, { silent: true, fillVoltageLevels: false });
+            }
+            if (this._uqTemplateKey) {
+                this._applyUqTemplate(this._uqTemplateKey, { silent: true, fillVoltageLevels: false });
+            }
+        };
+        this._rescaleTemplatesToPlant = rescale;
+        const units = this.inputs.get('generatorIds');
+        ((units && units._multiCheckboxes) || []).forEach(cb => cb.addEventListener('change', rescale));
+        [this.inputs.get('pnMw'), this.inputs.get('pMaxMw'), this._pRatedInput]
+            .forEach(inp => inp && inp.addEventListener('input', rescale));
     }
 
     _estimateInstalledCapacity() {
@@ -1416,6 +1444,7 @@ export class RPCDialog extends Dialog {
             inp.type = 'number';
             inp.step = 'any';
             inp.value = val;
+            inp.addEventListener('input', () => { this._pqTemplateKey = null; });
             Object.assign(inp.style, {
                 width: '100%', padding: '4px', border: '1px solid #ced4da',
                 borderRadius: '3px', fontSize: '13px', boxSizing: 'border-box'
@@ -1436,7 +1465,9 @@ export class RPCDialog extends Dialog {
         delBtn.onclick = () => {
             tbody.removeChild(tr);
             this.requirementRows = this.requirementRows.filter(r => r.tr !== tr);
+            this._pqTemplateKey = null;
         };
+        if (p === '' && qMin === '' && qMax === '') this._pqTemplateKey = null;
         tdDel.appendChild(delBtn);
         tr.appendChild(tdDel);
         tbody.appendChild(tr);

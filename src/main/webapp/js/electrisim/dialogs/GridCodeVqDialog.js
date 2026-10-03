@@ -167,6 +167,7 @@ export class GridCodeVqDialog extends GridCodePqDialog {
             this._uqTemplateSelect.dispatchEvent(new Event('change'));
             this._applyUqTemplate('entsoe_ppm_uq_inner', { silent: true, fillVoltageLevels: false });
         }
+        this._followPlantForTemplates();
 
         const buttonContainer = document.createElement('div');
         Object.assign(buttonContainer.style, {

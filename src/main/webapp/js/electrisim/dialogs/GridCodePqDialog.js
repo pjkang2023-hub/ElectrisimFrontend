@@ -512,6 +512,8 @@ export class GridCodePqDialog extends RPCDialog {
             const n = cellAttr(genCell, 'name') || cellAttr(genCell, 'userFriendlyName') || '';
             cb.checked = names.has(String(n));
         });
+        // Ticked in code, so no change event: rescale the requirement here.
+        if (this._rescaleTemplatesToPlant) this._rescaleTemplatesToPlant();
     }
 
     _openParkControllerDialog() {
@@ -754,6 +756,7 @@ export class GridCodePqDialog extends RPCDialog {
             this._templateSelect.dispatchEvent(new Event('change'));
             this._applyTemplate('entsoe_ppm_inner', { silent: true });
         }
+        this._followPlantForTemplates();
 
         const buttonContainer = document.createElement('div');
         Object.assign(buttonContainer.style, {
