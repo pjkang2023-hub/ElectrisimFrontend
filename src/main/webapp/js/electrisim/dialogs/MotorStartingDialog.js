@@ -96,7 +96,9 @@ export class MotorStartingDialog extends Dialog {
             },
             {
                 id: 'reactor_x_pu',
-                label: 'Reactor Reactance (p.u.)',
+                // Relative to the locked-rotor impedance, as the backend uses it
+                // (motor voltage = 1 / (1 + x)); "p.u." alone read as the motor base.
+                label: 'Reactor Reactance (p.u. of the motor\'s locked-rotor impedance)',
                 type: 'number',
                 value: '0.25',
                 min: '0',
