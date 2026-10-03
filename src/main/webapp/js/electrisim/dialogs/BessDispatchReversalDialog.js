@@ -94,6 +94,7 @@ function _scanGraph(graph) {
                 value: id,
                 label: `${_cellLabel(cell, id)} (P=${pMw} MW)`,
                 pMw: parseFloat(pMw) || 0,
+                snMva: parseFloat(_attr(cell, 'sn_mva', '0')) || 0,
                 curveOn,
                 voltDep: /^(true|1|yes|on)$/i.test(String(_attr(cell, 'q_cap_voltage_dependent', ''))),
                 qSource
@@ -114,6 +115,16 @@ function _scanGraph(graph) {
     return { buses, storages };
 }
 
+/**
+ * The ramp a battery is screened with: its rating, else its drawn power,
+ * from charging to discharging (+ charge, - discharge). Null when the
+ * drawing gives neither.
+ */
+function _rampFor(meta) {
+    const size = (meta?.snMva > 0) ? meta.snMva : Math.abs(meta?.pMw || 0);
+    return size > 0 ? { start: size, end: -size } : null;
+}
+
 export class BessDispatchReversalDialog extends Dialog {
     constructor(editorUi) {
         super('BESS Dispatch Reversal (OpenDER + OpenDSS)', 'Calculate');
@@ -129,6 +140,7 @@ export class BessDispatchReversalDialog extends Dialog {
         }
 
         this._storageMeta = Object.fromEntries(storages.map((s) => [s.value, s]));
+        const ramp = _rampFor(storages[0]) || { start: 45, end: -45 };
 
         this.parameters = [
             {
@@ -149,14 +161,14 @@ export class BessDispatchReversalDialog extends Dialog {
                 id: 'pStartMw',
                 label: 'Start P [MW] (+ charge, − discharge)',
                 type: 'number',
-                value: '45',
+                value: String(ramp.start),
                 step: '1'
             },
             {
                 id: 'pEndMw',
                 label: 'End P [MW] after ramp',
                 type: 'number',
-                value: '-45',
+                value: String(ramp.end),
                 step: '1'
             },
             {
@@ -328,17 +340,27 @@ export class BessDispatchReversalDialog extends Dialog {
                 console.warn('Subscription check error', e);
             }
 
-            const meta = this._storageMeta[form.storageId];
-            if (meta && Number.isFinite(meta.pMw) && meta.pMw !== 0) {
-                if (!form.pStartMw || form.pStartMw === '45') {
-                    form.pStartMw = String(meta.pMw);
-                }
-                if (!form.pEndMw || form.pEndMw === '-45') {
-                    form.pEndMw = String(-meta.pMw);
-                }
-            }
+            // The ramp is what the form shows. Default values were swapped
+            // here for the battery's drawn P and its negative, unseen - for a
+            // discharging battery that ran discharge -> charge, the opposite
+            // reversal, so the voltage rise was never screened.
             callback?.(form);
         }, this.parameters);
+        this._followStorageForRamp();
+    }
+
+    /** Choosing another battery sets the ramp to its size, in the form. */
+    _followStorageForRamp() {
+        const select = this.inputs?.get('storageId');
+        const start = this.inputs?.get('pStartMw');
+        const end = this.inputs?.get('pEndMw');
+        if (!select || !start || !end) return;
+        select.addEventListener('change', () => {
+            const ramp = _rampFor(this._storageMeta[select.value]);
+            if (!ramp) return;
+            start.value = String(ramp.start);
+            end.value = String(ramp.end);
+        });
     }
 }
 
