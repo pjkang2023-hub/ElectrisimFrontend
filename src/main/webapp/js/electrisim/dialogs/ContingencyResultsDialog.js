@@ -390,14 +390,17 @@ export class ContingencyResultsDialog {
     }
 
     _groupViolations(violations) {
-        const groups = { voltage: [], thermal: [], other: [] };
+        // Loss of supply (a bus the outage cuts off) first: it is the worst.
+        const groups = { supply: [], voltage: [], thermal: [], other: [] };
         violations.forEach(v => {
             const t = (v.type || 'other').toLowerCase();
-            if (t === 'voltage') groups.voltage.push(v);
+            if (t === 'supply') groups.supply.push(v);
+            else if (t === 'voltage') groups.voltage.push(v);
             else if (t === 'thermal') groups.thermal.push(v);
             else groups.other.push(v);
         });
         if (!groups.other.length) delete groups.other;
+        if (!groups.supply.length) delete groups.supply;
         return groups;
     }
 
@@ -406,7 +409,7 @@ export class ContingencyResultsDialog {
         return String(raw)
             .replace(/^Line_/, 'Line ')
             .replace(/^Bus_/, 'Bus ')
-            .replace(/^Trafo_/, 'Transformer ')
+            .replace(/^Trafo3?w?_/, 'Transformer ')
             .replace(/^Gen_/, 'Generator ')
             .replace(/_/g, ' ');
     }
