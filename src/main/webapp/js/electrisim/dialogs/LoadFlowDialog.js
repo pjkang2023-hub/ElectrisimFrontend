@@ -901,7 +901,9 @@ export class LoadFlowDialog extends Dialog {
                 
                 devLog('LoadFlowDialog: Subscription check passed, proceeding with calculation...');
 
-                if (isDevEnvironment()) {
+                // The pandapower tab's checkboxes only: on the OpenDSS tab there
+                // is no exportPython, and every run logged "NOT FOUND" as an error.
+                if (isDevEnvironment() && this.currentTab === 'pandapower') {
                     console.log('=== PRE-CALLBACK DEBUG ===');
                     console.log('Current tab:', this.currentTab);
                     console.log('Inputs map size before getFormValues:', this.inputs.size);
