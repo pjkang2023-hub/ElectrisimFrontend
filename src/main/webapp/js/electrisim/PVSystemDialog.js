@@ -395,7 +395,7 @@ export class PVSystemDialog extends Dialog {
                 defaultSpectrum: 'default',
                 spectrumCsvInputId: 'pvsystem_spectrum_csv',
                 label: 'Harmonic spectrum',
-                description: 'Default (OpenDSS default), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum).',
+                description: 'Default (OpenDSS default), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum). OpenDSS scales it by the PV system\'s harmonic model, so the injected current is not the given % of the fundamental current: check it in the results.',
                 spectrumValue: this.data.spectrum,
                 csvValue: this.data.spectrum_csv,
                 rows: 5,

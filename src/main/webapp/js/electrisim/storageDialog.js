@@ -436,7 +436,7 @@ export class StorageDialog extends Dialog {
             {
                 id: 'spectrum',
                 label: 'Harmonic Spectrum',
-                description: 'Harmonic current injection spectrum for OpenDSS harmonic analysis. "default" is the built-in inverter spectrum.',
+                description: 'Harmonic spectrum for OpenDSS harmonic analysis. OpenDSS applies it to the unit\'s internal source, so the injected current also depends on the unit\'s impedance and falls with order - 5 % at h = 3 gives about 3.7 % of the fundamental current. "default" is OpenDSS\'s six-pulse rectifier spectrum (33 % 3rd, 20 % 5th, 14 % 7th), well above what a PWM inverter emits.',
                 type: 'select',
                 value: this.data.spectrum || 'default',
                 options: ['default', 'defaultgen', 'defaultload', 'pwm6', 'none']

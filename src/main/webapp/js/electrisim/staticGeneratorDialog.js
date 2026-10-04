@@ -464,7 +464,7 @@ export class StaticGeneratorDialog extends Dialog {
                 defaultSpectrum: 'defaultgen',
                 spectrumCsvInputId: 'staticgen_spectrum_csv',
                 label: 'Harmonic spectrum',
-                description: 'Default (OpenDSS defaultgen), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum).',
+                description: 'Default (OpenDSS defaultgen), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum). OpenDSS applies it to the voltage behind Xdpp, not to the current: the injected harmonic current is roughly %magnitude ÷ (h × Xdpp) of rated current - 5 % at h = 3 with Xdpp 0.20 gives about 8 %. Convert current emissions from a datasheet before entering them.',
                 spectrumValue: this.data.spectrum,
                 csvValue: this.data.spectrum_csv,
                 rows: 5
@@ -473,7 +473,7 @@ export class StaticGeneratorDialog extends Dialog {
                 id: 'Xdpp',
                 label: 'Subtransient reactance (Xdpp)',
                 unit: 'p.u.',
-                description: 'Subtransient reactance for harmonic model (per unit)',
+                description: 'Subtransient reactance for the harmonic model (per unit). It sets how much harmonic current the spectrum drives: halving it doubles the current.',
                 type: 'number',
                 value: String(this.data.Xdpp),
                 step: '0.01',
