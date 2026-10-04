@@ -127,19 +127,22 @@ function _computePqCompliance(curve, req, tolMvar = 1e-4) {
     return true;
 }
 
-function _maxAbsP(arr) {
+// Export only, as the backend counts it: the largest |P| took a PCC that only
+// imports - 7.55 MW at the transmission grid's 110 kV busbar, a 2.3 MW plant -
+// as the plant's Pmax and scaled the requirement 3.3 times.
+function _maxExportP(arr, sign) {
     let best = 0;
     (arr || []).forEach((p) => {
-        const a = Math.abs(Number(p));
+        const a = sign * Number(p);
         if (Number.isFinite(a) && a > best) best = a;
     });
     return best > 0 ? best : null;
 }
 
-function _pmaxPccFromCurve(curve) {
+function _pmaxPccFromCurve(curve, sign = 1) {
     if (!curve) return 0;
-    const a = _maxAbsP(curve.p_max_mw || curve.p_mw);
-    const b = _maxAbsP(curve.p_min_mw || curve.p_mw);
+    const a = _maxExportP(curve.p_max_mw || curve.p_mw, sign);
+    const b = _maxExportP(curve.p_min_mw || curve.p_mw, sign);
     if (a == null) return b || 0;
     if (b == null) return a;
     return Math.min(a, b);
@@ -149,8 +152,9 @@ function _pmaxPccFromCurves(data) {
     const overall = Number(data && data.pmax_pcc_mw);
     if (Number.isFinite(overall) && overall > 0) return overall;
     let best = 0;
+    const sign = data && data.generator_oriented === false ? -1 : 1;
     Object.values((data && data.curves) || {}).forEach((curve) => {
-        const v = _pmaxPccFromCurve(curve);
+        const v = _pmaxPccFromCurve(curve, sign);
         if (v > best) best = v;
     });
     return best;
@@ -186,7 +190,7 @@ function _attachPqRequirementOverlay(data) {
             : Object.keys(data.requirements);
         keys.forEach((v) => {
             const curve = _lookupVoltageMap(data.curves, v);
-            const pm = _pmaxPccFromCurve(curve);
+            const pm = _pmaxPccFromCurve(curve, data.generator_oriented === false ? -1 : 1);
             if (!(pm > 0)) return;
             const vReq = _lookupVoltageMap(data.requirements, v);
             if (!_hasPqReqPoints(vReq)) return;
@@ -228,6 +232,10 @@ function _attachPqRequirementOverlay(data) {
         }
     });
 
+    // A PCC that carries more than the plant: no verdict at any level.
+    if (data.assessable === false) {
+        (data.voltage_levels || []).forEach((v) => { data.compliance[Number(v).toFixed(4)] = null; });
+    }
     const flags = (data.voltage_levels || []).map((v) => _lookupVoltageMap(data.compliance, v));
     if (flags.some((f) => f === false)) data.pq_compliance = false;
     else if (flags.length && flags.every((f) => f === true)) data.pq_compliance = true;
@@ -423,7 +431,10 @@ export class GridCodePqResultsDialog extends RPCResultsDialog {
         let border = '#ffc107';
         let color = '#856404';
         let text = 'Compliance not assessed — no grid-code requirement was selected. Choose a Grid Code Template and run again.';
-        if (hasReq && ok === true) {
+        if (data.assessable === false) {
+            text = `NOT ASSESSABLE — with the plant's units off the PCC still carries ${Math.abs(Number(data.pcc_units_off_p_mw) || 0).toFixed(2)} MW: `
+                + "its P-Q is not the plant's. Choose the bus where the plant connects.";
+        } else if (hasReq && ok === true) {
             bg = '#d4edda';
             border = '#c3e6cb';
             color = '#155724';
@@ -440,7 +451,7 @@ export class GridCodePqResultsDialog extends RPCResultsDialog {
             padding: '10px 24px', fontSize: '14px', fontWeight: '700', letterSpacing: '0.01em',
             backgroundColor: bg, color, borderBottom: `1px solid ${border}`
         });
-        if (data.grid_code_template_name && hasReq) {
+        if (data.grid_code_template_name && hasReq && data.assessable !== false) {
             banner.textContent = `${text} (${data.grid_code_template_name})`;
         } else {
             banner.textContent = text;
@@ -610,7 +621,7 @@ export class GridCodePqResultsDialog extends RPCResultsDialog {
         }
         if (data.pq_compliance === true) extra.push(['P-Q compliance', 'COMPLIANT']);
         else if (data.pq_compliance === false) extra.push(['P-Q compliance', 'NON-COMPLIANT']);
-        else extra.push(['P-Q compliance', 'Not assessed']);
+        else extra.push(['P-Q compliance', data.assessable === false ? "Not assessable (PCC is not the plant's)" : 'Not assessed']);
         extra.forEach(([label, val]) => {
             const span = document.createElement('span');
             span.innerHTML = `<strong>${label}:</strong> ${val}`;

@@ -561,12 +561,32 @@ export class RPCDialog extends Dialog {
                 const fallback = plantKind === 'Wind Turbine'
                     ? `WT ${cell.getId()}`
                     : `SGen ${cell.getId()}`;
+                let bus = null;
+                (model.getEdges ? model.getEdges(cell) : (cell.edges || [])).forEach((edge) => {
+                    const other = edge.source === cell ? edge.target : edge.source;
+                    if (!bus && other && /shapeELXXX=Bus(;|$)/.test(String(other.getStyle ? other.getStyle() : other.style))) {
+                        bus = other.getId();
+                    }
+                });
                 plantGens.push({
                     value: cell.getId(),
-                    label: `${name || fallback} (${plantKind})`
+                    label: `${name || fallback} (${plantKind})`,
+                    bus,
+                    p: Math.abs(parseFloat(cell.value?.getAttribute?.('p_mw'))) || Math.abs(parseFloat(cell.value?.getAttribute?.('sn_mva'))) || 0,
                 });
             }
         });
+
+        // The plant's own bus by default - its largest unit's - with the units
+        // there. The first bus was the default: the transmission grid's 110 kV
+        // busbar, which carries the whole network's load, so the P-Q measured
+        // that load, not the plant.
+        const largest = [...plantGens].sort((a, b) => b.p - a.p)[0];
+        const plantBus = largest && largest.bus;
+        if (plantBus) {
+            busbars.forEach((b) => { if (b.value === plantBus) b.default = true; });
+            plantGens.forEach((g) => { g.checked = g.bus === plantBus; });
+        }
 
         const pccParam = this.parameters.find(p => p.id === 'pccBusId');
         if (pccParam) pccParam.options = busbars.length ? busbars : [{ value: '', label: 'No buses found' }];
@@ -642,7 +662,7 @@ export class RPCDialog extends Dialog {
             cb.type = 'checkbox';
             cb.value = opt.value || '';
             const hasValue = !!cb.value;
-            cb.checked = hasValue;
+            cb.checked = hasValue && opt.checked !== false;
             cb.disabled = !hasValue;
             cb.dataset.label = opt.label || '';
             row.appendChild(cb);
