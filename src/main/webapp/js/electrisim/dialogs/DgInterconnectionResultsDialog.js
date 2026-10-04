@@ -15,9 +15,12 @@ export class DgInterconnectionResultsDialog {
     }
 
     _statusBadge(status) {
-        const ok = String(status).toLowerCase() === 'pass';
-        const color = ok ? '#2e7d32' : '#c62828';
-        const bg = ok ? '#e8f5e9' : '#ffebee';
+        const s = String(status).toLowerCase();
+        const ok = s === 'pass';
+        // Reverse power is a warning, not a failed limit.
+        const warn = s === 'warning';
+        const color = ok ? '#2e7d32' : warn ? '#8a6d00' : '#c62828';
+        const bg = ok ? '#e8f5e9' : warn ? '#fff8e1' : '#ffebee';
         return `<span style="display:inline-block;padding:2px 8px;border-radius:4px;background:${bg};color:${color};font-weight:600;text-transform:uppercase;font-size:12px;">${this._escape(status)}</span>`;
     }
 
@@ -27,7 +30,8 @@ export class DgInterconnectionResultsDialog {
         }
         const rows = checks.map((c) => `
             <tr>
-                <td>${this._escape(c.name || c.id)}</td>
+                <td>${this._escape(c.name || c.id)}${c.note && c.status === 'warning'
+                    ? `<div style="font-size:11px;color:#666;">${this._escape(c.note)}</div>` : ''}</td>
                 <td>${this._statusBadge(c.status)}</td>
                 <td>${this._escape(c.value)} ${this._escape(c.unit || '')}</td>
                 <td>${this._escape(c.limit)} ${this._escape(c.unit || '')}</td>
