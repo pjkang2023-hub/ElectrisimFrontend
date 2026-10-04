@@ -5,6 +5,7 @@ import {
 } from './electricalSymbols.js';
 import { applyElectrisimImportSidecar as elApplySidecar } from './applyElectrisimImportSidecar.js';
 import { layoutRadialSld as elLayoutRadial, suggestImportSystem as elSuggestSystem } from './importRadialLayout.js';
+import { relayoutSld as elRelayoutSld } from './sldAutoLayout.js';
 
 /**
  * Are the geo coordinates worth using as a layout?
@@ -2374,6 +2375,9 @@ async function insertComponentsForData(grafka, a, target, point, data) {
         window._elxxxRadialUnplaced = [];
         window._elxxxUfn = {};
 
+        // An import without coordinates of its own is laid out again once drawn
+        // (sldAutoLayout.js); one with geo keeps its map.
+        grafka._elxxxRelayoutSld = false;
         if (importLayoutChoice === 'radial') {
             try {
                 const rawUfn = data._object.user_friendly_names && data._object.user_friendly_names._object;
@@ -2392,6 +2396,7 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 );
                 importPandapowerVerticalSld = true;
                 window._elxxxRadialImport = true;
+                grafka._elxxxRelayoutSld = busCount <= IMPORT_MAX_BUSES_VERTICAL_FEEDER;
                 busPositions.forEach((pos, busIndex) => {
                     if (!pos || !busData.data[busIndex]) return;
                     if (pos.leaf) window._elxxxRadialLeaves.add(String(busData.data[busIndex][0]));
@@ -2403,10 +2408,12 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 busPositions = null;
             }
         }
+        let importUsedGeo = false;
         if (importLayoutChoice === 'vertical') {
             if (importAllBusesHaveGeo(busData) && importGeoCanvasOk(busData)) {
                 busPositions = importBusPositionsFromGeo(busData, layoutCenterX, startY, IMPORT_GEO_SCALE);
                 importPandapowerVerticalSld = true;
+                importUsedGeo = true;
             } else if (
                 busCount > 0 &&
                 busCount <= IMPORT_MAX_BUSES_VERTICAL_FEEDER &&
@@ -2439,6 +2446,8 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     }
                 }
             }
+            grafka._elxxxRelayoutSld = !importUsedGeo && busCount > 0
+                && busCount <= IMPORT_MAX_BUSES_VERTICAL_FEEDER;
         }
 
         if (!busPositions) {
@@ -2682,7 +2691,10 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                     // Stub out of the winding pin, run clear of the bar, then tap down.
                     [[hvBusVertex, true, skipHvEdge], [lvBusVertex, false, skipLvEdge]]
                         .forEach(([busV, isHvWinding, hasSwitch]) => {
-                            if (!busV || !vertex.geometry) return;
+                            // A switched winding connects through its switch; a direct
+                            // edge as well drew the breaker bypassed (the transmission
+                            // tidy-up removed it again, the radial one did not).
+                            if (!busV || !vertex.geometry || hasSwitch) return;
                             const tg = vertex.geometry;
                             const bg = busV.geometry;
                             const cx = tg.x + tg.width / 2;
@@ -4310,6 +4322,16 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 elTransmissionFixLineSwitches(grafka, parent);
                 elTransmissionFixTrafoSwitches(grafka, parent);
             } catch (_rt) { /* layout tidy-up must never block the import */ }
+            if (grafka._elxxxRelayoutSld) {
+                grafka._elxxxRelayoutSld = false;
+                try {
+                    // Every bus has its place now, including any the radial
+                    // layout could not reach.
+                    if (elRelayoutSld(grafka, parent)) window._elxxxRadialUnplaced = [];
+                } catch (_lay) {
+                    console.warn('Single-line layout failed; keeping the import layout', _lay);
+                }
+            }
             try {
                 // The sidecar belongs to the model being imported; globalPandaPowerData
                 // only ever holds the bundled example network.
