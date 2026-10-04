@@ -165,9 +165,12 @@ export class DataCenterSiteScreeningResultsDialog {
 
     _table() {
         const table = document.createElement('table');
-        table.style.cssText = 'width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;';
+        // A floor on the width: in a narrow window the fixed layout crushed the
+        // columns - headers cut to "Loac", "Req", notes one letter a line - so
+        // scroll sideways instead.
+        table.style.cssText = 'width:100%;min-width:960px;border-collapse:collapse;font-size:13px;table-layout:fixed;';
         const colgroup = document.createElement('colgroup');
-        ['11%', '10%', '10%', '12%', '18%', '18%', '11%', '10%'].forEach((width) => {
+        ['11%', '9%', '9%', '10%', '15%', '15%', '10%', '21%'].forEach((width) => {
             const col = document.createElement('col');
             col.style.width = width;
             colgroup.appendChild(col);
