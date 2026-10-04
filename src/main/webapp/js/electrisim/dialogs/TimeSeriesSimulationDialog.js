@@ -159,7 +159,7 @@ class TimeSeriesSimulationDialog {
             { value: 'solar', label: 'Solar' },
             { value: 'wind', label: 'Wind' },
             { value: 'variable', label: 'Variable' }
-        ], 'Scale factors applied to each generator\'s base P.');
+        ], 'Scale factors applied to each static generator\'s base P (PV, wind).');
         genPresetWrap.style.flex = '1 1 140px';
         quickRow.appendChild(genPresetWrap);
 
@@ -179,7 +179,7 @@ class TimeSeriesSimulationDialog {
         quickRow.appendChild(mkQuickBtn('Apply load preset → all loads', 'Fill every load with scale factors from the load shape', () => {
             this.applyPresetToEditors('load', this._loadPresetSelect.value);
         }));
-        quickRow.appendChild(mkQuickBtn('Apply gen preset → all generators', 'Fill every generator/sgen with scale factors from the generation shape', () => {
+        quickRow.appendChild(mkQuickBtn('Apply gen preset → static generators (PV, wind)', 'Fill every static generator with scale factors from the generation shape; synchronous generators keep theirs', () => {
             this.applyPresetToEditors('gen', this._genPresetSelect.value);
         }));
         quickRow.appendChild(mkQuickBtn('Random MW (tutorial) → all', 'Notebook-style random absolute MW for every element', () => {
@@ -362,7 +362,9 @@ class TimeSeriesSimulationDialog {
         const n = parseInt(this._timeStepsInput?.value, 10) || 24;
         for (const editor of this.profileEditors) {
             const isLoad = editor.elementType === 'load';
-            const isGen = editor.elementType === 'gen' || editor.elementType === 'sgen';
+            // Static generators only: the Solar shape put a gas engine at
+            // 0 MW every night. A synchronous machine follows a profile of its own.
+            const isGen = editor.elementType === 'sgen';
             if (kind === 'load' && !isLoad) continue;
             if (kind === 'gen' && !isGen) continue;
             editor.modeSelect.value = 'scale';

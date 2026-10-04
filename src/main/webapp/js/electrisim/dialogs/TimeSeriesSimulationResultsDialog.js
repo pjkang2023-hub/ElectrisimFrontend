@@ -176,6 +176,21 @@
             `;
             card.appendChild(meta);
 
+            // What the run did beyond the profiles, e.g. a battery running empty.
+            if (this.results.notes?.length) {
+                const notes = document.createElement('div');
+                notes.style.cssText = `
+                    flex: 1 1 100%; padding: 8px 12px; background: #fff8e1; border: 1px solid #ffe08a;
+                    border-radius: 6px; font-size: 12px; color: #5d4300; line-height: 1.45;
+                `;
+                this.results.notes.forEach(text => {
+                    const line = document.createElement('div');
+                    line.textContent = text;
+                    notes.appendChild(line);
+                });
+                card.appendChild(notes);
+            }
+
             if (!converged && failedSteps.length) {
                 const warn = document.createElement('div');
                 warn.style.cssText = `
@@ -410,6 +425,9 @@
             this.addSeriesChart(container, this.results.gens, 'Generator active power', 'P (MW)', 'p_mw', timeSteps, '#558b2f');
             this.addSeriesChart(container, this.results.transformers, 'Transformer loading', 'Loading (%)', 'loading_percent', timeSteps, '#bf360c');
             this.addSeriesChart(container, this.results.externalgrids, 'External grid active power (+ import)', 'P (MW)', 'p_mw', timeSteps, '#37474f');
+            this.addSeriesChart(container, this.results.storages, 'Battery power (+ charging)', 'P (MW)', 'p_mw', timeSteps, '#00838f');
+            this.addSeriesChart(container, (this.results.storages || []).filter(s => s.soc_percent != null),
+                'Battery state of charge (end of hour)', 'SOC (%)', 'soc_percent', timeSteps, '#00838f');
         }
 
         addSeriesChart(container, rows, title, yLabel, key, timeSteps, color) {
@@ -621,6 +639,14 @@
                 const rows = [['time_step', 'name', 'p_mw', 'q_mvar']];
                 this.results.externalgrids.forEach(e => rows.push([e.time_step, e.name, e.p_mw, e.q_mvar]));
                 sheets.push({ name: 'res_ext_grid', rows });
+            }
+            if (this.results.storages?.length) {
+                const rows = [['time_step', 'name', 'p_mw', 'q_mvar', 'soc_percent', 'energy_mwh']];
+                this.results.storages.forEach(s => rows.push([s.time_step, s.name, s.p_mw, s.q_mvar, s.soc_percent, s.energy_mwh]));
+                sheets.push({ name: 'res_storage', rows });
+            }
+            if (this.results.notes?.length) {
+                sheets[0].rows.push([], ['Notes'], ...this.results.notes.map(note => [note]));
             }
             const profiles = this.results.profiles_used;
             if (profiles && Object.keys(profiles).length) {
