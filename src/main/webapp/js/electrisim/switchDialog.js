@@ -319,7 +319,7 @@ export class SwitchDialog extends Dialog {
             { id: 't_g', label: 'Primary trip time', symbol: 't_g', unit: 's', description: 'Primary backup trip time t> (DTOC / IDTOC).', type: 'number', value: String(this.data.t_g), step: '0.01', min: '0', showWhen: { protection_type: ['ocr'] } },
             { id: 't_diff', label: 'Grading margin', symbol: 't_diff', unit: 's', description: 'Time grading delay difference used for the miscoordination check.', type: 'number', value: String(this.data.t_diff), step: '0.01', min: '0', showWhen: { protection_type: ['ocr'] } },
             {
-                id: 'pickup_mode', label: 'Pickup current mode', description: 'Auto: pandapower derives pickup from line ratings. Manual: enter explicit pickup currents.',
+                id: 'pickup_mode', label: 'Pickup current mode', description: 'Auto: I> = the protected line or transformer rating x overload x CT factor; I>> = the current for a fault 95 % along the line, or 120 % of the transformer through-fault (none on a transformer load side); t> one grading step per relay nearer the grid. Manual: enter explicit pickup currents.',
                 type: 'select', value: this.data.pickup_mode, showWhen: { protection_type: ['ocr'] },
                 options: [
                     { value: 'auto', label: 'Auto (from line ratings)' },
@@ -329,7 +329,7 @@ export class SwitchDialog extends Dialog {
             { id: 'I_s_a', label: 'Pickup current I_s', symbol: 'I_s', unit: 'A', description: 'Manual IDMT / IDTOC pickup current.', type: 'number', value: String(this.data.I_s_a), step: '1', min: '0', showWhen: { protection_type: ['ocr'], pickup_mode: ['manual'] } },
             { id: 'I_g_a', label: 'Pickup current I>', symbol: 'I_g', unit: 'A', description: 'Manual DTOC / IDTOC primary pickup current.', type: 'number', value: String(this.data.I_g_a), step: '1', min: '0', showWhen: { protection_type: ['ocr'], pickup_mode: ['manual'] } },
             { id: 'I_gg_a', label: 'Pickup current I>>', symbol: 'I_gg', unit: 'A', description: 'Manual DTOC / IDTOC instantaneous pickup current.', type: 'number', value: String(this.data.I_gg_a), step: '1', min: '0', showWhen: { protection_type: ['ocr'], pickup_mode: ['manual'] } },
-            { id: 'overload_factor', label: 'Overload factor', description: 'Allowable line overload used to derive auto pickup currents.', type: 'number', value: String(this.data.overload_factor), step: '0.05', min: '1', showWhen: { protection_type: ['ocr'] } },
+            { id: 'overload_factor', label: 'Overload factor', description: 'Allowable overload of the protected line or transformer, used to derive auto pickup currents.', type: 'number', value: String(this.data.overload_factor), step: '0.05', min: '1', showWhen: { protection_type: ['ocr'] } },
             { id: 'ct_current_factor', label: 'CT current factor', description: 'CT multiplication factor for auto pickup currents.', type: 'number', value: String(this.data.ct_current_factor), step: '0.05', min: '1', showWhen: { protection_type: ['ocr'] } },
             { id: 'safety_factor', label: 'Safety factor', description: 'Safety limit applied to the instantaneous pickup current.', type: 'number', value: String(this.data.safety_factor), step: '0.05', min: '1', showWhen: { protection_type: ['ocr'] } },
 
