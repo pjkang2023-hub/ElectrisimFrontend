@@ -1,6 +1,6 @@
 import { SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE } from '../utils/dialogStyles.js';
 import { createDialogBracketGroup } from '../utils/dialogBracketGroup.js';
-import { GridCodePqDialog } from './GridCodePqDialog.js';
+import { GridCodePqDialog, GRID_CODE_Q_LIMITS_NOTE } from './GridCodePqDialog.js';
 import { RPCDialog } from './RPCDialog.js';
 
 console.log('GridCodeVqDialog.js LOADED');
@@ -69,6 +69,7 @@ export class GridCodeVqDialog extends GridCodePqDialog {
             'The chart plots Qmax and Qmin at the PCC (red) against the U-Q/Pmax grid-code envelope (blue, Q/Pmax × Pn). ' +
             '<strong>Plant Q dispatch</strong> is local Q on each unit or a <strong>Park Controller</strong> (constant Q at the PoC). ' +
             'Pandapower only. ' +
+            GRID_CODE_Q_LIMITS_NOTE +
             'See the <a href="https://electrisim.com/documentation.html#grid-code-vq" target="_blank" rel="noopener noreferrer">Electrisim documentation</a>.';
     }
 

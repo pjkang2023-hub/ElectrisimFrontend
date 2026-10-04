@@ -27,6 +27,17 @@ function cellAttr(cell, name) {
  * Grid Code Compliance (P-Q) dialog: P-Q/Pmax study with optional Park Controller.
  * Extends RPCDialog for templates and form widgets; no U-Q section.
  */
+/**
+ * Where the grid-code studies take each unit's Q limits from. They said "a
+ * circular Sn-P limit" unless the curve was enabled, but a 2.5 MVA wind farm
+ * at 2 MW got 1.10 Mvar, not 1.5: the default turbine table applies.
+ */
+export const GRID_CODE_Q_LIMITS_NOTE =
+    'Q limits come from each machine’s Q capability data, used here even when its curve is not enabled for load flow. ' +
+    'A wind turbine without its own Q(P,U) table, and a static generator still carrying the default placeholder curve, ' +
+    'get a typical full-converter turbine table (about ±0.44 S<sub>n</sub> at full power). ' +
+    'Other machines, and storage without an enabled curve, get the circular S<sub>n</sub>–P limit. ';
+
 export class GridCodePqDialog extends RPCDialog {
     constructor(editorUi) {
         super(editorUi);
@@ -308,7 +319,7 @@ export class GridCodePqDialog extends RPCDialog {
             'Two- and three-winding DiscreteTapControl and shunt reactor control (DiscreteShuntController and Line P→shunt step) ' +
             'can be enabled independently; shunt on/off still reduces compensation steps before plant Q when the loading limit binds. ' +
             'Pandapower only. Park Q applies to wind turbines and static generators. ' +
-            'Q limits come from each machine’s Q capability tab when that curve is enabled; otherwise a circular S<sub>n</sub>–P limit. ' +
+            GRID_CODE_Q_LIMITS_NOTE +
             'See the <a href="https://electrisim.com/documentation.html#grid-code-pq" target="_blank" rel="noopener noreferrer">Electrisim documentation</a>.';
     }
 

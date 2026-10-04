@@ -57,6 +57,20 @@ export class GridCodeVqResultsDialog extends RPCResultsDialog {
         titleBar.appendChild(closeBtn);
         dialog.appendChild(titleBar);
 
+        if (data.assessable === false) {
+            // A PCC carrying more than the plant measures the network's Q:
+            // say so, rather than judge the plant on it.
+            data.uq_compliance = null;
+            const banner = document.createElement('div');
+            Object.assign(banner.style, {
+                padding: '10px 24px', fontSize: '14px', fontWeight: '700',
+                backgroundColor: '#fff3cd', borderBottom: '1px solid #ffc107', color: '#856404'
+            });
+            banner.textContent = `NOT ASSESSABLE — with the plant's units off the PCC still carries ${Math.abs(Number(data.pcc_units_off_p_mw) || 0).toFixed(2)} MW: `
+                + "its U-Q is not the plant's. Choose the bus where the plant connects.";
+            dialog.appendChild(banner);
+        }
+
         dialog.appendChild(this._createVqSummaryBar(data));
 
         const content = document.createElement('div');
@@ -67,6 +81,11 @@ export class GridCodeVqResultsDialog extends RPCResultsDialog {
         const panel = document.createElement('div');
         this._buildUqChartPanel(panel, data);
         content.appendChild(panel);
+
+        // The backend's warnings were never shown here.
+        if (data.warnings && data.warnings.length > 0) {
+            content.appendChild(this._createWarningsSection(data.warnings));
+        }
 
         if (data.pcc_q_convention) {
             const note = document.createElement('div');
@@ -125,7 +144,9 @@ export class GridCodeVqResultsDialog extends RPCResultsDialog {
         if (data.q_dispatch_mode === 'park' && data.park_controller_name) {
             items.push(['Park', data.park_controller_name]);
         }
-        if (data.uq_compliance === true || data.uq_compliance === false) {
+        if (data.assessable === false) {
+            items.push(['Compliance', "Not assessable (PCC is not the plant's)"]);
+        } else if (data.uq_compliance === true || data.uq_compliance === false) {
             items.push(['Compliance', data.uq_compliance ? 'COMPLIANT' : 'NON-COMPLIANT']);
         }
 
