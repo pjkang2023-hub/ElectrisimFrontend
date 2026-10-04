@@ -180,17 +180,22 @@ export class LoadFlowDialog extends Dialog {
                     { value: 'Daily', label: 'Daily (24-hour simulation)' },
                     { value: 'Dutycycle', label: 'Dutycycle (Time-varying)' },
                     { value: 'Yearly', label: 'Yearly' },
-                    { value: 'M1', label: 'M1 (Monte Carlo load variation)' },
-                    { value: 'M2', label: 'M2 (Monte Carlo load variation)' },
-                    { value: 'M3', label: 'M3 (Monte Carlo at a specified hour)' }
+                    { value: 'M1', label: 'M1 (Monte Carlo, each load drawn separately)' },
+                    { value: 'M2', label: 'M2 (Monte Carlo days, every hour; one factor for all loads)' },
+                    { value: 'M3', label: 'M3 (Monte Carlo, one factor for all loads)' }
                 ]
             },
-            { id: 'monteCarloNumber', label: 'Monte Carlo Samples', type: 'number', value: '100', min: 1, visibleWhenMonteCarlo: true },
+            { id: 'monteCarloNumber', label: 'Monte Carlo Samples (days in M2)', type: 'number', value: '100', min: 1, visibleWhenMonteCarlo: true },
             {
                 id: 'monteCarloRandom', label: 'Random Distribution', type: 'radio', visibleWhenMonteCarlo: true,
                 options: [{ value: 'Uniform', label: 'Uniform', default: true }, { value: 'Gaussian', label: 'Gaussian' }]
             },
-            { id: 'monteCarloHour', label: 'Hour (M3 only)', type: 'number', value: '0', min: 0, max: 23, visibleWhenM3: true },
+            // M3 reads the hour from each load's yearly profile, and the model
+            // gives loads none, so the hour changed nothing.
+            {
+                id: 'monteCarloHour', label: 'Hour (M3 only - no effect: loads have no yearly profile)', type: 'number',
+                value: '0', min: 0, max: 23, visibleWhenM3: true, disabled: true
+            },
             {
                 id: 'algorithm',
                 label: 'Solution Algorithm',
@@ -653,6 +658,7 @@ export class LoadFlowDialog extends Dialog {
         input.type = param.type;
         input.id = param.id;
         input.value = param.value;
+        input.disabled = !!param.disabled;
         Object.assign(input.style, {
             width: '100%',
             padding: '6px 10px',
@@ -660,7 +666,7 @@ export class LoadFlowDialog extends Dialog {
             borderRadius: '4px',
             fontSize: '13px',
             fontFamily: 'inherit',
-            backgroundColor: '#ffffff'
+            backgroundColor: param.disabled ? '#e9ecef' : '#ffffff'
         });
         input.addEventListener('focus', () => {
             input.style.borderColor = '#007bff';

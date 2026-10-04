@@ -15,8 +15,8 @@ export class MonteCarloResultsDialog {
         dialog.innerHTML = `<h2 style="margin:0 0 16px;">OpenDSS Monte Carlo Results (${this._escape(this.results.mode)})</h2>
             <div style="padding:12px 14px;margin-bottom:18px;background:#f8f9fa;border:1px solid #dee2e6;border-radius:6px;font-size:13px;">
                 <b>Samples:</b> ${this._number(summary.n_samples)} &nbsp; <b>Converged:</b> ${this._number(summary.converged_count)}
-                &nbsp; <b>Failed:</b> ${this._number(summary.failed_count)} &nbsp; <b>Distribution:</b> ${this._escape(this.results.random)}
-            </div>`;
+                &nbsp; <b>Failed:</b> ${this._number(summary.failed_count)} &nbsp; <b>Load factors:</b> ${this._escape(this.results.random_description || this.results.random)}
+            </div>${this._notesHtml()}`;
         this._appendTable(dialog, 'Bus voltage statistics [pu]', this.results.bus_stats || [], [
             ['name', 'Bus'], ['vmin', 'Min'], ['p5', 'P5'], ['p50', 'P50'], ['p95', 'P95'], ['vmax', 'Max'], ['vmean', 'Mean']
         ]);
@@ -37,6 +37,13 @@ export class MonteCarloResultsDialog {
         this._ensureChartJs().then(() => this._drawChart(chartWrap.querySelector('canvas'))).catch((error) => {
             console.warn('Chart.js load failed; Monte Carlo chart omitted:', error);
         });
+    }
+
+    // What the mode did with this model: M2's days hour by hour, M3's hour ignored.
+    _notesHtml() {
+        const notes = this.results.notes || [];
+        if (!notes.length) return '';
+        return `<div style="padding:10px 14px;margin:-8px 0 18px;background:#fff8e1;border:1px solid #ffe08a;border-radius:6px;font-size:13px;">${notes.map(note => `<div>${this._escape(note)}</div>`).join('')}</div>`;
     }
 
     _appendTable(dialog, title, rows, columns) {
