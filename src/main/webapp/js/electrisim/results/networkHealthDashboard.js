@@ -457,24 +457,37 @@
 
         const linesSc = Array.isArray(d.lines_sc) ? d.lines_sc : [];
         const trafosSc = Array.isArray(d.trafos_sc) ? d.trafos_sc : [];
+        const trafos3wSc = Array.isArray(d.trafos3w_sc) ? d.trafos3w_sc : [];
         const branchEntities = [];
         for (const row of linesSc) {
             const ik = num(row.ikss_ka) ?? num(row.i_from_ka) ?? num(row.i_to_ka);
             if (ik === null) continue;
             branchEntities.push({
-                kind: 'Line', id: row.id, name: row.name, dialogName: nameOf(row), ikss_ka: ik,
+                kind: 'Line', kindLabel: 'line', id: row.id, name: row.name, dialogName: nameOf(row), ikss_ka: ik,
             });
         }
-        for (const row of trafosSc) {
-            const ik = num(row.ikss_hv_ka) ?? num(row.ikss_lv_ka) ?? num(row.i_hv_ka) ?? num(row.i_lv_ka);
-            if (ik === null) continue;
-            branchEntities.push({
-                kind: 'Trafo', id: row.id, name: row.name, dialogName: nameOf(row), ikss_ka: ik,
-            });
+        // A transformer's duty is its largest winding current. It was ranked
+        // by the HV side - the radial grid's 0.4 kV TA as 0.58 kA, not 29.0 -
+        // so no transformer reached the list, and 3W ones were never read.
+        const largestWinding = (row, sides) => {
+            const vals = sides.map(s => num(row[`ikss_${s}_ka`]) ?? num(row[`i_${s}_ka`])).filter(v => v !== null);
+            return vals.length ? Math.max(...vals) : null;
+        };
+        for (const [rows, sides, kind] of [[trafosSc, ['hv', 'lv'], 'Trafo'],
+                                           [trafos3wSc, ['hv', 'mv', 'lv'], '3W-Trafo']]) {
+            for (const row of rows) {
+                const ik = largestWinding(row, sides);
+                if (ik === null) continue;
+                branchEntities.push({
+                    kind, kindLabel: 'transformer', id: row.id, name: row.name, dialogName: nameOf(row), ikss_ka: ik,
+                });
+            }
         }
 
+        // Buses and branches rank together, so each says what it is: the
+        // radial grid's line LA1 sat among the buses unmarked.
         const topCandidates = [
-            ...busRows.filter(r => r.ikss_ka !== null).map(r => ({ kind: 'Bus', ...r })),
+            ...busRows.filter(r => r.ikss_ka !== null).map(r => ({ kind: 'Bus', kindLabel: 'bus', ...r })),
             ...branchEntities,
         ].sort((a, b) => (b.ikss_ka || 0) - (a.ikss_ka || 0));
 
@@ -928,11 +941,12 @@
             const cls = classifyLoading(pct);
             const color = cls === 'good' ? COLOR_GOOD : cls === 'warn' ? COLOR_WARN : COLOR_DANGER;
             const w = Math.min(100, pct).toFixed(0);
-            const label = e.dialogName || e.name || e.id || `${e.kind}`;
+            const base = e.dialogName || e.name || e.id || `${e.kind}`;
+            const label = e.kindLabel ? `${base} · ${e.kindLabel}` : base;
             const valueText = e.displayValue != null ? e.displayValue : `${pct.toFixed(0)}%`;
             const tooltip = e.displayValue != null
-                ? `${e.kind}: ${label} — ${e.displayValue}`
-                : `${e.kind}: ${label} — ${pct.toFixed(1)}% loading`;
+                ? `${e.kind}: ${base} — ${e.displayValue}`
+                : `${e.kind}: ${base} — ${pct.toFixed(1)}% loading`;
             const idx = targets.length;
             targets.push({ id: e.id, name: e.name });
             return `
