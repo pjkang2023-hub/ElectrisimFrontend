@@ -73,7 +73,7 @@ export class EconomicAnalysisDialog extends Dialog {
         if (hasGenerators) {
             params.push({
                 id: 'generation_profile',
-                label: 'Generation profile',
+                label: 'Generation profile (static generators and wind turbines; synchronous generators keep their P)',
                 type: 'select',
                 options: [
                     { value: 'constant', label: 'Constant', default: true },

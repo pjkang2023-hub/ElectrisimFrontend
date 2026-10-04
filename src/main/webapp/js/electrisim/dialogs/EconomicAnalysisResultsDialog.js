@@ -1,6 +1,15 @@
 import { Dialog } from '../Dialog.js';
 import { DIALOG_STYLES, attachBackdropCloseHandler } from '../utils/dialogStyles.js';
 
+const ECONOMIC_PROFILE_LABELS = {
+    constant: 'Constant',
+    daily: 'Residential (yearly, seasonal)',
+    industrial: 'Industrial (yearly, seasonal)',
+    solar: 'Solar (yearly, seasonal)',
+    onshore_wind: 'Onshore wind (yearly, seasonal)',
+    offshore_wind: 'Offshore wind (yearly, seasonal)',
+};
+
 export class EconomicAnalysisResultsDialog extends Dialog {
     constructor(results, editorUi, options = {}) {
         super('Economic Analysis Results', 'Close');
@@ -51,7 +60,18 @@ export class EconomicAnalysisResultsDialog extends Dialog {
             return card;
         };
 
-        grid.appendChild(makeCard('Total CAPEX', `${symbol} ${Number(totalCapex).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`));
+        // No element costed is not a CAPEX of 0: "$ 0.00" read as free.
+        const capexRows = Array.isArray(this.results.capex_breakdown) ? this.results.capex_breakdown : [];
+        if (capexRows.length) {
+            grid.appendChild(makeCard('Total CAPEX', `${symbol} ${Number(totalCapex).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`));
+        } else {
+            const capexCard = makeCard('Total CAPEX', 'Not entered');
+            const capexNote = document.createElement('div');
+            capexNote.style.cssText = 'font-size: 12px; color: #6c757d; margin-top: 4px;';
+            capexNote.textContent = "No element has a cost: set them in each element's Economic tab.";
+            capexCard.appendChild(capexNote);
+            grid.appendChild(capexCard);
+        }
         grid.appendChild(makeCard('Power Losses', `${Number(totalLosses).toFixed(4)} MW`));
         if (totalEnergyMwh != null) {
             const periodHours = this.results.energy_loss_period_hours ?? this.results.time_steps ?? 1;
@@ -272,11 +292,15 @@ export class EconomicAnalysisResultsDialog extends Dialog {
             profilesTitle.textContent = 'Profiles used for calculation';
             Object.assign(profilesTitle.style, sectionTitleStyle);
             profilesSection.appendChild(profilesTitle);
-            const loadProfileName = this.results.load_profile || 'constant';
-            const genProfileName = this.results.generation_profile || 'constant';
+            // The dialog's names, not the request's keys ("daily" for the
+            // seasonal residential profile).
+            const loadProfileName = ECONOMIC_PROFILE_LABELS[this.results.load_profile || 'constant']
+                || this.results.load_profile;
+            const genProfileName = ECONOMIC_PROFILE_LABELS[this.results.generation_profile || 'constant']
+                || this.results.generation_profile;
             const descParts = [];
             if (showLoadChart) descParts.push(`Load: ${loadProfileName}`);
-            if (showGenChart) descParts.push(`Generation: ${genProfileName}`);
+            if (showGenChart) descParts.push(`Generation (static generators and wind turbines): ${genProfileName}`);
             const hourCount = (loadProfileValues?.length || genProfileValues?.length) || 0;
             if (hourCount > 0) descParts.push(`(${hourCount} hours)`);
             const profileDesc = document.createElement('p');
