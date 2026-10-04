@@ -24,7 +24,7 @@ export const defaultLoadData = {
     min_q_mvar: -1.0,
     in_service: true,
     /** OpenDSS harmonic analysis (see configureLoadAttributes) */
-    spectrum: 'defaultload',
+    spectrum: 'none',  // no harmonic injection unless chosen
     spectrum_csv: '',
     pctSeriesRL: 100,
     conn: 'wye',
@@ -237,7 +237,7 @@ export class LoadDialog extends Dialog {
                 spectrumCsvInputId: 'spectrum_csv',
                 label: 'Harmonic spectrum',
                 symbol: 'spectrum / spectrum_csv',
-                description: 'Default (OpenDSS defaultload), Linear, Custom (CSV: harmonic order, magnitude %, angle), or None (no harmonic spectrum / spectrum=none).',
+                description: 'None (no harmonics, the default), OpenDSS default (defaultload: a 6-pulse rectifier), 1/h (square wave), or Custom (CSV: harmonic order, magnitude %, angle).',
                 spectrumValue: this.data.spectrum,
                 csvValue: this.data.spectrum_csv,
                 rows: 5

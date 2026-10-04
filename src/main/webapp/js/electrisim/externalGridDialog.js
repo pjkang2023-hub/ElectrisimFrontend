@@ -243,7 +243,7 @@ export class ExternalGridDialog extends Dialog {
                 defaultSpectrum: 'defaultvsource',
                 spectrumCsvInputId: 'extgrid_spectrum_csv',
                 label: 'Harmonic voltage spectrum',
-                description: 'Default (OpenDSS defaultvsource), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic voltage spectrum).',
+                description: 'Default (OpenDSS defaultvsource), 1/h (square wave), Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic voltage spectrum).',
                 spectrumValue: this.data.spectrum,
                 csvValue: this.data.spectrum_csv,
                 rows: 5

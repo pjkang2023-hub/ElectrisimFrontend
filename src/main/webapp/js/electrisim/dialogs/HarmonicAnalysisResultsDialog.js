@@ -183,15 +183,9 @@ function drawSpectrumSvg(svg, statusEl, points, legendLabel = 'Spectrum') {
  */
 export function showHarmonicAnalysisResultsDialog(dataJson, graph) {
     const dialogNameFor = createDialogNameResolver(graph);
-    const busLabel = (bus) => {
-        const dialog = dialogNameFor(bus);
-        const backend = bus.name || bus.id || '';
-        if (dialog) {
-            if (backend && String(backend) !== dialog) return `${dialog} (${backend})`;
-            return dialog;
-        }
-        return backend || '—';
-    };
+    // The bus as the diagram labels it; the backend name ("mxCell_264") was
+    // appended to every label.
+    const busLabel = (bus) => dialogNameFor(bus) || bus.name || bus.id || '—';
 
     const meta = dataJson.harmonic_analysis;
     const busbars = Array.isArray(dataJson.busbars) ? dataJson.busbars : [];

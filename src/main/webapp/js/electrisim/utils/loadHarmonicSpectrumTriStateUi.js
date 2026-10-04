@@ -1,7 +1,7 @@
 /**
  * Harmonic spectrum UI: Default / Linear / Custom CSV / None
  * (spectrum + spectrum_csv on the model; backend creates New Spectrum.* from CSV when custom).
- * None → spectrum=none: omit harmonic injection (OpenDSS convention; see https://opendss.epri.com/).
+ * None → spectrum=none: no harmonic injection (the backend gives OpenDSS a fundamental-only spectrum).
  */
 
 import {
@@ -64,10 +64,12 @@ export function mountHarmonicSpectrumTriState(param, rightColumn, inputsMap, opt
     sel.id = modeSelectId;
 
     [
-        [MODE_DEFAULT, 'Default'],
-        [MODE_LINEAR, 'Linear'],
+        // "Linear" injected 1/h (33 % 3rd, 20 % 5th ...), the opposite of a
+        // linear load; the stored values stay as they were.
+        [MODE_DEFAULT, 'OpenDSS default'],
+        [MODE_LINEAR, '1/h (square wave)'],
         [MODE_CUSTOM, 'Custom'],
-        [MODE_NONE, 'None']
+        [MODE_NONE, 'None (no harmonics)']
     ].forEach(([val, label]) => {
         const o = document.createElement('option');
         o.value = val;

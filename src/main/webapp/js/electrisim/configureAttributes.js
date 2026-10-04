@@ -138,7 +138,8 @@ export function configureGeneratorAttributes(grafka, vertex, options = {}) {
     // Harmonic analysis parameters (OpenDSS)
     // Reference: https://opendss.epri.com/Properties9.html
     g.setAttribute("Harmonic_parameters", "");
-    g.setAttribute("spectrum", options.spectrum || "defaultgen");
+    // A synchronous machine injects no harmonics (defaultgen gave it a spectrum).
+    g.setAttribute("spectrum", options.spectrum || "none");
     g.setAttribute("spectrum_csv", options.spectrum_csv || "");
     g.setAttribute("Xdpp", options.Xdpp || "0.20");
     g.setAttribute("XRdp", options.XRdp || "20");
@@ -643,7 +644,9 @@ export function configureLoadAttributes(grafka, vertex, options = {}) {
     // Harmonic analysis parameters (OpenDSS)
     // Reference: https://opendss.epri.com/HarmonicsLoadModeling.html
     g.setAttribute("Harmonic_parameters", "");
-    g.setAttribute("spectrum", options.spectrum || "defaultload");
+    // No harmonic injection unless chosen: OpenDSS's defaultload is a 6-pulse
+    // rectifier, which made every ordinary load a harmonic source.
+    g.setAttribute("spectrum", options.spectrum || "none");
     g.setAttribute("spectrum_csv", options.spectrum_csv || "");
     g.setAttribute("pctSeriesRL", options.pctSeriesRL ?? "100");
     g.setAttribute("conn", (options.conn || "wye").toLowerCase());
@@ -936,7 +939,9 @@ export function configureLoad1phAttributes(grafka, vertex, options = {}) {
     g.setAttribute("pf", options.pf ?? "1.0");
     g.setAttribute("phase", String(options.phase ?? 1));
     g.setAttribute("conn", (options.conn || "wye").toLowerCase());
-    g.setAttribute("spectrum", options.spectrum || "defaultload");
+    // No harmonic injection unless chosen: OpenDSS's defaultload is a 6-pulse
+    // rectifier, which made every ordinary load a harmonic source.
+    g.setAttribute("spectrum", options.spectrum || "none");
     g.setAttribute("pctSeriesRL", String(options.pctSeriesRL ?? 100));
     g.setAttribute("in_service", String(options.in_service !== false));
     grafka.getModel().setValue(vertex, g);
@@ -971,7 +976,8 @@ export function configureGenerator1phAttributes(grafka, vertex, options = {}) {
     g.setAttribute("model", String(options.model ?? 1));
     g.setAttribute("phase", String(options.phase ?? 1));
     g.setAttribute("conn", (options.conn || "wye").toLowerCase());
-    g.setAttribute("spectrum", options.spectrum || "defaultgen");
+    // A synchronous machine injects no harmonics (defaultgen gave it a spectrum).
+    g.setAttribute("spectrum", options.spectrum || "none");
     g.setAttribute("in_service", String(options.in_service !== false));
     grafka.getModel().setValue(vertex, g);
     grafka.insertVertex(vertex, null, options.name || 'Generator 1ph', 0.5, 1.1, 0, 0, null, true);

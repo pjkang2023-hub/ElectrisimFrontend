@@ -36,7 +36,7 @@ export const defaultGeneratorData = {
     opf_cp2_eur_per_mw2: '',
     in_service: true,
     /** OpenDSS harmonic (Generator) */
-    spectrum: 'defaultgen',
+    spectrum: 'none',  // a synchronous machine injects no harmonics
     spectrum_csv: '',
     Xdpp: 0.2,
     XRdp: 20,
@@ -326,7 +326,7 @@ export class GeneratorDialog extends Dialog {
                 spectrumCsvInputId: 'generator_spectrum_csv',
                 label: 'Harmonic spectrum',
                 symbol: 'spectrum / spectrum_csv',
-                description: 'Default (OpenDSS defaultgen), Linear, Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum).',
+                description: 'Default (OpenDSS defaultgen), 1/h (square wave), Custom (CSV: harmonic order, %magnitude, angle), or None (no harmonic spectrum).',
                 spectrumValue: this.data.spectrum,
                 csvValue: this.data.spectrum_csv,
                 rows: 5
