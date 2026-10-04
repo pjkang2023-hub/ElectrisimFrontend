@@ -394,6 +394,15 @@ export function estimateRpcInstalledMw(graph, generatorCellIds = null) {
         if (!cell || !cell.value) return;
         if (idSet && !idSet.has(String(cell.getId()))) return;
         const style = cell.getStyle();
+        // Storage counts when it is chosen as a plant unit (grid code P-Q):
+        // its rating as the backend takes it - min(Sn, Pmax charge and
+        // discharge), or its diagram P where it has none.
+        if (idSet && /shapeELXXX=Storage(;|$)/.test(String(style || ''))) {
+            const num = (k) => Math.abs(parseFloat(cell.value.getAttribute?.(k))) || 0;
+            const caps = [num('sn_mva'), num('max_p_mw'), num('min_p_mw')].filter((v) => v > 0);
+            totalP += caps.length ? Math.min(...caps) : num('p_mw');
+            return;
+        }
         if (!rpcPlantGeneratorKind(null, style)) return;
         try {
             const snAttr = cell.value.attributes?.getNamedItem('sn_mva');

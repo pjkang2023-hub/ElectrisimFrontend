@@ -205,10 +205,16 @@ function gridCodePqAnalysis(a, b, c) {
             const pccBusName = _getCellNetworkName(pccCell);
             const extGridName = _getCellNetworkName(extGridCell);
 
-            const generatorNames = selectedGenIds.map((id) => {
-                const cell = model.getCell(id);
-                return _getCellNetworkName(cell);
-            }).filter((n) => n !== null);
+            // Storage chosen as a plant unit goes to the backend as storage.
+            const isStorage = (cell) => /shapeELXXX=Storage(;|$)/.test(String(cell?.getStyle?.() || ''));
+            const generatorNames = selectedGenIds.map((id) => model.getCell(id))
+                .filter((cell) => !isStorage(cell))
+                .map((cell) => _getCellNetworkName(cell))
+                .filter((n) => n !== null);
+            const storageNames = selectedGenIds.map((id) => model.getCell(id))
+                .filter((cell) => isStorage(cell))
+                .map((cell) => _getCellNetworkName(cell))
+                .filter((n) => n !== null);
 
             const excludeIds = (values.excludeGeneratorIds || []).filter((id) => id);
             const excludeNames = excludeIds.map((id) => _getCellNetworkName(model.getCell(id))).filter((n) => n);
@@ -271,6 +277,7 @@ function gridCodePqAnalysis(a, b, c) {
                 pcc_bus_name: pccBusName,
                 ext_grid_name: extGridName,
                 generator_names: generatorNames,
+                storage_names: storageNames,
                 exclude_generator_names: excludeNames,
                 shunt_names: shuntNames,
                 park_controller_name: parkControllerName,

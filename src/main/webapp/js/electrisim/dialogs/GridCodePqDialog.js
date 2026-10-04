@@ -116,7 +116,7 @@ export class GridCodePqDialog extends RPCDialog {
             },
             {
                 id: 'generatorIds',
-                label: 'Static generators and wind turbines',
+                label: 'Static generators, wind turbines and storage',
                 type: 'multiselect',
                 options: [],
                 bracketGroup: 'plant'
@@ -322,7 +322,8 @@ export class GridCodePqDialog extends RPCDialog {
         const parks = [];
         const shunts = [];
         const plantGens = [];
-        const canvasEq = { trafo2w: false, trafo3w: false, shuntReactor: false, shuntComp: false };
+        const storages = [];
+        const canvasEq ={ trafo2w: false, trafo3w: false, shuntReactor: false, shuntComp: false };
         const cellsArray = model.getDescendants();
 
         cellsArray.forEach((cell) => {
@@ -358,7 +359,26 @@ export class GridCodePqDialog extends RPCDialog {
                     label: `${name || fallback} (${shape})`
                 });
             }
+            if (shape === 'Storage') {
+                storages.push({
+                    value: cell.getId(),
+                    label: `${name || `Storage ${cell.getId()}`} (Storage)`,
+                    bus: this._connectedBusId(cell)
+                });
+            }
         });
+
+        // Storage is a plant unit too: a battery on the plant's bus that could
+        // not be ticked stayed on with the units "off", and its 0.5 MW made
+        // the radial wind farm's PCC "not assessable". Those on the PCC bus
+        // are ticked with the plant's other units there.
+        const genParam = this.parameters.find((p) => p.id === 'generatorIds');
+        const pccDefault = (this.parameters.find((p) => p.id === 'pccBusId')?.options || []).find((o) => o.default);
+        if (genParam && storages.length && this._offersStorageUnits !== false) {
+            const units = (genParam.options || []).filter((o) => o.value);
+            storages.forEach((s) => { s.checked = Boolean(pccDefault && s.bus === pccDefault.value); });
+            genParam.options = [...units, ...storages];
+        }
 
         const parkParam = this.parameters.find((p) => p.id === 'parkControllerId');
         if (parkParam) {
@@ -388,6 +408,18 @@ export class GridCodePqDialog extends RPCDialog {
         // Exclude-from-P-scaling defaults to none selected (unlike generatorIds).
         this._uncheckExcludeByDefault = true;
         this._canvasEq = canvasEq;
+    }
+
+    _connectedBusId(cell) {
+        const model = this.graph.getModel();
+        let bus = null;
+        (model.getEdges ? model.getEdges(cell) : (cell.edges || [])).forEach((edge) => {
+            const other = edge.source === cell ? edge.target : edge.source;
+            if (!bus && other && /shapeELXXX=Bus(;|$)/.test(String(other.getStyle ? other.getStyle() : other.style))) {
+                bus = other.getId();
+            }
+        });
+        return bus;
     }
 
     _canvasHas(kind) {
