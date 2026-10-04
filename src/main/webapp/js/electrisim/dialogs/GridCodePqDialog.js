@@ -385,7 +385,7 @@ export class GridCodePqDialog extends RPCDialog {
         // are ticked with the plant's other units there.
         const genParam = this.parameters.find((p) => p.id === 'generatorIds');
         const pccDefault = (this.parameters.find((p) => p.id === 'pccBusId')?.options || []).find((o) => o.default);
-        if (genParam && storages.length && this._offersStorageUnits !== false) {
+        if (genParam && storages.length) {
             const units = (genParam.options || []).filter((o) => o.value);
             storages.forEach((s) => { s.checked = Boolean(pccDefault && s.bus === pccDefault.value); });
             genParam.options = [...units, ...storages];

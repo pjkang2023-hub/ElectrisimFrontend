@@ -50,10 +50,6 @@ export class GridCodeVqDialog extends GridCodePqDialog {
             qStep.bracketGroupTitle = 'Q search';
             qStep.help = 'Resolution of the Qmax/Qmin search at each envelope voltage. Smaller is slower and more precise.';
         }
-        // The V-Q study scales static generators and wind turbines only.
-        this._offersStorageUnits = false;
-        const gens = filtered.find((p) => p.id === 'generatorIds');
-        if (gens) gens.label = 'Static generators and wind turbines';
         const pnIdx = filtered.findIndex((p) => p.id === 'pnMw');
         if (pnIdx >= 0) {
             filtered.splice(pnIdx + 1, 0, pMaxField);
