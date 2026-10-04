@@ -519,6 +519,25 @@ function bessPowerHeading(r) {
 }
 
 /**
+ * The battery box's colours: green only for a size the network carries. An
+ * infeasible answer sat in the same green as a requirement - "62.36 MVA" read
+ * at a glance as the size to buy.
+ */
+function bessPowerBoxColors(r) {
+    if (!r.converged) return { bg: '#f8d7da', border: '#f5c6cb', fg: '#721c24' };
+    if (Array.isArray(r.violations) && r.violations.length) {
+        return { bg: '#fff3cd', border: '#ffeaa7', fg: '#856404' };
+    }
+    return { bg: '#d4edda', border: '#c3e6cb', fg: '#155724' };
+}
+
+// The signs, said where the numbers are: the POC target is export to the
+// grid, the battery's P is + charging and its Q + absorbing (pandapower's
+// storage convention), so a battery feeding the grid reads negative.
+const BESS_POC_SIGN_NOTE = '+ export to the grid, − import';
+const BESS_SIGN_NOTE = 'P: − discharging, + charging · Q: − injecting, + absorbing';
+
+/**
  * The battery's rating against what the target needs, and what that
  * operating point does to the network (overloads, voltages).
  */
@@ -612,21 +631,24 @@ function processBessSizingResults(dataJson, graph, editorUi, values) {
 
         scenarios.forEach((scenario, index) => {
             const bessS = Math.sqrt(Math.pow(scenario.bess_p_mw || 0, 2) + Math.pow(scenario.bess_q_mvar || 0, 2));
+            const box = bessPowerBoxColors(scenario);
             resultsHtml += `
                 <div style="margin-bottom: 20px; padding: 15px; background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'}; border: 1px solid #dee2e6; border-radius: 4px;">
                     <h3 style="margin-top: 0; color: #007bff; border-bottom: 2px solid #007bff; padding-bottom: 8px;">${scenario.scenario_name || `Scenario ${index + 1}`}</h3>
-                    
+
                     <div style="margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-radius: 4px;">
                         <h4 style="margin-top: 0; margin-bottom: 8px; color: #495057; font-size: 13px;">Target at POC</h4>
                         <p style="margin: 3px 0;"><strong>Active Power (P):</strong> ${scenario.scenario_p?.toFixed(1) || 'N/A'} MW</p>
                         <p style="margin: 3px 0;"><strong>Reactive Power (Q):</strong> ${scenario.scenario_q?.toFixed(1) || 'N/A'} Mvar</p>
+                        <p style="margin: 3px 0; font-size: 12px; color: #6c757d;">${BESS_POC_SIGN_NOTE}</p>
                     </div>
 
-                    <div style="margin-bottom: 15px; padding: 10px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
-                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #155724; font-size: 13px;">${bessPowerHeading(scenario)}</h4>
+                    <div style="margin-bottom: 15px; padding: 10px; background-color: ${box.bg}; border-radius: 4px; border: 1px solid ${box.border};">
+                        <h4 style="margin-top: 0; margin-bottom: 8px; color: ${box.fg}; font-size: 13px;">${bessPowerHeading(scenario)}</h4>
                         <p style="margin: 3px 0;"><strong>Active Power (P):</strong> ${scenario.bess_p_mw?.toFixed(4) || 'N/A'} MW</p>
                         <p style="margin: 3px 0;"><strong>Reactive Power (Q):</strong> ${scenario.bess_q_mvar?.toFixed(4) || 'N/A'} Mvar</p>
                         <p style="margin: 3px 0;"><strong>Apparent Power (S):</strong> ${bessS.toFixed(4)} MVA</p>
+                        <p style="margin: 3px 0; font-size: 12px; color: #6c757d;">${BESS_SIGN_NOTE}</p>
                     </div>
 
                     ${bessChecksHtml(scenario, true)}
@@ -652,20 +674,23 @@ function processBessSizingResults(dataJson, graph, editorUi, values) {
         });
     } else {
         // Single target display (existing logic)
+        const box = bessPowerBoxColors(dataJson);
         resultsHtml = `
             <h2 style="margin-top: 0; color: #007bff; margin-bottom: 20px;">BESS Sizing Results</h2>
-            
+
             <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 4px;">
                 <h3 style="margin-top: 0; color: #495057;">Target at POC</h3>
                 <p style="margin: 5px 0;"><strong>Active Power (P):</strong> ${values.targetP} MW</p>
                 <p style="margin: 5px 0;"><strong>Reactive Power (Q):</strong> ${values.targetQ} Mvar</p>
+                <p style="margin: 5px 0; font-size: 12px; color: #6c757d;">${BESS_POC_SIGN_NOTE}</p>
             </div>
 
-            <div style="margin-bottom: 20px; padding: 15px; background-color: #d4edda; border-radius: 4px; border: 1px solid #c3e6cb;">
-                <h3 style="margin-top: 0; color: #155724;">${bessPowerHeading(dataJson)}</h3>
+            <div style="margin-bottom: 20px; padding: 15px; background-color: ${box.bg}; border-radius: 4px; border: 1px solid ${box.border};">
+                <h3 style="margin-top: 0; color: ${box.fg};">${bessPowerHeading(dataJson)}</h3>
                 <p style="margin: 5px 0;"><strong>Active Power (P):</strong> ${dataJson.bess_p_mw?.toFixed(4) || 'N/A'} MW</p>
                 <p style="margin: 5px 0;"><strong>Reactive Power (Q):</strong> ${dataJson.bess_q_mvar?.toFixed(4) || 'N/A'} Mvar</p>
                 <p style="margin: 5px 0;"><strong>Apparent Power (S):</strong> ${dataJson.bess_s_mva?.toFixed(4) || 'N/A'} MVA</p>
+                <p style="margin: 5px 0; font-size: 12px; color: #6c757d;">${BESS_SIGN_NOTE}</p>
             </div>
 
             ${bessChecksHtml(dataJson, false)}

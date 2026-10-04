@@ -38,7 +38,7 @@ export class BessSizingDialog extends Dialog {
             },
             {
                 id: 'targetP',
-                label: 'Target Active Power at POC (MW)',
+                label: 'Target Active Power at POC (MW, + export to the grid)',
                 type: 'number',
                 value: '10.0',
                 placeholder: '10.0',
@@ -46,7 +46,7 @@ export class BessSizingDialog extends Dialog {
             },
             {
                 id: 'targetQ',
-                label: 'Target Reactive Power at POC (Mvar)',
+                label: 'Target Reactive Power at POC (Mvar, + export to the grid)',
                 type: 'number',
                 value: '5.0',
                 placeholder: '5.0',
@@ -89,7 +89,8 @@ export class BessSizingDialog extends Dialog {
     }
 
     getDescription() {
-        return '<strong>Battery Energy Storage System (BESS) Sizing</strong><br>Calculate required BESS power to achieve target P and Q at Point of Coupling (POC). ' +
+        return '<strong>Battery Energy Storage System (BESS) Sizing</strong><br>Calculate required BESS power to achieve target P and Q at Point of Coupling (POC), the bus of the External Grid. ' +
+            'Targets are exported to the grid: a network that imports 5 MW has a POC P of −5 MW. ' +
             'See the <a href="https://electrisim.com/documentation.html#battery-sizing" target="_blank" rel="noopener noreferrer">Electrisim documentation</a>.';
     }
 
@@ -345,7 +346,7 @@ export class BessSizingDialog extends Dialog {
 
         // Header row
         const headerRow = document.createElement('tr');
-        ['Scenario', 'P (MW)', 'Q (Mvar)'].forEach(headerText => {
+        ['Scenario', 'P (MW, + export)', 'Q (Mvar, + export)'].forEach(headerText => {
             const th = document.createElement('th');
             th.textContent = headerText;
             Object.assign(th.style, {
