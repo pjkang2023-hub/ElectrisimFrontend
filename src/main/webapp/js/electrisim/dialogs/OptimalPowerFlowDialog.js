@@ -20,6 +20,10 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
                 
                 console.log('OptimalPowerFlowDialog: this.ui:', !!this.ui);
                 console.log('OptimalPowerFlowDialog: this.graph:', !!this.graph);
+                // Priced sources make the polynomial cost the default: with no
+                // cost function pandapower minimises total generation, and the
+                // dispatch ran the 45 EUR/MWh CHP plant at nothing to import at 60.
+                const priced = this.drawingHasPrices();
                 
                 this.parameters = [
                     {
@@ -137,14 +141,26 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
                         label: 'Cost Function Type',
                         type: 'radio',
                         options: [
-                            { value: 'polynomial', label: 'Polynomial Cost' },
+                            { value: 'polynomial', label: 'Polynomial Cost', default: priced },
                             { value: 'piecewise_linear', label: 'Piecewise Linear Cost' },
-                            { value: 'none', label: 'No Cost Function', default: true }
+                            { value: 'none', label: 'No Cost Function', default: !priced }
                         ]
                     }
                 ];
                 
                 console.log('OptimalPowerFlowDialog: constructor completed, parameters length:', this.parameters.length);
+            }
+
+            /** Whether any element on the drawing carries a marginal cost. */
+            drawingHasPrices() {
+                const graph = this.graph;
+                if (!graph || !graph.getModel) return false;
+                const cells = graph.getChildCells(graph.getDefaultParent(), true, false) || [];
+                return cells.some((cell) => {
+                    const v = cell && cell.value && typeof cell.value.getAttribute === 'function'
+                        ? cell.value.getAttribute('opf_marginal_cost_eur_per_mwh') : null;
+                    return v !== null && v !== undefined && String(v).trim() !== '' && Number.isFinite(Number(v));
+                });
             }
 
             getDescription() {
@@ -324,7 +340,7 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
                             costHint.innerHTML =
                                 '<strong>Polynomial</strong> — uses <code>opf_marginal_cost_eur_per_mwh</code> (cp1) and optional <code>opf_cp2_eur_per_mw2</code> (cp2) from each element&rsquo;s <strong>OPF</strong> tab. The pandapower <code>opf_basic</code> loss-minimization cells use <strong>the same cp1 only</strong> (no cp2); if your gens or slack still have cp2 set (e.g. 0.01), dispatch and reported marginal ∂C/∂P will differ from the notebook.<br><br>' +
                                 '<strong>Piecewise linear</strong> — one segment over each device&rsquo;s OPF <strong>Min&ndash;Max P (MW)</strong> with slope from the same marginal field.<br><br>' +
-                                '<strong>No cost function</strong> — no <code>poly_cost</code> / <code>pwl_cost</code>; OPF still runs without a generation-cost objective.';
+                                '<strong>No cost function</strong> — no <code>poly_cost</code> / <code>pwl_cost</code>; pandapower then minimises the total generation (in effect the losses), whatever the prices on the elements.';
                             fieldContainer.appendChild(costHint);
                         }
                     } else if (param.type === 'select') {

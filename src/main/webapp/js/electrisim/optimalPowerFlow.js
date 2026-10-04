@@ -547,7 +547,12 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     const genMinP = parseFloat(genOpfAttr.min_p_mw);
                                     const genMaxP = parseFloat(genOpfAttr.max_p_mw);
                                     const minPResolved = Number.isFinite(genMinP) ? genMinP : 0;
-                                    let maxPResolved = Number.isFinite(genMaxP) ? genMaxP : p_mw_val;
+                                    // Without a limit of its own: the rated active power,
+                                    // so the rated point stays within the MVA rating.
+                                    const genSn = parseFloat(genOpfAttr.sn_mva);
+                                    const genPf = parseFloat(genOpfAttr.cos_phi);
+                                    const ratedP = genSn > 0 && genPf > 0 && genPf <= 1 ? genSn * genPf : p_mw_val;
+                                    let maxPResolved = Number.isFinite(genMaxP) ? genMaxP : ratedP;
                                     if (maxPResolved <= minPResolved) {
                                         maxPResolved = Math.max(p_mw_val, minPResolved + 1e-6);
                                     }

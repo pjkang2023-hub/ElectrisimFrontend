@@ -335,7 +335,7 @@
             intro.className = 'opf-results-intro';
             intro.innerHTML =
                 'This dialog shows the <strong>AC optimal power flow</strong> solution: voltages and flows that satisfy the network equations while minimizing whatever pandapower cost rows exist (<code>poly_cost</code> / <code>pwl_cost</code> on generators, static generators, and optionally on external grid, storage, controllable loads, and DC lines when marginal prices are set). ' +
-                'Slack / external grid absorbs mismatch unless it too carries a cost; generators may sit at minimum power if imports are cheaper. ' +
+                'Slack / external grid absorbs mismatch unless it too carries a cost; with prices, the cheaper sources run first. ' +
                 'Lagrange multipliers (when shown) relate to OPF stationarity at buses; line shadow prices appear when a flow limit binds. ' +
                 'If you turned off <strong>Suppress warnings</strong>, PyPower verbose text appears in a collapsible section below.';
             header.appendChild(intro);
@@ -362,8 +362,16 @@
             const cardCost = document.createElement('div');
             cardCost.className = 'opf-summary-card';
             let costValueHtml = '—';
-            if (totalCost != null && Number.isFinite(Number(totalCost))) {
-                costValueHtml = formatNumber(totalCost, 4) + dispatchCostCurrencySuffix(costCurrency);
+            // Without prices pandapower minimises the total generation; its
+            // objective is MW, not money - it read "11.4985 €".
+            const unpriced = this.results.objective === 'total_generation';
+            if (unpriced) {
+                costValueHtml = 'No cost function<br><span style="font-size:0.8125rem;font-weight:500">total generation minimised: '
+                    + formatNumber(this.results.total_generation_mw, 3) + ' MW</span>';
+            } else if (totalCost != null && Number.isFinite(Number(totalCost))) {
+                // MW times price per MWh: a cost per hour of operation.
+                costValueHtml = formatNumber(totalCost, 2) + dispatchCostCurrencySuffix(costCurrency)
+                    + (this.results.cost_per === 'h' ? '/h' : '');
             }
             const costLabel = '<dt>Dispatch cost</dt><dd>' + costValueHtml + '</dd>';
             cardCost.innerHTML = costLabel;
@@ -616,7 +624,7 @@
                 ),
                 renderTable(
                     'Generators',
-                    'Dispatch and reactive output at PV/PQ-capable machines. Very small P can mean the optimum prefers grid imports. Cost columns reflect pandapower <code>poly_cost</code> (polynomial) or <code>pwl_cost</code> (piecewise linear) when present (omit economic objective by choosing <strong>No cost function</strong> in the OPF dialog).',
+                    'Dispatch and reactive output at PV/PQ-capable machines. With prices, a machine at its minimum is dearer than the alternatives; without, the OPF only minimises total generation. Cost columns reflect pandapower <code>poly_cost</code> (polynomial) or <code>pwl_cost</code> (piecewise linear) when present (omit economic objective by choosing <strong>No cost function</strong> in the OPF dialog).',
                     this.results.generators,
                     genSpec,
                 ),
