@@ -279,6 +279,18 @@
                 ));
                 container.appendChild(section);
             }
+            const trafoStats = this.results.transformer_loading_statistics;
+            if (trafoStats && Object.keys(trafoStats).length) {
+                const section = document.createElement('div');
+                section.innerHTML = '<h3 style="margin:18px 0 8px;font-size:15px;color:#333;">Transformer loading statistics</h3>';
+                section.appendChild(this.buildStatsTable(
+                    ['Transformer', 'Min (%)', 'Max (%)', 'Avg (%)'],
+                    Object.entries(trafoStats).map(([name, s]) => [
+                        name, s.min_loading_percent.toFixed(2), s.max_loading_percent.toFixed(2), s.avg_loading_percent.toFixed(2)
+                    ])
+                ));
+                container.appendChild(section);
+            }
             if (!this.results.voltage_statistics && !this.results.loading_statistics) {
                 container.innerHTML += '<p style="color:#666;">No statistics available.</p>';
             }
@@ -392,6 +404,24 @@
                     })
                 })), '#7b1fa2');
             }
+
+            // Generators, transformers and the external grid were left out -
+            // the most loaded element can be a transformer.
+            this.addSeriesChart(container, this.results.gens, 'Generator active power', 'P (MW)', 'p_mw', timeSteps, '#558b2f');
+            this.addSeriesChart(container, this.results.transformers, 'Transformer loading', 'Loading (%)', 'loading_percent', timeSteps, '#bf360c');
+            this.addSeriesChart(container, this.results.externalgrids, 'External grid active power (+ import)', 'P (MW)', 'p_mw', timeSteps, '#37474f');
+        }
+
+        addSeriesChart(container, rows, title, yLabel, key, timeSteps, color) {
+            if (!rows?.length) return;
+            const names = [...new Set(rows.map(r => r.name))];
+            this.addLineChart(container, title, yLabel, timeSteps, names.map(name => ({
+                label: name,
+                data: timeSteps.map(ts => {
+                    const d = rows.find(r => r.name === name && r.time_step === ts);
+                    return d ? d[key] : null;
+                })
+            })), color);
         }
 
         resolveProfileDisplayName(technicalId, spec) {
@@ -551,8 +581,9 @@
                     ['Status', this.results.timeseries_converged ? 'Converged' : 'Not converged'],
                     ['Time steps', this.results.time_steps],
                     ['Profile mode', this.results.profile_mode || 'custom'],
-                    ['Load profile preset', this.results.load_profile || ''],
-                    ['Generation profile preset', this.results.generation_profile || '']
+                    // No preset when every element ran its own profile.
+                    ['Load profile preset', this.results.load_profile || 'none (each load its own profile)'],
+                    ['Generation profile preset', this.results.generation_profile || 'none (each generator its own profile)']
                 ]
             });
 
@@ -575,6 +606,21 @@
                 const rows = [['time_step', 'name', 'p_mw', 'q_mvar']];
                 this.results.sgens.forEach(s => rows.push([s.time_step, s.name, s.p_mw, s.q_mvar]));
                 sheets.push({ name: 'res_sgen', rows });
+            }
+            if (this.results.gens?.length) {
+                const rows = [['time_step', 'name', 'p_mw', 'q_mvar', 'vm_pu']];
+                this.results.gens.forEach(g => rows.push([g.time_step, g.name, g.p_mw, g.q_mvar, g.vm_pu]));
+                sheets.push({ name: 'res_gen', rows });
+            }
+            if (this.results.transformers?.length) {
+                const rows = [['time_step', 'name', 'loading_percent', 'p_hv_mw', 'q_hv_mvar']];
+                this.results.transformers.forEach(t => rows.push([t.time_step, t.name, t.loading_percent, t.p_hv_mw, t.q_hv_mvar]));
+                sheets.push({ name: 'res_trafo', rows });
+            }
+            if (this.results.externalgrids?.length) {
+                const rows = [['time_step', 'name', 'p_mw', 'q_mvar']];
+                this.results.externalgrids.forEach(e => rows.push([e.time_step, e.name, e.p_mw, e.q_mvar]));
+                sheets.push({ name: 'res_ext_grid', rows });
             }
             const profiles = this.results.profiles_used;
             if (profiles && Object.keys(profiles).length) {

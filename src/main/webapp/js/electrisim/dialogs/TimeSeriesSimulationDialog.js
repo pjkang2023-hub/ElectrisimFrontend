@@ -216,7 +216,8 @@ class TimeSeriesSimulationDialog {
         const exportCheckbox = document.createElement('input');
         exportCheckbox.type = 'checkbox';
         exportCheckbox.id = 'export_to_xlsx';
-        exportCheckbox.checked = true;
+        // Off unless asked for: on, every run saved a file to the user's downloads.
+        exportCheckbox.checked = false;
         const exportLabel = document.createElement('label');
         exportLabel.htmlFor = 'export_to_xlsx';
         exportLabel.textContent = 'Download Excel report automatically when results open';
@@ -318,13 +319,13 @@ class TimeSeriesSimulationDialog {
                     }
                     let mode = editor.modeSelect.value;
                     const maxVal = Math.max(...values.map(v => Math.abs(Number(v))));
-                    const baseP = editor.basePMw || 1;
-                    const looksLikeAbsolute = maxVal > 3 || (maxVal >= baseP * 0.2 && maxVal <= baseP * 1.05);
-                    if (mode === 'scale' && looksLikeAbsolute) {
-                        alert(
-                            `"${editor.label}" is set to Scale factor but the values look like MW (max ${maxVal.toFixed(2)}, base P ${baseP} MW).\n\n` +
-                            'Switch to Absolute P (MW), or enter scale factors typically between 0 and 2.'
-                        );
+                    // Only a factor no profile would use: comparing it with base P
+                    // refused every preset (1.0 "looked like MW" for a 1-5 MW element).
+                    if (mode === 'scale' && maxVal > 3 && !confirm(
+                        `"${editor.label}" is set to Scale factor and reaches ${maxVal.toFixed(2)} × its base P ` +
+                        `(${editor.basePMw} MW). Were these meant as MW?\n\n` +
+                        'OK runs them as scale factors; Cancel returns to the dialog.'
+                    )) {
                         return;
                     }
                     params.element_profiles[editor.key] = {
@@ -401,7 +402,9 @@ class TimeSeriesSimulationDialog {
             o.textContent = opt.label;
             modeSelect.appendChild(o);
         });
-        modeSelect.value = 'absolute';
+        // Opens on the shape the selectors show (Constant: the load flow as
+        // drawn); it opened on random MW while they read "Constant".
+        modeSelect.value = 'scale';
         header.appendChild(modeSelect);
         card.appendChild(header);
 
@@ -415,7 +418,9 @@ class TimeSeriesSimulationDialog {
         textarea.rows = 3;
         textarea.placeholder = 'e.g. 10, 12, 8, 15, … (one value per hour)';
         textarea.style.cssText = 'width:100%;box-sizing:border-box;padding:8px;border:1px solid #ccc;border-radius:4px;font-family:Consolas,monospace;font-size:12px;resize:vertical;';
-        const initial = buildRandomAbsoluteProfile(initialSteps, el.basePMw);
+        const initial = el.elementType === 'load'
+            ? buildLoadPresetProfile(this._loadPresetSelect?.value || 'constant', initialSteps)
+            : buildGenerationPresetProfile(this._genPresetSelect?.value || 'constant', initialSteps);
         textarea.value = formatProfileValues(initial);
         card.appendChild(textarea);
 
