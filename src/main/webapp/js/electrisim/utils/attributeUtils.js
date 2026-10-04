@@ -53,7 +53,10 @@ export function formatResultNameHeader(resultCell, backendName, defaultType) {
     const objectIdDisplay =
         objectId && !looksLikeInternalGraphObjectId(objectId) ? objectId : '';
     if (dialog) {
-        if (objectIdDisplay && dialog !== objectIdDisplay) {
+        // "#" and "_" alike: the result helpers turn a name's first "_" into
+        // "#" (cell-id style), and "T_LV1" came out as "T_LV1 (T#LV1)".
+        const sameName = objectIdDisplay.replace(/#/g, '_') === dialog.replace(/#/g, '_');
+        if (objectIdDisplay && !sameName) {
             return `${dialog}\n(${objectIdDisplay})`;
         }
         return dialog;

@@ -132,12 +132,7 @@ export class ContingencyResultsDialog {
 
     _getFilteredCases() {
         let cases = [...(this.results.contingency_results || [])];
-        cases.sort((a, b) => {
-            const va = (a.violations || []).length;
-            const vb = (b.violations || []).length;
-            if (vb !== va) return vb - va;
-            return String(a.name || '').localeCompare(String(b.name || ''));
-        });
+        cases.sort((a, b) => this._severityOrder(a, b));
 
         if (this._filterMode === 'violations') {
             cases = cases.filter(c => (c.violations || []).length > 0);
@@ -231,7 +226,7 @@ export class ContingencyResultsDialog {
 
         const countNote = document.createElement('div');
         countNote.style.cssText = 'font-size:12px;color:#6c757d;margin-bottom:8px;';
-        countNote.textContent = `Showing ${cases.length} case${cases.length === 1 ? '' : 's'} (sorted by violation count, highest first)`;
+        countNote.textContent = `Showing ${cases.length} case${cases.length === 1 ? '' : 's'} (most violations first, then most load cut off, then highest loading)`;
         container.appendChild(countNote);
 
         const list = document.createElement('div');
@@ -309,7 +304,12 @@ export class ContingencyResultsDialog {
             summaryHint.style.color = '#198754';
         } else {
             const groups = this._groupViolations(violations);
-            summaryHint.textContent = Object.entries(groups).map(([t, arr]) => `${arr.length} ${t}`).join(', ');
+            const parts = Object.entries(groups).map(([t, arr]) => `${arr.length} ${t}`);
+            if (groups.supply) {
+                parts.push(`${(Number(c.lost_load_mw) || 0).toFixed(2)} MW load, ` +
+                    `${(Number(c.lost_generation_mw) || 0).toFixed(2)} MW generation cut off`);
+            }
+            summaryHint.textContent = parts.join(', ');
         }
         row.appendChild(summaryHint);
 
@@ -406,26 +406,35 @@ export class ContingencyResultsDialog {
 
     _friendlyName(raw) {
         if (!raw) return '?';
+        // The kind prefix only: every "_" became a space, "T_LV1" "T LV1".
         return String(raw)
             .replace(/^Line_/, 'Line ')
             .replace(/^Bus_/, 'Bus ')
             .replace(/^Trafo3?w?_/, 'Transformer ')
-            .replace(/^Gen_/, 'Generator ')
-            .replace(/_/g, ' ');
+            .replace(/^S?gen_/i, 'Generator ');
+    }
+
+    // Most violations first, then most load cut off, then the highest loading:
+    // by violations alone every cut-off bus tied, one with no load among them.
+    _severityOrder(a, b) {
+        const va = (a.violations || []).length;
+        const vb = (b.violations || []).length;
+        if (vb !== va) return vb - va;
+        const la = Number(a.lost_load_mw) || 0;
+        const lb = Number(b.lost_load_mw) || 0;
+        if (Math.abs(lb - la) > 1e-9) return lb - la;
+        const ma = Number(a.max_loading_percent) || 0;
+        const mb = Number(b.max_loading_percent) || 0;
+        if (Math.abs(mb - ma) > 1e-9) return mb - ma;
+        return String(a.name || '').localeCompare(String(b.name || ''));
     }
 
     _getWorstCase() {
         const cases = this.results.contingency_results || [];
         if (!cases.length) return null;
-        return cases.reduce((best, c) => {
-            const count = (c.violations || []).length;
-            const bestCount = (best.violations || []).length;
-            if (count > bestCount) return c;
-            if (count === bestCount && count > 0) {
-                return String(c.name || '').localeCompare(String(best.name || '')) < 0 ? c : best;
-            }
-            return best;
-        }, cases[0]);
+        const named = this.results.worst_case && cases.find(c => c.name === this.results.worst_case);
+        if (named) return named;
+        return [...cases].sort((a, b) => this._severityOrder(a, b))[0];
     }
 
     _buildViolationLookup(violations) {
@@ -471,7 +480,7 @@ export class ContingencyResultsDialog {
         const worstCount = worstViolations.length;
         summary.textContent = worstCount
             ? `Worst-case network snapshot (${worstCount} violation${worstCount === 1 ? '' : 's'})`
-            : 'Worst-case network snapshot (highest violation count)';
+            : 'Worst-case network snapshot (most violations, then most load cut off)';
         details.appendChild(summary);
 
         const inner = document.createElement('div');
@@ -588,6 +597,13 @@ export class ContingencyResultsDialog {
         } else {
             parts.push('No limit violations in this case');
         }
+        // A cut-off bus is no limit violation, but it is why this case ranks first.
+        const cutOff = (worstCase.violations || []).filter(v => v.type === 'supply').length;
+        if (cutOff) {
+            parts.push(`${cutOff} bus${cutOff === 1 ? '' : 'es'} cut off: ` +
+                `${(Number(worstCase.lost_load_mw) || 0).toFixed(2)} MW load, ` +
+                `${(Number(worstCase.lost_generation_mw) || 0).toFixed(2)} MW generation`);
+        }
         parts.push(converged ? 'Load flow converged' : 'Load flow did not converge');
         meta.textContent = parts.join(' · ');
         banner.appendChild(meta);
@@ -606,12 +622,14 @@ export class ContingencyResultsDialog {
             <div style="font-weight:600;margin-bottom:6px;color:#343a40;">What am I looking at?</div>
             <p style="margin:0 0 8px 0;">
                 Electrisim tested many single-element outages (N-1). This section shows the
-                <strong>post-outage load-flow state</strong> for the case with the most limit violations —
-                i.e. how voltages and flows looked on the remaining network after that one element was removed.
+                <strong>post-outage load-flow state</strong> for the most severe case — most violations, then
+                most load cut off, then highest loading — i.e. how voltages and flows looked on the remaining
+                network after that one element was removed.
             </p>
             <p style="margin:0 0 8px 0;">
-                The same numbers are applied to your diagram on the canvas (bus colours and line/transformer labels).
-                Expand a case in the list above to see the same violation details for any other outage.
+                The diagram shows something else: each element's own worst over all the outages (highest
+                loading, lowest and highest voltage) with the outage that causes it.
+                Expand a case in the list above to see the violation details for any other outage.
             </p>
             ${hasViolations ? `<p style="margin:0;color:#664d03;">
                 Rows highlighted below are elements that exceeded your configured voltage or loading limits during this outage.

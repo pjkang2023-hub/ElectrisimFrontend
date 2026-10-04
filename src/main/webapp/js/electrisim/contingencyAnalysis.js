@@ -37,6 +37,11 @@ function replaceUnderscores(name) {
     return String(name || '').replace('_', '#');
 }
 
+// "(Main transformer 110/20/10 out)" on the line below a worst value.
+function outageNote(outage) {
+    return outage ? `\n (${outage} out)` : '';
+}
+
 function updateCellColor(grafka, cell, color) {
     if (!cell || !grafka?.getModel) return;
     const style = grafka.getModel().getStyle(cell) || '';
@@ -125,12 +130,13 @@ function createElementProcessors(cellLookupMap, graph, limits) {
                     }
 
                     const label = formatResultNameHeader(resultCell, replaceUnderscores(row.name), 'Bus');
+                    // Each bus's own extremes over the outages, each with its outage.
+                    const cutOff = (row.deenergised_by || []).length
+                        ? `\nCut off by: ${row.deenergised_by.map(o => `${o} out`).join(', ')}` : '';
                     const resultString = `${label}
-U[pu]: ${formatNumber(row.vm_pu)}
-U[deg]: ${formatNumber(row.va_degree)}
-P[MW]: ${formatNumber(row.p_mw)}
-Q[MVar]: ${formatNumber(row.q_mvar)}
-(worst-case N-1)`;
+U min[pu]: ${formatNumber(row.vm_pu)}${outageNote(row.worst_outage)}
+U max[pu]: ${formatNumber(row.vm_max_pu)}${outageNote(row.worst_outage_max)}${cutOff}
+(N-1, worst per element)`;
 
                     const existing = findResultPlaceholder(grafka, resultCell);
                     if (existing) {
@@ -138,14 +144,17 @@ Q[MVar]: ${formatNumber(row.q_mvar)}
                     } else {
                         insertResultBox(grafka, resultCell, resultString, {
                             width: 80,
-                            height: 76,
+                            height: 96,
                             positionX: 0,
                             positionY: 1.0,
                             offsetXDelta: 40,
                             offsetYDelta: 35
                         });
                     }
-                    processVoltageColor(grafka, resultCell, row.vm_pu, limits);
+                    // Coloured by whichever extreme is further from nominal.
+                    const vMin = Number(row.vm_pu), vMax = Number(row.vm_max_pu);
+                    const vWorst = Number.isFinite(vMax) && Math.abs(vMax - 1) > Math.abs(vMin - 1) ? vMax : vMin;
+                    processVoltageColor(grafka, resultCell, vWorst, limits);
                 } catch (error) {
                     console.error('Error processing contingency bus data:', error);
                 }
@@ -167,10 +176,9 @@ Q[MVar]: ${formatNumber(row.q_mvar)}
 
                     const label = formatResultNameHeader(resultCell, replaceUnderscores(row.name), 'Line');
                     const resultString = `${label}
+Max loading[%]: ${formatNumber(row.loading_percent, 1)}${outageNote(row.worst_outage)}
 P_from[MW]: ${formatNumber(row.p_from_mw)}
-Q_from[MVar]: ${formatNumber(row.q_from_mvar)}
-Loading[%]: ${formatNumber(row.loading_percent, 1)}
-(worst-case N-1)`;
+(N-1, worst per element)`;
 
                     const existing = findResultPlaceholder(grafka, resultCell);
                     if (existing) {
@@ -207,10 +215,9 @@ Loading[%]: ${formatNumber(row.loading_percent, 1)}
 
                     const label = formatResultNameHeader(resultCell, replaceUnderscores(row.name), 'Transformer');
                     const resultString = `${label}
+Max loading[%]: ${formatNumber(row.loading_percent, 1)}${outageNote(row.worst_outage)}
 P_HV[MW]: ${formatNumber(row.p_hv_mw)}
-Q_HV[MVar]: ${formatNumber(row.q_hv_mvar)}
-Loading[%]: ${formatNumber(row.loading_percent, 1)}
-(worst-case N-1)`;
+(N-1, worst per element)`;
 
                     const existing = findResultPlaceholderForComponent(grafka, resultCell)
                         || findResultPlaceholder(grafka, resultCell);
@@ -304,9 +311,12 @@ function contingencyAnalysisPandaPower(a, b, c) {
             const model = b.getModel();
             model.beginUpdate();
             try {
+                // The diagram shows each element's worst over the outages; one
+                // case's snapshot, labelled "worst-case", understated most of them.
+                const labelData = dataJson.worst_by_element || dataJson;
                 Object.entries(elementProcessors).forEach(([type, processor]) => {
-                    if (dataJson[type]) {
-                        processor(dataJson[type], b, grafka);
+                    if (labelData[type]) {
+                        processor(labelData[type], b, grafka);
                     }
                 });
             } finally {
