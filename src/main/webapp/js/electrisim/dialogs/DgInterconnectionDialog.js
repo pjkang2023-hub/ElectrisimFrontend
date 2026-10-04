@@ -24,6 +24,11 @@ export class DgInterconnectionDialog extends Dialog {
 
         const buses = [];
         const ders = [];
+        // Each DER's bus: the screening resizes a DER where it is connected,
+        // so that bus is its point of coupling. The POC defaulted to the first
+        // bus - the 110 kV busbar for a CHP plant on 20 kV busbar 2.
+        this._derBus = {};
+        const idOf = (cell) => (cell.mxObjectId ? cell.mxObjectId.replace('#', '_') : cell.id);
         try {
             const model = this.graph.getModel();
             const parent = this.graph.getDefaultParent();
@@ -37,8 +42,15 @@ export class DgInterconnectionDialog extends Dialog {
                 if (shape === 'Bus' || shape === 'Busbar') {
                     buses.push({ value: String(id), label: `${label} (${id})` });
                 }
-                if (shape === 'PVSystem' || shape === 'Storage' || shape === 'Generator' || shape === 'Static Generator') {
-                    ders.push({ value: String(id), label: `${shape}: ${label}`, derType: shape === 'Static Generator' ? 'Generator' : shape });
+                // Wind turbines too: a static generator to the backend, and left out.
+                if (['PVSystem', 'Storage', 'Generator', 'Static Generator', 'Wind Turbine'].includes(shape)) {
+                    ders.push({ value: String(id), label: `${shape}: ${label}`,
+                        derType: shape === 'Static Generator' || shape === 'Wind Turbine' ? 'Generator' : shape });
+                    const edges = model.getEdges ? model.getEdges(cell) : (cell.edges || []);
+                    (edges || []).forEach((edge) => {
+                        const other = edge.source === cell ? edge.target : edge.source;
+                        if (other && _shapeOf(other) === 'Bus' && !this._derBus[String(id)]) this._derBus[String(id)] = String(idOf(other));
+                    });
                 }
             });
         } catch (e) {
@@ -46,6 +58,8 @@ export class DgInterconnectionDialog extends Dialog {
         }
 
         this._derMeta = Object.fromEntries(ders.map((d) => [d.value, d.derType]));
+        const firstBus = ders.length ? this._derBus[ders[0].value] : null;
+        buses.forEach((b) => { if (b.value === firstBus) b.default = true; });
 
         this.parameters = [
             {
@@ -90,7 +104,7 @@ export class DgInterconnectionDialog extends Dialog {
             },
             {
                 id: 'maxLoadingPercent',
-                label: 'Max line loading (%)',
+                label: 'Max line / transformer loading (%)',
                 type: 'number',
                 value: '100',
                 step: '1'
@@ -128,7 +142,7 @@ export class DgInterconnectionDialog extends Dialog {
 
     getDescription() {
         return '<strong>DG Interconnection Screening (OpenDSS)</strong><br>' +
-            'Screens a proposed DER at a POC for voltage band, thermal loading, and reverse power. ' +
+            'Screens a DER, resized to the proposed kW where it is connected (its POC), for voltage band, line and transformer loading, and reverse power. ' +
             'Optionally compares Volt-VAR InvControl mitigation and estimates hosting capacity by binary search. ' +
             'Related: BESS sizing (pandapower) and Grid Code Compliance (P-Q).';
     }
@@ -186,6 +200,18 @@ export class DgInterconnectionDialog extends Dialog {
             values.derType = this._derMeta[derId] || 'PVSystem';
             callback?.(values);
         }, this.parameters);
+        // The POC follows the DER chosen.
+        const derSelect = document.getElementById('derId');
+        const pocSelect = document.getElementById('pocBusId');
+        if (derSelect && pocSelect) {
+            derSelect.addEventListener('change', () => {
+                const bus = this._derBus[derSelect.value];
+                if (bus) {
+                    pocSelect.value = bus;
+                    pocSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            });
+        }
     }
 }
 

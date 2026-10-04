@@ -69,11 +69,19 @@ export class DgInterconnectionResultsDialog {
                 Overall: ${this._statusBadge(summary.overall || 'n/a')}<br>
                 Proposed: ${this._escape(summary.proposed_kw)} kW
                 (${this._escape(summary.der_type)} / ${this._escape(summary.der_label || summary.der_id)})<br>
+                POC: ${this._escape(summary.poc_bus_label || summary.poc_bus_id || 'n/a')}<br>
                 Limiting constraint: ${this._escape(summary.limiting_constraint || 'none')}
             </div>
+            ${(r.warnings || []).length ? `
+                <div style="margin-bottom:12px;padding:10px;background:#fff8e1;border:1px solid #ffe08a;border-radius:4px;font-size:13px;">
+                    ${r.warnings.map((w) => `<div>${this._escape(w)}</div>`).join('')}
+                </div>` : ''}
             <h3 style="margin:16px 0 8px;">Baseline checks (InvControl off)</h3>
             ${this._checksTable(r.checks)}
-            ${r.invcontrol_compare ? `
+            ${r.invcontrol_compare && r.invcontrol_compare.applicable === false ? `
+                <h3 style="margin:16px 0 8px;">With Volt-VAR InvControl</h3>
+                <div style="color:#555;">${this._escape(r.invcontrol_compare.note)}</div>
+            ` : r.invcontrol_compare ? `
                 <h3 style="margin:16px 0 8px;">With Volt-VAR InvControl</h3>
                 <div style="margin-bottom:8px;">Overall: ${this._statusBadge(r.invcontrol_compare.overall)}
                 ${r.invcontrol_compare.limiting_constraint ? `<br>Limiting: ${this._escape(r.invcontrol_compare.limiting_constraint)}` : ''}
@@ -83,9 +91,12 @@ export class DgInterconnectionResultsDialog {
             ${r.hosting_capacity ? `
                 <h3 style="margin:16px 0 8px;">Hosting capacity</h3>
                 <div style="padding:10px;background:#fafafa;border:1px solid #eee;border-radius:4px;">
-                    Estimated hosting capacity: <strong>${this._escape(r.hosting_capacity.hosting_capacity_kw)} kW</strong>
+                    Estimated hosting capacity: <strong>${r.hosting_capacity.at_least ? '&ge; ' : ''}${this._escape(r.hosting_capacity.hosting_capacity_kw)} kW</strong>
                     (${this._escape(r.hosting_capacity.iterations)} iterations,
                     search max ${this._escape(r.hosting_capacity.search_max_kw)} kW)
+                    ${r.hosting_capacity.at_least ? '<br>No limit reached up to the search maximum.'
+                        : r.hosting_capacity.limiting_constraint_at_upper
+                            ? `<br>Limited by: ${this._escape(r.hosting_capacity.limiting_constraint_at_upper)}` : ''}
                 </div>
             ` : ''}
             <h3 style="margin:16px 0 8px;">Suggested mitigations</h3>
