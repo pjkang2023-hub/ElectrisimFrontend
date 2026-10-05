@@ -1434,6 +1434,28 @@ export function configureDcCapacitorAttributes(grafka, vertex, options = {}) {
     grafka.insertVertex(vertex, null, '', 0.5, 0, 0, 0, null, true);
 }
 
+export function configureSstAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    g.setAttribute("name", options.name || "SST");
+
+    // MV AC on its left pin, LV DC on its right, LV AC (optional) at the bottom
+    g.setAttribute("Load_flow_parameters", "");
+    var defaults = {
+        vn_mv_kv: "20", vn_lv_dc_kv: "0.8", vn_lv_ac_kv: "0.4", link_kv: "30", q_mv_mvar: "0",
+        rect_rated_mw: "1", rect_efficiency_percent: "98.5", rect_no_load_kw: "2",
+        dcdc_rated_mw: "1", dcdc_efficiency_percent: "98", dcdc_no_load_kw: "2", vm_lv_dc_pu: "1.0",
+        inverter_mode: "grid_following", inv_rated_mw: "0.5", inv_efficiency_percent: "97.5", inv_no_load_kw: "1",
+        p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true"
+    };
+    Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
+
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+
+    grafka.getModel().setValue(vertex, g);
+}
+
 export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
     options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1693,6 +1715,7 @@ if (typeof window !== 'undefined') {
     window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
     window.configureDcBreakerAttributes = configureDcBreakerAttributes;
     window.configureDcDcConverterAttributes = configureDcDcConverterAttributes;
+    window.configureSstAttributes = configureSstAttributes;
     window.updateDcBreakerCellStyle = updateDcBreakerCellStyle;
     window.configureSwitchAttributes = configureSwitchAttributes;
     window.updateSwitchCellStyle = updateSwitchCellStyle;

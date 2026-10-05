@@ -8,7 +8,7 @@
 // of each edge: the payload used to send a VSC's AC bus only, and a DC line no
 // buses at all, so the backend left both out.
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer'];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
@@ -161,6 +161,25 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             row: withOptional(row, cell, ['breaker_type', 'rated_voltage_kv', 'rated_current_ka', 'breaking_capacity_ka',
                 'opening_time_ms', 'limiting_inductance_mh', 'arrester_clamp_kv', 'arrester_energy_kj',
                 'cost_per_unit_by_currency'])
+        };
+    }
+    case 'Solid-State Transformer': {
+        // MV AC on the left pin, LV AC at the bottom (pin x 0.5), LV DC on the right;
+        // the backend also takes the higher-voltage AC bus as the MV port.
+        const { ac, dc } = connectedBuses(cell, model);
+        const row = {
+            ...common(cell, `Solid-State Transformer${next('sst')}`),
+            bus_mv: ac[0]?.key || null,
+            bus_lv_ac: ac[1]?.key || null,
+            bus_lv_dc: dc[0]?.key || null,
+        };
+        return {
+            arrayKey: 'sst',
+            row: withOptional(row, cell, ['vn_mv_kv', 'vn_lv_dc_kv', 'vn_lv_ac_kv', 'link_kv', 'q_mv_mvar',
+                'rect_rated_mw', 'rect_efficiency_percent', 'rect_no_load_kw',
+                'dcdc_rated_mw', 'dcdc_efficiency_percent', 'dcdc_no_load_kw', 'vm_lv_dc_pu',
+                'inverter_mode', 'inv_rated_mw', 'inv_efficiency_percent', 'inv_no_load_kw', 'p_ac_mw', 'q_ac_mvar',
+                'vm_lv_ac_pu', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC/DC Converter': {

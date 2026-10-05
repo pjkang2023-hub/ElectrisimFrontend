@@ -1946,6 +1946,7 @@ function loadFlowPandaPower(a, b, c) {
         dcCapacitor: 0,
         dcBreaker: 0,
         dcDcConverter: 0,
+        sst: 0,
         dcLine: 0,
         line: 0,
         switch: 0
@@ -2060,6 +2061,7 @@ function loadFlowPandaPower(a, b, c) {
         dcCapacitor: [],
         dcBreaker: [],
         dcDcConverter: [],
+        sst: [],
         dcLine: [],
         line: [],
         switch: []
@@ -3196,6 +3198,21 @@ P_dc-[MW]: ${formatNumber(cell.p_dc_mw_m)}`, { width: 70, height: 56, positionX:
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Capacitor')}
 U[pu]: ${formatNumber(cell.vm_pu)}
 E[kJ]: ${formatNumber(cell.energy_kj)}`, { width: 60, height: 40, positionX: -0.3 });
+            });
+        },
+        ssts: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const stages = cell.stages || [];
+                const loss = stages.reduce((sum, st) => sum + (Number(st.loss_mw) || 0), 0);
+                const loading = Math.max(0, ...stages.map(st => Number(st.loading_percent) || 0));
+                const body = cell.in_service === false ? 'Out of service' : `P_MV[MW]: ${formatNumber(cell.p_mv_mw)}
+Q_MV[Mvar]: ${formatNumber(cell.q_mv_mvar)}
+Loss[MW]: ${formatNumber(loss)}
+Max loading[%]: ${formatNumber(loading)}`;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'SST')}
+${body}`, { width: 72, height: 60, positionX: 0.5, positionY: 1.25 });
             });
         },
         dcdcconverters: (data, b) => {
@@ -4803,6 +4820,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcLine);
         addComponents(componentArrays.dcBreaker);
         addComponents(componentArrays.dcDcConverter);
+        addComponents(componentArrays.sst);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);
         
