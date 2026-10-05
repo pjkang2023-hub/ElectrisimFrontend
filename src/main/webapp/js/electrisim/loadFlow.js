@@ -1944,6 +1944,7 @@ function loadFlowPandaPower(a, b, c) {
         VSC: 0,
         B2BVSC: 0,
         dcCapacitor: 0,
+        dcBreaker: 0,
         dcLine: 0,
         line: 0,
         switch: 0
@@ -2056,6 +2057,7 @@ function loadFlowPandaPower(a, b, c) {
         VSC: [],
         B2BVSC: [],
         dcCapacitor: [],
+        dcBreaker: [],
         dcLine: [],
         line: [],
         switch: []
@@ -3192,6 +3194,17 @@ P_dc-[MW]: ${formatNumber(cell.p_dc_mw_m)}`, { width: 70, height: 56, positionX:
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Capacitor')}
 U[pu]: ${formatNumber(cell.vm_pu)}
 E[kJ]: ${formatNumber(cell.energy_kj)}`, { width: 60, height: 40, positionX: -0.3 });
+            });
+        },
+        dcbreakers: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const state = cell.closed ? 'Closed' : 'Open';
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Breaker')}
+${state}
+I[kA]: ${formatNumber(cell.i_ka)}
+Loading[%]: ${formatNumber(cell.loading_percent)}`, { width: 60, height: 50, positionX: 0.5, positionY: 1.2 });
             });
         },
         linedcs: (data, b) => {
@@ -4774,6 +4787,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.sourceDc);
         addComponents(componentArrays.dcCapacitor);
         addComponents(componentArrays.dcLine);
+        addComponents(componentArrays.dcBreaker);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);
         

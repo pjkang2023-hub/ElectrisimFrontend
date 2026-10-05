@@ -8,7 +8,13 @@
 // of each edge: the payload used to send a VSC's AC bus only, and a DC line no
 // buses at all, so the backend left both out.
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker'];
+
+// What a DC breaker can switch, by the shape at its other side.
+const DC_BREAKER_TARGETS = {
+    'DC Bus': 'bus_dc', 'DC Line': 'line_dc', 'VSC': 'vsc', 'B2B VSC': 'b2b_vsc',
+    'Load DC': 'load_dc', 'Source DC': 'source_dc'
+};
 
 function shapeOf(cell) {
     const m = String(cell?.style || '').match(/shapeELXXX=([^;]+)/);
@@ -53,8 +59,18 @@ export function connectedBuses(cell, model) {
     const ac = [];
     const dc = [];
     edgesOf(cell, model).forEach((edge) => {
-        const other = opposite(edge, cell);
+        let other = opposite(edge, cell);
         if (!other) return;
+        // Wired through a DC breaker: the bus beyond it.
+        if (shapeOf(other) === 'DC Breaker') {
+            const breaker = other;
+            other = null;
+            edgesOf(breaker, model).forEach((e2) => {
+                const beyond = e2 === edge ? null : opposite(e2, breaker);
+                if (!other && beyond && beyond !== cell && (isDcBusCell(beyond) || isAcBusCell(beyond))) other = beyond;
+            });
+            if (!other) return;
+        }
         const style = String(edge.style || '');
         const key = edge.source === cell ? 'exitX' : 'entryX';
         const m = style.match(new RegExp(`${key}=([0-9.]+)`));
@@ -126,6 +142,25 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             row.vm_pu = attr(cell, 'vm_pu', '1.0');
         }
         return { arrayKey: isLoad ? 'loadDc' : 'sourceDc', row: withOptional(row, cell, ['in_service', 'cost_per_unit_by_currency']) };
+    }
+    case 'DC Breaker': {
+        // Its DC bus, and what is on its other side.
+        const sides = edgesOf(cell, model).map(e => opposite(e, cell)).filter(Boolean);
+        const busSide = sides.find(isDcBusCell) || null;
+        const other = sides.find(o => o !== busSide) || null;
+        const row = {
+            ...common(cell, `DC Breaker${next('dcBreaker')}`),
+            bus: busSide ? busKey(busSide) : (sides[0] ? busKey(sides[0]) : null),
+            element: other ? busKey(other) : null,
+            et: other ? (DC_BREAKER_TARGETS[shapeOf(other)] || shapeOf(other) || null) : null,
+            closed: attr(cell, 'closed', 'true'),
+        };
+        return {
+            arrayKey: 'dcBreaker',
+            row: withOptional(row, cell, ['breaker_type', 'rated_voltage_kv', 'rated_current_ka', 'breaking_capacity_ka',
+                'opening_time_ms', 'limiting_inductance_mh', 'arrester_clamp_kv', 'arrester_energy_kj',
+                'cost_per_unit_by_currency'])
+        };
     }
     case 'DC Capacitor': {
         const { dc, ac } = connectedBuses(cell, model);

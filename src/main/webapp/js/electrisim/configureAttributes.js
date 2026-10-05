@@ -1434,6 +1434,42 @@ export function configureDcCapacitorAttributes(grafka, vertex, options = {}) {
     grafka.insertVertex(vertex, null, '', 0.5, 0, 0, 0, null, true);
 }
 
+/** The DC breaker's symbol, open or closed. */
+export function updateDcBreakerCellStyle(grafka, vertex, closed) {
+    if (!grafka || !vertex) return;
+    var style = grafka.getModel().getStyle(vertex) || "";
+    if (typeof style !== "string" || style.indexOf("shapeELXXX=DC Breaker") < 0) return;
+    var newImg = (closed === true || closed === "true") ? "images/electrical/sym-dc-breaker-closed.svg" : "images/electrical/sym-dc-breaker.svg";
+    var newStyle = style.replace(/image=images\/electrical\/sym-dc-breaker(-closed)?\.svg/g, "image=" + newImg);
+    if (newStyle !== style) grafka.setCellStyle(newStyle, [vertex]);
+}
+
+export function configureDcBreakerAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    g.setAttribute("name", options.name || "DC Breaker");
+
+    // Between a DC bus and a DC cable, a VSC, a DC load or source, or a second DC bus
+    g.setAttribute("Load_flow_parameters", "");
+    var closed = String(options.closed ?? "true");
+    g.setAttribute("closed", closed);
+    g.setAttribute("breaker_type", options.breaker_type || "solid_state");
+    g.setAttribute("rated_voltage_kv", String(options.rated_voltage_kv ?? "1"));
+    g.setAttribute("rated_current_ka", String(options.rated_current_ka ?? "1"));
+    g.setAttribute("breaking_capacity_ka", String(options.breaking_capacity_ka ?? "20"));
+    // For the DC fault and EMT studies
+    g.setAttribute("opening_time_ms", String(options.opening_time_ms ?? "0.01"));
+    g.setAttribute("limiting_inductance_mh", String(options.limiting_inductance_mh ?? "0.01"));
+    g.setAttribute("arrester_clamp_kv", String(options.arrester_clamp_kv ?? "1.5"));
+    g.setAttribute("arrester_energy_kj", String(options.arrester_energy_kj ?? "50"));
+
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+
+    grafka.getModel().setValue(vertex, g);
+    updateDcBreakerCellStyle(grafka, vertex, closed);
+}
+
 export function configureSourceDcAttributes(grafka, vertex, options = {}) {
     options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1626,6 +1662,8 @@ if (typeof window !== 'undefined') {
     window.configureLoadDcAttributes = configureLoadDcAttributes;
     window.configureSourceDcAttributes = configureSourceDcAttributes;
     window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
+    window.configureDcBreakerAttributes = configureDcBreakerAttributes;
+    window.updateDcBreakerCellStyle = updateDcBreakerCellStyle;
     window.configureSwitchAttributes = configureSwitchAttributes;
     window.updateSwitchCellStyle = updateSwitchCellStyle;
     window.configureVscAttributes = configureVscAttributes;
