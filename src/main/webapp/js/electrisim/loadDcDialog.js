@@ -5,6 +5,13 @@ import { createEconomicTabContent, buildCostPerUnitByCurrency } from './utils/ec
 export const defaultLoadDcData = {
     name: "Load DC",
     p_mw: 0.0,
+    load_model: 'constant_power',
+    share_p_percent: 100,
+    share_i_percent: 0,
+    share_r_percent: 0,
+    v_min_pu: 0.8,
+    filter_l_mh: 0,
+    filter_c_uf: 0,
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -38,6 +45,86 @@ export class LoadDcDialog extends Dialog {
                 type: 'number',
                 value: this.data.p_mw.toString(),
                 step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'load_model',
+                label: 'Load type',
+                symbol: 'load_model',
+                description: 'How its power follows the DC bus voltage: constant power, constant current (P = P0 v), constant resistance (P = P0 v^2), or a mix of the three.',
+                type: 'select',
+                options: [
+                    { value: 'constant_power', label: 'Constant power' },
+                    { value: 'constant_current', label: 'Constant current' },
+                    { value: 'constant_resistance', label: 'Constant resistance' },
+                    { value: 'mixed', label: 'Mixed (shares below)' }
+                ],
+                value: this.data.load_model
+            },
+            {
+                id: 'share_p_percent',
+                label: 'Mixed: constant power share',
+                symbol: 'share_p_percent',
+                unit: '%',
+                description: 'Used when the load type is Mixed. The three shares are scaled to add up to 100 %.',
+                type: 'number',
+                value: String(this.data.share_p_percent),
+                step: '1',
+                min: '0'
+            },
+            {
+                id: 'share_i_percent',
+                label: 'Mixed: constant current share',
+                symbol: 'share_i_percent',
+                unit: '%',
+                description: 'Used when the load type is Mixed.',
+                type: 'number',
+                value: String(this.data.share_i_percent),
+                step: '1',
+                min: '0'
+            },
+            {
+                id: 'share_r_percent',
+                label: 'Mixed: constant resistance share',
+                symbol: 'share_r_percent',
+                unit: '%',
+                description: 'Used when the load type is Mixed.',
+                type: 'number',
+                value: String(this.data.share_r_percent),
+                step: '1',
+                min: '0'
+            },
+            {
+                id: 'v_min_pu',
+                label: 'Constant-power limit voltage',
+                symbol: 'v_min_pu',
+                unit: 'p.u.',
+                description: 'Below this voltage the constant-power part draws constant current, as a converter does at its input current limit. 0 keeps it constant power at any voltage.',
+                type: 'number',
+                value: String(this.data.v_min_pu),
+                step: '0.01',
+                min: '0'
+            },
+            {
+                id: 'filter_l_mh',
+                label: 'Input filter inductance (EMT)',
+                symbol: 'filter_l_mh',
+                unit: 'mH',
+                description: 'For the EMT study; the load flow does not use it.',
+                type: 'number',
+                value: String(this.data.filter_l_mh),
+                step: '0.001',
+                min: '0'
+            },
+            {
+                id: 'filter_c_uf',
+                label: 'Input filter capacitance (EMT)',
+                symbol: 'filter_c_uf',
+                unit: 'uF',
+                description: 'For the EMT study; the load flow does not use it.',
+                type: 'number',
+                value: String(this.data.filter_c_uf),
+                step: '1',
                 min: '0'
             },
             {
@@ -333,6 +420,19 @@ export class LoadDcDialog extends Dialog {
                     accentColor: '#007bff',
                     cursor: 'pointer',
                     margin: '0'
+                });
+            } else if (param.type === 'select') {
+                input = document.createElement('select');
+                (param.options || []).forEach((opt) => {
+                    const o = document.createElement('option');
+                    o.value = opt.value;
+                    o.textContent = opt.label;
+                    if (String(param.value) === String(opt.value)) o.selected = true;
+                    input.appendChild(o);
+                });
+                Object.assign(input.style, {
+                    width: '200px', padding: '10px 14px', border: '2px solid #ced4da', borderRadius: '6px',
+                    fontSize: '14px', fontFamily: 'inherit', backgroundColor: '#ffffff', boxSizing: 'border-box'
                 });
             } else {
                 input = document.createElement('input');

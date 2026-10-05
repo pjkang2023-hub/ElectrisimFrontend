@@ -9,6 +9,8 @@ export const defaultDCLineData = {
     length_km: 0.1,
     r_ohm_per_km: 0.1,
     max_i_ka: 1.0,
+    l_mh_per_km: 0.3,
+    c_uf_per_km: 0.2,
     // An HVDC link between AC buses (pandapower dcline)
     p_mw: 0.0,
     loss_percent: 0.0,
@@ -69,6 +71,22 @@ export class DCLineDialog extends Dialog {
                 type: 'number',
                 value: String(this.data.max_i_ka),
                 step: '0.01'
+            },
+            {
+                id: 'l_mh_per_km',
+                label: 'Inductance (mH/km)',
+                description: 'Between two DC buses: the cable\'s loop inductance per km, for the EMT and DC fault studies. The load flow does not use it.',
+                type: 'number',
+                value: String(this.data.l_mh_per_km),
+                step: '0.001'
+            },
+            {
+                id: 'c_uf_per_km',
+                label: 'Capacitance (uF/km)',
+                description: 'Between two DC buses: the capacitance between its conductors per km, for the EMT study.',
+                type: 'number',
+                value: String(this.data.c_uf_per_km),
+                step: '0.001'
             },
             {
                 id: 'p_mw',

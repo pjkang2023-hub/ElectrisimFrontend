@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-25 -44 50 64">
+    <!-- DC-link capacitor: the lead to its DC bus at the top, a polarised capacitor, the return pole below -->
+    <line x1="0" y1="-42" x2="0" y2="-10" stroke="#1a1a2e" stroke-width="2"/>
+    <line x1="-16" y1="-10" x2="16" y2="-10" stroke="#1a1a2e" stroke-width="3"/>
+    <path d="M -16 2 Q 0 -6 16 2" fill="none" stroke="#1a1a2e" stroke-width="3"/>
+    <line x1="0" y1="-2" x2="0" y2="14" stroke="#1a1a2e" stroke-width="2"/>
+    <line x1="-12" y1="14" x2="12" y2="14" stroke="#1a1a2e" stroke-width="2"/>
+    <line x1="-7" y1="18" x2="7" y2="18" stroke="#1a1a2e" stroke-width="2"/>
+    <text x="-14" y="-15" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="#1a1a2e">+</text>
+    <text x="14" y="-14" text-anchor="middle" font-family="monospace" font-size="7" font-weight="bold" fill="#c0392b">DC</text>
+</svg>

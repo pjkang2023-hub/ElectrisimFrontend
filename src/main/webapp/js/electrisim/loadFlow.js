@@ -1943,6 +1943,7 @@ function loadFlowPandaPower(a, b, c) {
         sourceDc: 0,
         VSC: 0,
         B2BVSC: 0,
+        dcCapacitor: 0,
         dcLine: 0,
         line: 0,
         switch: 0
@@ -2054,6 +2055,7 @@ function loadFlowPandaPower(a, b, c) {
         sourceDc: [],
         VSC: [],
         B2BVSC: [],
+        dcCapacitor: [],
         dcLine: [],
         line: [],
         switch: []
@@ -3181,6 +3183,15 @@ P_ac[MW]: ${formatNumber(cell.p_mw)}
 Q_ac[MVar]: ${formatNumber(cell.q_mvar)}
 P_dc+[MW]: ${formatNumber(cell.p_dc_mw_p)}
 P_dc-[MW]: ${formatNumber(cell.p_dc_mw_m)}`, { width: 70, height: 56, positionX: 0.5, positionY: 1.2 });
+            });
+        },
+        dccapacitors: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Capacitor')}
+U[pu]: ${formatNumber(cell.vm_pu)}
+E[kJ]: ${formatNumber(cell.energy_kj)}`, { width: 60, height: 40, positionX: -0.3 });
             });
         },
         linedcs: (data, b) => {
@@ -4761,6 +4772,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcBus);
         addComponents(componentArrays.loadDc);
         addComponents(componentArrays.sourceDc);
+        addComponents(componentArrays.dcCapacitor);
         addComponents(componentArrays.dcLine);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);

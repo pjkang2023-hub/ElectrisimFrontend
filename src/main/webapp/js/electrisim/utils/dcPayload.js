@@ -8,7 +8,7 @@
 // of each edge: the payload used to send a VSC's AC bus only, and a DC line no
 // buses at all, so the backend left both out.
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor'];
 
 function shapeOf(cell) {
     const m = String(cell?.style || '').match(/shapeELXXX=([^;]+)/);
@@ -118,9 +118,25 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             // A DC bus, or - drawn on an AC bus by mistake - that bus, which the backend reports.
             bus: (dc[0] || ac[0])?.key || null,
         };
-        if (isLoad) row.p_mw = attr(cell, 'p_mw', '0');
-        else row.vm_pu = attr(cell, 'vm_pu', '1.0');
+        if (isLoad) {
+            row.p_mw = attr(cell, 'p_mw', '0');
+            withOptional(row, cell, ['load_model', 'share_p_percent', 'share_i_percent', 'share_r_percent',
+                'v_min_pu', 'filter_l_mh', 'filter_c_uf']);
+        } else {
+            row.vm_pu = attr(cell, 'vm_pu', '1.0');
+        }
         return { arrayKey: isLoad ? 'loadDc' : 'sourceDc', row: withOptional(row, cell, ['in_service', 'cost_per_unit_by_currency']) };
+    }
+    case 'DC Capacitor': {
+        const { dc, ac } = connectedBuses(cell, model);
+        const row = {
+            ...common(cell, `DC Capacitor${next('dcCapacitor')}`),
+            bus: (dc[0] || ac[0])?.key || null,
+            c_mf: attr(cell, 'c_mf', '0'),
+            esr_mohm: attr(cell, 'esr_mohm', '0'),
+            esl_uh: attr(cell, 'esl_uh', '0'),
+        };
+        return { arrayKey: 'dcCapacitor', row: withOptional(row, cell, ['in_service', 'cost_per_unit_by_currency']) };
     }
     case 'VSC':
     case 'B2B VSC': {
@@ -164,7 +180,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         const row = { ...common(cell, `DC Line${next('dcLine')}`), busFrom: from, busTo: to };
         withOptional(row, cell, [
             // A DC cable between DC buses (line_dc)
-            'length_km', 'r_ohm_per_km', 'max_i_ka',
+            'length_km', 'r_ohm_per_km', 'max_i_ka', 'l_mh_per_km', 'c_uf_per_km',
             // An HVDC link between AC buses (dcline)
             'p_mw', 'loss_percent', 'loss_mw', 'vm_from_pu', 'vm_to_pu',
             'max_p_mw', 'min_q_from_mvar', 'max_q_from_mvar', 'min_q_to_mvar', 'max_q_to_mvar',

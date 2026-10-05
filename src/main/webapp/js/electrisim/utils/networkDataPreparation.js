@@ -319,6 +319,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
         SSC: 0,
         VSC: 0,
         B2BVSC: 0,
+        dcCapacitor: 0,
         dcLine: 0,
         line: 0
     };
@@ -441,6 +442,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
         SSC: [],
         VSC: [],
         B2BVSC: [],
+        dcCapacitor: [],
         dcLine: [],
         line: []
     };
@@ -1607,6 +1609,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
     addComponents(componentArrays.dcBus);
     addComponents(componentArrays.loadDc);
     addComponents(componentArrays.sourceDc);
+    addComponents(componentArrays.dcCapacitor);
     addComponents(componentArrays.dcLine);
     addComponents(componentArrays.line);
     addComponents(componentArrays.switch);

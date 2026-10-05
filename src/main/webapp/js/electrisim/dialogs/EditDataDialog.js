@@ -21,6 +21,7 @@ import { WardDialog } from '../wardDialog.js';
 import { BusDialog } from '../busDialog.js';
 import { DcBusDialog } from '../dcBusDialog.js';
 import { LoadDcDialog } from '../loadDcDialog.js';
+import { DcCapacitorDialog } from '../dcCapacitorDialog.js';
 import { SourceDcDialog } from '../sourceDcDialog.js';
 import { SwitchDialog } from '../switchDialog.js';
 import { updateSwitchCellStyle } from '../configureAttributes.js';
@@ -318,6 +319,12 @@ export class EditDataDialog {
             // Handle Load DC with new tabbed dialog
             if (this.elementType === "Load DC") {
                 this.handleLoadDc();
+                return;
+            }
+
+            // A DC-link capacitor: the DC load's dialog layout, its own fields
+            if (this.elementType === "DC Capacitor") {
+                this.handleLoadDc(DcCapacitorDialog);
                 return;
             }
             
@@ -2133,7 +2140,7 @@ export class EditDataDialog {
     }
     
     // Handle Load DC
-    handleLoadDc() {
+    handleLoadDc(DialogClass = LoadDcDialog) {
         this.shouldShowDialog = false;
         this.container.style.display = 'none';
         this.container.innerHTML = '';
@@ -2149,7 +2156,7 @@ export class EditDataDialog {
         }
         
         try {
-            const loadDcDialog = new LoadDcDialog(this.ui);
+            const loadDcDialog = new DialogClass(this.ui);
             this.setDialogCleanup(loadDcDialog);
             loadDcDialog.populateDialog(this.cell.value);
             
@@ -3292,6 +3299,11 @@ export class EditDataDialog {
                 gridOptions: null, // Modern dialog handles this
                 rowDefs: null,
                 helpUrl: 'https://pandapower.readthedocs.io/en/v3.4.0/elements/bus_dc.html'
+            }),
+            'DC Capacitor': () => ({
+                gridOptions: null, // Modern dialog handles this
+                rowDefs: null,
+                helpUrl: 'https://electrisim.com/documentation.html#load-dc'
             }),
             'Load DC': () => ({ 
                 gridOptions: null, // Modern dialog handles this

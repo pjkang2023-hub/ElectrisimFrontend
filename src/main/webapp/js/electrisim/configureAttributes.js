@@ -1293,6 +1293,9 @@ export function configureDCLineAttributes(grafka, vertex, options = {}) {
     g.setAttribute("length_km", String(options.length_km ?? "0.1"));
     g.setAttribute("r_ohm_per_km", String(options.r_ohm_per_km ?? "0.1"));
     g.setAttribute("max_i_ka", String(options.max_i_ka ?? "1"));
+    // For the EMT study: the cable's inductance and capacitance
+    g.setAttribute("l_mh_per_km", String(options.l_mh_per_km ?? "0.3"));
+    g.setAttribute("c_uf_per_km", String(options.c_uf_per_km ?? "0.2"));
     // Between two AC buses: an HVDC link (pandapower dcline)
     g.setAttribute("p_mw", options.p_mw || "0");
     g.setAttribute("loss_percent", options.loss_percent || "0");
@@ -1394,11 +1397,39 @@ export function configureLoadDcAttributes(grafka, vertex, options = {}) {
     
     g.setAttribute("Load_flow_parameters", "");
     g.setAttribute("p_mw", options.p_mw || "0");
+    // How its power follows the voltage, and its input filter (EMT study)
+    g.setAttribute("load_model", options.load_model || "constant_power");
+    g.setAttribute("share_p_percent", String(options.share_p_percent ?? "100"));
+    g.setAttribute("share_i_percent", String(options.share_i_percent ?? "0"));
+    g.setAttribute("share_r_percent", String(options.share_r_percent ?? "0"));
+    g.setAttribute("v_min_pu", String(options.v_min_pu ?? "0.8"));
+    g.setAttribute("filter_l_mh", String(options.filter_l_mh ?? "0"));
+    g.setAttribute("filter_c_uf", String(options.filter_c_uf ?? "0"));
     
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
     g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
     
+    grafka.getModel().setValue(vertex, g);
+    grafka.insertVertex(vertex, null, '', 0.5, 0, 0, 0, null, true);
+}
+
+export function configureDcCapacitorAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    g.setAttribute("name", options.name || "DC Capacitor");
+
+    // A DC-link capacitor: no effect on a load flow; the DC fault and EMT
+    // studies use it, and the load flow reports the energy it holds.
+    g.setAttribute("Load_flow_parameters", "");
+    g.setAttribute("c_mf", String(options.c_mf ?? "10"));
+    g.setAttribute("esr_mohm", String(options.esr_mohm ?? "2"));
+    g.setAttribute("esl_uh", String(options.esl_uh ?? "0.1"));
+    g.setAttribute("in_service", String(options.in_service ?? "true"));
+
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+
     grafka.getModel().setValue(vertex, g);
     grafka.insertVertex(vertex, null, '', 0.5, 0, 0, 0, null, true);
 }
@@ -1594,6 +1625,7 @@ if (typeof window !== 'undefined') {
     window.configureDcBusAttributes = configureDcBusAttributes;
     window.configureLoadDcAttributes = configureLoadDcAttributes;
     window.configureSourceDcAttributes = configureSourceDcAttributes;
+    window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
     window.configureSwitchAttributes = configureSwitchAttributes;
     window.updateSwitchCellStyle = updateSwitchCellStyle;
     window.configureVscAttributes = configureVscAttributes;
