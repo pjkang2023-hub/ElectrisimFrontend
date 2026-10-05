@@ -140,6 +140,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'v_min_pu', 'filter_l_mh', 'filter_c_uf']);
         } else {
             row.vm_pu = attr(cell, 'vm_pu', '1.0');
+            withOptional(row, cell, ['r_sc_mohm', 'l_sc_uh']);
         }
         return { arrayKey: isLoad ? 'loadDc' : 'sourceDc', row: withOptional(row, cell, ['in_service', 'cost_per_unit_by_currency']) };
     }

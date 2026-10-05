@@ -1477,6 +1477,11 @@ export function configureSourceDcAttributes(grafka, vertex, options = {}) {
     
     g.setAttribute("Load_flow_parameters", "");
     g.setAttribute("vm_pu", options.vm_pu || "1.0");
+
+    // For the DC fault study: its internal resistance and inductance
+    g.setAttribute("Short_circuit_parameters", "");
+    g.setAttribute("r_sc_mohm", String(options.r_sc_mohm ?? "20"));
+    g.setAttribute("l_sc_uh", String(options.l_sc_uh ?? "10"));
     
     // Economic parameters
     g.setAttribute("Economic_parameters", "");

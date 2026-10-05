@@ -6,6 +6,8 @@ export const defaultSourceDcData = {
     name: "Source DC",
     vm_pu: 1.0,
     in_service: true,
+    r_sc_mohm: 20,
+    l_sc_uh: 10,
     cost_per_unit_by_currency: "0"
 };
 
@@ -50,7 +52,31 @@ export class SourceDcDialog extends Dialog {
             }
         ];
         
-        this.shortCircuitParameters = [];
+        // For the DC fault study: a battery or other DC source behind its internal impedance.
+        this.shortCircuitParameters = [
+            {
+                id: 'r_sc_mohm',
+                label: 'Internal resistance',
+                symbol: 'R_i',
+                unit: 'mΩ',
+                description: 'In series with the source, for the DC fault study: it limits the current a fault near the source draws. The load flow holds the set voltage at the bus.',
+                type: 'number',
+                value: this.data.r_sc_mohm.toString(),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'l_sc_uh',
+                label: 'Internal inductance',
+                symbol: 'L_i',
+                unit: 'µH',
+                description: 'In series with the source, for the DC fault study: it slows the rise of the fault current.',
+                type: 'number',
+                value: this.data.l_sc_uh.toString(),
+                step: '0.1',
+                min: '0'
+            }
+        ];
         this.opfParameters = [];
 
         // Economic parameters (for Economic Analysis)
