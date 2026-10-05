@@ -158,7 +158,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         };
         return {
             arrayKey: 'dcBreaker',
-            row: withOptional(row, cell, ['breaker_type', 'rated_voltage_kv', 'rated_current_ka', 'breaking_capacity_ka',
+            row: withOptional(row, cell, ['breaker_type', 'rated_voltage_kv', 'rated_current_ka', 'breaking_capacity_ka', 'trip_current_ka',
                 'opening_time_ms', 'limiting_inductance_mh', 'arrester_clamp_kv', 'arrester_energy_kj',
                 'cost_per_unit_by_currency'])
         };

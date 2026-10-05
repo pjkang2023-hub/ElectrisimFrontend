@@ -1503,6 +1503,7 @@ export function configureDcBreakerAttributes(grafka, vertex, options = {}) {
     g.setAttribute("rated_voltage_kv", String(options.rated_voltage_kv ?? "1"));
     g.setAttribute("rated_current_ka", String(options.rated_current_ka ?? "1"));
     g.setAttribute("breaking_capacity_ka", String(options.breaking_capacity_ka ?? "20"));
+    g.setAttribute("trip_current_ka", String(options.trip_current_ka ?? "2"));
     // For the DC fault and EMT studies
     g.setAttribute("opening_time_ms", String(options.opening_time_ms ?? "0.01"));
     g.setAttribute("limiting_inductance_mh", String(options.limiting_inductance_mh ?? "0.01"));
