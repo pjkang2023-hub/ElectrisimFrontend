@@ -203,7 +203,12 @@ export class BessPreliminaryDesignDialog extends Dialog {
             pcsPerWinding: Number(v('pcsPerWinding', 2)) === 4 ? 4 : 2,
             umin_pu: Number(v('umin_pu', 0.95)) || 0.95,
             auxP_MW: Number(v('auxP_MW', 0.5)) || 0,
+            auxQ_Mvar: Number(v('auxQ_Mvar', 0.1)) || 0,
+            hvTrafoEnabled: String(v('hvTrafoEnabled', true)) !== 'false',
+            stringVkPercent: this._isEdited('stringVkPercent') ? Number(v('stringVkPercent', 6)) : 6,
+            hvVkPercent: this._isEdited('hvVkPercent') ? Number(v('hvVkPercent', 8)) : 8,
             mvVoltage_kV: Number(v('mvVoltage_kV', 33)) || 33,
+            hvVoltage_kV: Number(v('hvVoltage_kV', 132)) || 132,
         });
         const sugRatings = suggestedRatingValues(s);
         // A rating the user typed in is kept; the rest follow the POC inputs.

@@ -757,25 +757,42 @@ function insertAuxLoad(graph, parent, bus, opts, role, x, y) {
 
 /**
  * Compute suggested ratings from POC P/Q and topology inputs.
+ *
+ * Each rating is what the worst corner case needs, estimated, with one 5 %
+ * design margin. The margins used to be stacked (x 1.12 on P, / 0.82 and
+ * x 1.30 on Q, / U, x 1.18, x 1.22): the default 5 MW plant got 4.6 MVA
+ * PCS units and string transformers that the study's worst case loaded to
+ * 64-66 %, and 3.22 MW battery racks it took to 86 %.
  */
+const BESS_SIZING_MARGIN = 1.05;
+const BESS_SIZING_LOSS_FRACTION = 0.02;   // collection and transformer losses, of P
+
 export function computeSuggestedRatings(params) {
     const p = Math.abs(Number(params.pocP_MW) || 0);
     const pf = Math.min(0.999999, Math.max(0.1, Math.abs(Number(params.powerFactor) || 0.95)));
     let q = Math.abs(Number(params.pocQ_Mvar) || 0);
     if (!(q > 0) && p > 0) q = p * Math.tan(Math.acos(pf));
     const n = Math.max(1, parseInt(params.numUnits, 10) || 1);
-    const aux = Number(params.auxP_MW) || 0;
+    const auxP = Math.abs(Number(params.auxP_MW) || 0);
+    const auxQ = Math.abs(Number(params.auxQ_Mvar) || 0);
     const umin = Math.min(1, Math.max(0.8, Math.abs(Number(params.umin_pu) || 0.95)));
-    // Charge at the POC is Pn + aux + losses. Envelope Q is clipped when
-    // transformer loading exceeds 100 %; at Umin that is S / (Sn·U). Plant X
-    // also consumes Q. Size PCS / trafos so the PF rectangle still fits at Umin.
-    const importP = p + aux + 0.05 * p;
-    const qAtPcs = q / 0.82;
-    const unitP = (importP * 1.12) / n;
-    const unitQ = (qAtPcs * 1.30) / n;
-    const uLv = Math.max(0.84, umin - 0.05);
-    const unitSn = (Math.hypot(unitP, unitQ) / uLv) * 1.18;
-    const plantMva = (Math.hypot(importP, qAtPcs) / umin) * 1.22;
+    const hvTrafo = params.hvTrafoEnabled !== false;
+    const vkString = (Number(params.stringVkPercent) > 0 ? Number(params.stringVkPercent) : 6) / 100;
+    const vkHv = (Number(params.hvVkPercent) > 0 ? Number(params.hvVkPercent) : 8) / 100;
+
+    // P the PCS units carry at full charge or discharge: the POC's plus the
+    // auxiliaries' plus the losses between.
+    const plantP = (p + auxP) * (1 + BESS_SIZING_LOSS_FRACTION);
+    // Q they carry: the POC's and the auxiliaries', plus what the string (and
+    // POC) transformers absorb at full load, vk x S on their own rating.
+    const qPoc = q + auxQ;
+    const sPoc = Math.hypot(plantP, qPoc);
+    const plantQ = qPoc + vkString * sPoc + (hvTrafo ? vkHv * sPoc : 0);
+    const unitP = plantP / n;
+    const unitQ = plantQ / n;
+    // A converter is current-limited: at Umin it delivers Umin x its rating.
+    const unitSn = Math.hypot(unitP, unitQ) / umin * BESS_SIZING_MARGIN;
+    const plantMva = Math.hypot(plantP, plantQ) / umin * BESS_SIZING_MARGIN;
     const threeW = params.stringTopology === 'three_winding';
     const pcsPerWinding = Number(params.pcsPerWinding) === 4 ? 4 : 2;
     const pcsPerSkid = threeW ? 2 * pcsPerWinding : 1;
@@ -784,7 +801,7 @@ export function computeSuggestedRatings(params) {
         hvTrafoSnMva: Math.ceil(plantMva * 10) / 10,
         stringTrafoSnMva: Math.ceil(stringTrafoSn * 10) / 10,
         storageSnMva: Math.ceil(unitSn * 10) / 10,
-        storagePMaxMw: Math.ceil(unitP * 100) / 100,
+        storagePMaxMw: Math.ceil(unitP * BESS_SIZING_MARGIN * 100) / 100,
         cableMaxIKa: Math.ceil((stringTrafoSn / (Math.sqrt(3) * (Number(params.mvVoltage_kV) || 33))) * 100) / 100,
         hvCableMaxIKa: Math.ceil((plantMva / (Math.sqrt(3) * (Number(params.hvVoltage_kV) || 132))) * 100) / 100,
         pcsPerSkid,
