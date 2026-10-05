@@ -1804,10 +1804,18 @@ const COMPONENT_TYPES = {
     DC_LINE: 'DC Line',
     LINE: 'Line',
     SWITCH: 'Switch',
-    VSC: 'VSC'
+    VSC: 'VSC',
+    // The other DC elements: without them here, networkDataPreparation's
+    // cases for them never matched and no DC bus, load or source was sent.
+    DC_BUS: 'DC Bus',
+    LOAD_DC: 'Load DC',
+    SOURCE_DC: 'Source DC',
+    B2B_VSC: 'B2B VSC'
 };
 
 import { DIALOG_STYLES } from './utils/dialogStyles.js';
+import { DC_COMPONENT_TYPES, buildDcPayloadRow } from './utils/dcPayload.js';
+import { showResultWarnings } from './utils/resultWarnings.js';
 import { showConfirmDialog } from './utils/confirmDialog.js';
 import { LoadFlowDialog } from './dialogs/LoadFlowDialog.js';
 import { formatResultNameHeader, createDialogNameResolver, buildGraphCellLookupMap, resolveGraphCellForResult } from './utils/attributeUtils.js';
@@ -1930,6 +1938,11 @@ function loadFlowPandaPower(a, b, c) {
         SVC: 0,
         TCSC: 0,
         SSC: 0,
+        dcBus: 0,
+        loadDc: 0,
+        sourceDc: 0,
+        VSC: 0,
+        B2BVSC: 0,
         dcLine: 0,
         line: 0,
         switch: 0
@@ -2036,6 +2049,11 @@ function loadFlowPandaPower(a, b, c) {
         SVC: [],
         TCSC: [],
         SSC: [],
+        dcBus: [],
+        loadDc: [],
+        sourceDc: [],
+        VSC: [],
+        B2BVSC: [],
         dcLine: [],
         line: [],
         switch: []
@@ -2443,6 +2461,18 @@ function loadFlowPandaPower(a, b, c) {
             });
         }
         return dir;
+    };
+
+    /** A DC element's result box: updated in place when it exists, inserted beside the element otherwise. */
+    const placeDcResult = (b, resultCell, text, options) => {
+        const existing = findResultPlaceholder(resultCell);
+        if (existing) {
+            b.getModel().setValue(existing, text);
+            processCellStyles(b, existing);
+        } else {
+            const labelka = insertResultPlaceholder(resultCell, text, options);
+            if (labelka) processCellStyles(b, labelka);
+        }
     };
 
     const elementProcessors = {
@@ -3102,6 +3132,69 @@ ${tapBlock}`;
                 }
             });
         },
+        // DC elements: none of their results were drawn.
+        dcbuses: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const vn = parseFloat(resultCell.value?.getAttribute?.('vn_kv'));
+                const text = `${formatResultNameHeader(resultCell, cell.name, 'DC Bus')}
+U[pu]: ${formatNumber(cell.vm_pu)}${Number.isFinite(vn) && vn > 0 ? `\nU[kV]: ${formatNumber(cell.vm_pu * vn)}` : ''}
+P[MW]: ${formatNumber(cell.p_mw)}`;
+                placeDcResult(b, resultCell, text, { width: 70, height: 46, positionX: 0, positionY: 1.0 });
+            });
+        },
+        loadsdc: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'Load DC')}
+P[MW]: ${formatNumber(cell.p_mw)}`, { width: 60, height: 30, positionX: -0.3 });
+            });
+        },
+        sourcesdc: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'Source DC')}
+P[MW]: ${formatNumber(cell.p_mw)}
+U[pu]: ${formatNumber(cell.vm_pu)}`, { width: 60, height: 40, positionX: -0.3 });
+            });
+        },
+        vscs: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'VSC')}
+P_ac[MW]: ${formatNumber(cell.p_mw)}
+Q_ac[MVar]: ${formatNumber(cell.q_mvar)}
+P_dc[MW]: ${formatNumber(cell.p_dc_mw)}
+U_dc[pu]: ${formatNumber(cell.vm_dc_pu)}`, { width: 70, height: 56, positionX: 0.5, positionY: 1.2 });
+            });
+        },
+        b2bvscs: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'B2B VSC')}
+P_ac[MW]: ${formatNumber(cell.p_mw)}
+Q_ac[MVar]: ${formatNumber(cell.q_mvar)}
+P_dc+[MW]: ${formatNumber(cell.p_dc_mw_p)}
+P_dc-[MW]: ${formatNumber(cell.p_dc_mw_m)}`, { width: 70, height: 56, positionX: 0.5, positionY: 1.2 });
+            });
+        },
+        linedcs: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Cable')}
+P_from[MW]: ${formatNumber(cell.p_from_mw)}
+P_to[MW]: ${formatNumber(cell.p_to_mw)}
+Pl[MW]: ${formatNumber(cell.pl_mw)}
+I[kA]: ${formatNumber(cell.i_from_ka)}
+Loading[%]: ${formatNumber(cell.loading_percent)}`, { width: 70, height: 66, positionX: 0.5, positionY: 1.2 });
+            });
+        },
         /** net.res_switch: p_from_mw, q_from_mvar, p_to_mw, q_to_mvar, i_ka, loading_percent */
         switches: (data, b, grafka) => {
             const model = b.getModel();
@@ -3338,6 +3431,14 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
                 }
             } catch (animErr) {
                 console.warn('Load flow animation skipped:', animErr);
+            }
+
+            // The backend's warnings - elements left out, values corrected -
+            // only reached the server log.
+            try {
+                showResultWarnings(dataJson.warnings);
+            } catch (warnErr) {
+                console.warn('Load flow notes not shown:', warnErr);
             }
 
             // Auto-snapshot every successful run so the user can compare A↔B
@@ -3622,6 +3723,13 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
                 processedComponents++;
                 
                 const baseData = preComputedData.get(cell.id);
+
+                // DC elements: one shared builder, so every study sends them alike.
+                if (DC_COMPONENT_TYPES.includes(componentType)) {
+                    const built = buildDcPayloadRow(cell, componentType, counters, model);
+                    if (built) componentArrays[built.arrayKey].push(built.row);
+                    return;
+                }
 
                 switch (componentType) {
                     case COMPONENT_TYPES.EXTERNAL_GRID:
@@ -4369,36 +4477,6 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
                         componentArrays.SSC.push(SSC);
                         break;
 
-                    case COMPONENT_TYPES.DC_LINE:
-                        const dcLine = {
-                            typ: `DC Line${counters.dcLine++}`,
-                            name: cell.mxObjectId.replace('#', '_'),
-                            id: cell.id,
-                            userFriendlyName: (() => {
-                                // Check if the cell has a name attribute stored
-                                if (cell.value && cell.value.attributes) {
-                                    for (let i = 0; i < cell.value.attributes.length; i++) {
-                                        if (cell.value.attributes[i].nodeName === 'name') {
-                                            return cell.value.attributes[i].nodeValue;
-                                        }
-                                    }
-                                }
-                                return cell.mxObjectId.replace('#', '_');
-                            })(),
-                            bus: getConnectedBusId(cell),
-                            ...getAttributesAsObject(cell, {
-                                // Load flow parameters                       
-                                p_mw: 'p_mw',
-                                loss_percent: 'loss_percent',
-                                loss_mw: 'loss_mw',
-                                vm_from_pu: 'vm_from_pu',
-                                vm_to_pu: 'vm_to_pu',
-                                in_service: { name: 'in_service', optional: true }
-                            })
-                        };
-                        componentArrays.dcLine.push(dcLine);
-                        break;
-
                     case COMPONENT_TYPES.LINE:
                         const lfModel = b.getModel();
                         if (!cell.edges || cell.edges.length === 0) {
@@ -4678,6 +4756,11 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.SSC);
         addComponents(componentArrays.SVC);
         addComponents(componentArrays.TCSC);
+        addComponents(componentArrays.VSC);
+        addComponents(componentArrays.B2BVSC);
+        addComponents(componentArrays.dcBus);
+        addComponents(componentArrays.loadDc);
+        addComponents(componentArrays.sourceDc);
         addComponents(componentArrays.dcLine);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);

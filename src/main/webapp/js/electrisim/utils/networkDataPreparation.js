@@ -21,6 +21,7 @@ import {
     COMPONENT_TYPES,
     isSwitchClosedForPowerFlow
 } from '../loadFlow.js';
+import { DC_COMPONENT_TYPES, buildDcPayloadRow } from './dcPayload.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from '../windTurbineDialog.js';
 import { resolveStorageFixedPf } from '../storageDialog.js';
 import { resolveStorageQSetpoint } from './storageQCapability.js';
@@ -556,6 +557,13 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
         processedComponents++;
         
         const baseData = preComputedData.get(cell.id);
+
+        // DC elements: one shared builder, so every study sends them alike.
+        if (DC_COMPONENT_TYPES.includes(componentType)) {
+            const built = buildDcPayloadRow(cell, componentType, counters, model);
+            if (built) componentArrays[built.arrayKey].push(built.row);
+            return;
+        }
 
         switch (componentType) {
             case COMPONENT_TYPES.EXTERNAL_GRID:
@@ -1433,70 +1441,6 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                 componentArrays.SSC.push(SSC);
                 break;
 
-            case COMPONENT_TYPES.DC_BUS:
-                const dcBus = {
-                    typ: `DC Bus${counters.dcBus++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    vn_kv: cell.value.attributes[2]?.nodeValue || "0",
-                    userFriendlyName: baseData.userFriendlyName,
-                    ...getAttributesAsObject(cell, {
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true }
-                    })
-                };
-                componentArrays.dcBus.push(dcBus);
-                break;
-
-            case COMPONENT_TYPES.LOAD_DC:
-                const loadDc = {
-                    typ: `Load DC${counters.loadDc++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    userFriendlyName: (() => {
-                        if (cell.value && cell.value.attributes) {
-                            for (let i = 0; i < cell.value.attributes.length; i++) {
-                                if (cell.value.attributes[i].nodeName === 'name') {
-                                    return cell.value.attributes[i].nodeValue;
-                                }
-                            }
-                        }
-                        return cell.mxObjectId.replace('#', '_');
-                    })(),
-                    bus: getConnectedBusId(cell),
-                    ...getAttributesAsObject(cell, {
-                        p_mw: 'p_mw',
-                        in_service: { name: 'in_service', optional: true },
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true }
-                    })
-                };
-                componentArrays.loadDc.push(loadDc);
-                break;
-
-            case COMPONENT_TYPES.SOURCE_DC:
-                const sourceDc = {
-                    typ: `Source DC${counters.sourceDc++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    userFriendlyName: (() => {
-                        if (cell.value && cell.value.attributes) {
-                            for (let i = 0; i < cell.value.attributes.length; i++) {
-                                if (cell.value.attributes[i].nodeName === 'name') {
-                                    return cell.value.attributes[i].nodeValue;
-                                }
-                            }
-                        }
-                        return cell.mxObjectId.replace('#', '_');
-                    })(),
-                    bus: getConnectedBusId(cell),
-                    ...getAttributesAsObject(cell, {
-                        vm_pu: 'vm_pu',
-                        in_service: { name: 'in_service', optional: true },
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true }
-                    })
-                };
-                componentArrays.sourceDc.push(sourceDc);
-                break;
-
             case COMPONENT_TYPES.SWITCH:
                 if (!cell.edges || cell.edges.length < 2) {
                     const swE = model.getEdges(cell);
@@ -1535,103 +1479,6 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         : {}),
                 };
                 componentArrays.switch.push(switchElement);
-                break;
-
-            case COMPONENT_TYPES.VSC:
-                const vsc = {
-                    typ: `VSC${counters.VSC++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    userFriendlyName: (() => {
-                        if (cell.value && cell.value.attributes) {
-                            for (let i = 0; i < cell.value.attributes.length; i++) {
-                                if (cell.value.attributes[i].nodeName === 'name') {
-                                    return cell.value.attributes[i].nodeValue;
-                                }
-                            }
-                        }
-                        return cell.mxObjectId.replace('#', '_');
-                    })(),
-                    bus: getConnectedBusId(cell),
-                    ...getAttributesAsObject(cell, {
-                        p_mw: 'p_mw',
-                        vm_pu: 'vm_pu',
-                        sn_mva: 'sn_mva',
-                        rx: 'rx',
-                        max_ik_ka: 'max_ik_ka',
-                        in_service: { name: 'in_service', optional: true },
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true }
-                    })
-                };
-                componentArrays.VSC.push(vsc);
-                break;
-
-            case COMPONENT_TYPES.B2B_VSC:
-                const b2bVsc = {
-                    typ: `B2B VSC${counters.B2BVSC++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    userFriendlyName: (() => {
-                        if (cell.value && cell.value.attributes) {
-                            for (let i = 0; i < cell.value.attributes.length; i++) {
-                                if (cell.value.attributes[i].nodeName === 'name') {
-                                    return cell.value.attributes[i].nodeValue;
-                                }
-                            }
-                        }
-                        return cell.mxObjectId.replace('#', '_');
-                    })(),
-                    ...getAttributesAsObject(cell, {
-                        bus1: 'bus1',
-                        bus2: 'bus2',
-                        p_mw: 'p_mw',
-                        vm1_pu: 'vm1_pu',
-                        vm2_pu: 'vm2_pu',
-                        sn_mva: 'sn_mva',
-                        rx: 'rx',
-                        max_ik_ka: 'max_ik_ka',
-                        in_service: { name: 'in_service', optional: true },
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true }
-                    })
-                };
-                componentArrays.B2BVSC.push(b2bVsc);
-                break;
-
-            case COMPONENT_TYPES.DC_LINE:
-                const dcLine = {
-                    typ: `DC Line${counters.dcLine++}`,
-                    name: cell.mxObjectId.replace('#', '_'),
-                    id: cell.id,
-                    userFriendlyName: (() => {
-                        if (cell.value && cell.value.attributes) {
-                            for (let i = 0; i < cell.value.attributes.length; i++) {
-                                if (cell.value.attributes[i].nodeName === 'name') {
-                                    return cell.value.attributes[i].nodeValue;
-                                }
-                            }
-                        }
-                        return cell.mxObjectId.replace('#', '_');
-                    })(),
-                    bus: getConnectedBusId(cell),
-                    ...getAttributesAsObject(cell, {
-                        p_mw: 'p_mw',
-                        loss_percent: 'loss_percent',
-                        loss_mw: 'loss_mw',
-                        vm_from_pu: 'vm_from_pu',
-                        vm_to_pu: 'vm_to_pu',
-                        in_service: { name: 'in_service', optional: true },
-                        cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true },
-                        max_p_mw: { name: 'max_p_mw', optional: true },
-                        min_q_from_mvar: { name: 'min_q_from_mvar', optional: true },
-                        max_q_from_mvar: { name: 'max_q_from_mvar', optional: true },
-                        min_q_to_mvar: { name: 'min_q_to_mvar', optional: true },
-                        max_q_to_mvar: { name: 'max_q_to_mvar', optional: true },
-                        opf_marginal_cost_eur_per_mwh: { name: 'opf_marginal_cost_eur_per_mwh', optional: true },
-                        opf_cp2_eur_per_mw2: { name: 'opf_cp2_eur_per_mw2', optional: true },
-                        opf_cost_currency: { name: 'opf_cost_currency', optional: true },
-                    })
-                };
-                componentArrays.dcLine.push(dcLine);
                 break;
 
             case COMPONENT_TYPES.LINE:

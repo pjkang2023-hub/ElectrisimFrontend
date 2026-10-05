@@ -5,6 +5,11 @@ import { OPF_COST_CURRENCY_OPTIONS } from './utils/opfCostCurrency.js';
 // Default values for DC line parameters (based on pandapower documentation)
 export const defaultDCLineData = {
     name: "DC Line",
+    // A DC cable between DC buses (pandapower line_dc)
+    length_km: 0.1,
+    r_ohm_per_km: 0.1,
+    max_i_ka: 1.0,
+    // An HVDC link between AC buses (pandapower dcline)
     p_mw: 0.0,
     loss_percent: 0.0,
     loss_mw: 0.0,
@@ -42,9 +47,33 @@ export class DCLineDialog extends Dialog {
                 value: this.data.name
             },
             {
+                id: 'length_km',
+                label: 'Length (km)',
+                description: 'Between two DC buses (a DC cable): its length. The load flow takes its resistance and rating below; the other tabs are for a DC line between two AC buses.',
+                type: 'number',
+                value: String(this.data.length_km),
+                step: '0.001'
+            },
+            {
+                id: 'r_ohm_per_km',
+                label: 'Resistance (Ohm/km)',
+                description: 'Between two DC buses: the cable\'s resistance per km, both conductors together.',
+                type: 'number',
+                value: String(this.data.r_ohm_per_km),
+                step: '0.001'
+            },
+            {
+                id: 'max_i_ka',
+                label: 'Maximum current (kA)',
+                description: 'Between two DC buses: the cable\'s rated current, for its loading.',
+                type: 'number',
+                value: String(this.data.max_i_ka),
+                step: '0.01'
+            },
+            {
                 id: 'p_mw',
                 label: 'Active Power (MW)',
-                description: 'Active power transmitted from from_bus to to_bus',
+                description: 'Between two AC buses (an HVDC link): active power transmitted from from_bus to to_bus',
                 type: 'number',
                 value: this.data.p_mw.toString(),
                 step: '0.1'

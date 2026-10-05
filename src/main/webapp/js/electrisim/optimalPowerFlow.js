@@ -1,5 +1,7 @@
 // Dependencies will be resolved from global scope when needed
 import ENV from './config/environment.js';
+import { DC_COMPONENT_TYPES, buildDcPayloadRow } from './utils/dcPayload.js';
+import { showResultWarnings } from './utils/resultWarnings.js';
 import { resolveStudyOpfCostCurrency } from './utils/opfCostCurrency.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import {
@@ -140,6 +142,11 @@ function optimalPowerFlowPandaPower(a, b, c) {
         storage: 0,
         staticGenerator: 0,
         dcLine: 0,
+        dcBus: 0,
+        loadDc: 0,
+        sourceDc: 0,
+        VSC: 0,
+        B2BVSC: 0,
         switch: 0,
         shuntReactor: 0,
         capacitor: 0,
@@ -158,6 +165,11 @@ function optimalPowerFlowPandaPower(a, b, c) {
         storage: [],
         staticGenerator: [],
         dcLine: [],
+        dcBus: [],
+        loadDc: [],
+        sourceDc: [],
+        VSC: [],
+        B2BVSC: [],
         switch: [],
         shuntReactor: [],
         capacitor: [],
@@ -487,6 +499,14 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     id: cell.id,
                                     bus: getConnectedBusId(cell)
                                 };
+                            }
+
+                            // DC elements: the shared builder. The DC line sent its ends
+                            // nested as bus: {busFrom, busTo}, so the backend skipped it.
+                            if (DC_COMPONENT_TYPES.includes(componentType)) {
+                                const built = buildDcPayloadRow(cell, componentType, counters, model);
+                                if (built) componentArrays[built.arrayKey].push(built.row);
+                                return;
                             }
 
                             // Process basic component types
@@ -946,33 +966,6 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                     });
                                     break;
 
-                                case COMPONENT_TYPES.DC_LINE: {
-                                    const dcOpf = getAttributesAsObject(cell, {
-                                        p_mw: 'p_mw',
-                                        loss_percent: 'loss_percent',
-                                        loss_mw: 'loss_mw',
-                                        vm_from_pu: 'vm_from_pu',
-                                        vm_to_pu: 'vm_to_pu',
-                                        in_service: { name: 'in_service', optional: true },
-                                        max_p_mw: { name: 'max_p_mw', optional: true },
-                                        min_q_from_mvar: { name: 'min_q_from_mvar', optional: true },
-                                        max_q_from_mvar: { name: 'max_q_from_mvar', optional: true },
-                                        min_q_to_mvar: { name: 'min_q_to_mvar', optional: true },
-                                        max_q_to_mvar: { name: 'max_q_to_mvar', optional: true },
-                                        opf_marginal_cost_eur_per_mwh: { name: 'opf_marginal_cost_eur_per_mwh', optional: true },
-                                        opf_cp2_eur_per_mw2: { name: 'opf_cp2_eur_per_mw2', optional: true },
-                                        opf_cost_currency: { name: 'opf_cost_currency', optional: true },
-                                    });
-                                    componentArrays.dcLine.push({
-                                        typ: `DC Line${counters.dcLine++}`,
-                                        name: cell.mxObjectId.replace('#', '_'),
-                                        id: cell.id,
-                                        userFriendlyName: baseData.userFriendlyName,
-                                        bus: getConnectedBusId(cell, true),
-                                        ...dcOpf,
-                                    });
-                                    break;
-                                }
                             }
                         });
 
@@ -1122,6 +1115,11 @@ function optimalPowerFlowPandaPower(a, b, c) {
                             ...componentArrays.load,
                             ...componentArrays.storage,
                             ...componentArrays.motor,
+                            ...componentArrays.VSC,
+                            ...componentArrays.B2BVSC,
+                            ...componentArrays.dcBus,
+                            ...componentArrays.loadDc,
+                            ...componentArrays.sourceDc,
                             ...componentArrays.dcLine,
                             ...componentArrays.line,
                             ...componentArrays.switch,
@@ -1214,6 +1212,13 @@ async function processNetworkData(url, obj, b, grafka, simProgress) {
             alert('Optimal Power Flow Error: ' + dataJson.error);
             overlay?.remove();
             return;
+        }
+
+        // What the backend left out (a DC network the OPF cannot model, ...).
+        try {
+            showResultWarnings(dataJson.warnings, 'Optimal power flow notes');
+        } catch (warnErr) {
+            console.warn('OPF notes not shown:', warnErr);
         }
 
         await ensureElectrisimModule('dialogs/OptimalPowerFlowResultsDialog');

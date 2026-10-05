@@ -1288,7 +1288,12 @@ export function configureDCLineAttributes(grafka, vertex, options = {}) {
     var g = mxUtils.createXmlDocument().createElement("object");
     g.setAttribute("name", "DC Line");
     //INPUT
-    g.setAttribute("Load_flow_parameters", "");  
+    g.setAttribute("Load_flow_parameters", "");
+    // Between two DC buses: a DC cable (pandapower line_dc)
+    g.setAttribute("length_km", String(options.length_km ?? "0.1"));
+    g.setAttribute("r_ohm_per_km", String(options.r_ohm_per_km ?? "0.1"));
+    g.setAttribute("max_i_ka", String(options.max_i_ka ?? "1"));
+    // Between two AC buses: an HVDC link (pandapower dcline)
     g.setAttribute("p_mw", options.p_mw || "0");
     g.setAttribute("loss_percent", options.loss_percent || "0");
     g.setAttribute("loss_mw", options.loss_mw || "0");
