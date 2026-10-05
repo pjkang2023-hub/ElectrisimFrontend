@@ -167,7 +167,7 @@
             meta.style.cssText = 'flex: 1 1 200px; font-size: 13px; line-height: 1.6; color: #444;';
             const period = this.results.time_stamps?.length
                 ? `${this.results.time_stamps[0]} → ${this.results.time_stamps[this.results.time_stamps.length - 1]}`
-                : `${steps} hour(s)`;
+                : `${steps} ${this.isHourly() ? 'hour(s)' : 'step(s)'}`;
             meta.innerHTML = `
                 <div><strong>Duration:</strong> ${steps} time step(s) &nbsp;·&nbsp; <strong>Period:</strong> ${period}</div>
                 <div><strong>Loads:</strong> ${this.countUnique(this.results.loads, 'name')} &nbsp;·&nbsp;
@@ -347,7 +347,7 @@
                 return;
             }
             container.innerHTML = `<p style="font-size:12px;color:#666;margin:0 0 8px;">
-                Bus voltages and powers at every time step. Scroll inside the table to browse all ${this.results.time_steps || ''} hours.
+                Bus voltages and powers at every time step. Scroll inside the table to browse all ${this.results.time_steps || ''} ${this.isHourly() ? 'hours' : 'steps'}.
             </p>`;
             const section = document.createElement('div');
             const buses = [...new Set(this.results.busbars.map(b => b.name))];
@@ -357,14 +357,14 @@
                 buses.forEach(busName => {
                     const busData = this.results.busbars.find(b => b.name === busName && b.time_step === ts);
                     if (busData) {
-                        rows.push([ts, busName, busData.vm_pu.toFixed(4), busData.va_degree.toFixed(2), busData.p_mw.toFixed(2), busData.q_mvar.toFixed(2)]);
+                        rows.push([this.timeLabel(ts), busName, busData.vm_pu.toFixed(4), busData.va_degree.toFixed(2), busData.p_mw.toFixed(2), busData.q_mvar.toFixed(2)]);
                     }
                 });
             });
             const scrollWrap = document.createElement('div');
             scrollWrap.style.cssText = 'max-height:min(480px,50vh);overflow:auto;border:1px solid #e9ecef;border-radius:4px;';
             scrollWrap.appendChild(this.buildStatsTable(
-                ['Hour', 'Bus', 'V (pu)', 'Angle (°)', 'P (MW)', 'Q (MVar)'],
+                [this.isHourly() ? 'Hour' : 'Time (s)', 'Bus', 'V (pu)', 'Angle (°)', 'P (MW)', 'Q (MVar)'],
                 rows
             ));
             section.appendChild(scrollWrap);
@@ -427,7 +427,7 @@
             this.addSeriesChart(container, this.results.externalgrids, 'External grid active power (+ import)', 'P (MW)', 'p_mw', timeSteps, '#37474f');
             this.addSeriesChart(container, this.results.storages, 'Battery power (+ charging)', 'P (MW)', 'p_mw', timeSteps, '#00838f');
             this.addSeriesChart(container, (this.results.storages || []).filter(s => s.soc_percent != null),
-                'Battery state of charge (end of hour)', 'SOC (%)', 'soc_percent', timeSteps, '#00838f');
+                `Battery state of charge (end of ${this.isHourly() ? 'hour' : 'step'})`, 'SOC (%)', 'soc_percent', timeSteps, '#00838f');
         }
 
         addSeriesChart(container, rows, title, yLabel, key, timeSteps, color) {
@@ -456,7 +456,8 @@
             const profilesUsed = this.results.profiles_used;
             if (profilesUsed && Object.keys(profilesUsed).length > 0) {
                 Object.entries(profilesUsed).forEach(([technicalId, spec]) => {
-                    const elementName = this.resolveProfileDisplayName(technicalId, spec);
+                    const elementName = this.resolveProfileDisplayName(technicalId, spec)
+                        + (spec.library_profile ? ` (load profile "${spec.library_profile}")` : '');
                     const unit = spec.mode === 'absolute' ? 'MW' : '× base P';
                     this.addLineChart(container, `Input profile — ${elementName}`, spec.mode === 'absolute' ? 'P (MW)' : 'Scale factor',
                         timeSteps.slice(0, spec.values.length),
@@ -474,6 +475,18 @@
                 this.addLineChart(container, 'Generation profile (scale)', 'Scale factor', timeSteps,
                     [{ label: this.results.generation_profile || 'generation', data: this.results.generation_profile_values }], '#558b2f');
             }
+        }
+
+        /** Steps an hour apart, as before seconds-long steps could be chosen. */
+        isHourly() {
+            const step = Number(this.results?.time_step_s);
+            return !(step > 0) || Math.abs(step - 3600) < 1e-9;
+        }
+
+        /** A step's place on the time axis: its hour, or its time in seconds. */
+        timeLabel(step) {
+            if (this.isHourly()) return step;
+            return Number((Number(step) * Number(this.results.time_step_s)).toPrecision(10));
         }
 
         addLineChart(container, title, yLabel, labels, datasets, defaultColor) {
@@ -511,13 +524,13 @@
             try {
                 const chart = new ChartCtor(canvas, {
                     type: 'line',
-                    data: { labels, datasets: chartDatasets },
+                    data: { labels: labels.map(l => this.timeLabel(l)), datasets: chartDatasets },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: { legend: { display: chartDatasets.length > 1 } },
                         scales: {
-                            x: { title: { display: true, text: 'Hour (time step)' } },
+                            x: { title: { display: true, text: this.isHourly() ? 'Hour (time step)' : 'Time (s)' } },
                             y: { title: { display: true, text: yLabel } }
                         }
                     }

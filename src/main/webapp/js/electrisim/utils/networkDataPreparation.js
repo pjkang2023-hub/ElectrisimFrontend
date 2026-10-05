@@ -1078,6 +1078,9 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         dc_it_share_percent: { name: 'dc_it_share_percent', optional: true },
                         dc_ups_hold_s: { name: 'dc_ups_hold_s', optional: true },
                         dc_ride_through_csv: { name: 'dc_ride_through_csv', optional: true },
+                        // A profile from the diagram's load profile library, and how Q follows it.
+                        load_profile_id: { name: 'load_profile_id', optional: true },
+                        load_profile_q_mode: { name: 'load_profile_q_mode', optional: true },
                     })
                 };
                 componentArrays.load.push(load);

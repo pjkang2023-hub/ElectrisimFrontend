@@ -8,6 +8,7 @@ import {
     normalizeProfileLength
 } from '../utils/timeSeriesProfiles.js';
 import { attachBackdropCloseHandler } from '../utils/dialogStyles.js';
+import { getLoadProfileLibrary } from '../utils/loadProfileLibrary.js';
 
 const LOAD_TYPES = new Set(['Load', 'Asymmetric Load']);
 // A Wind Turbine is a static generator to the backend; leaving it out meant a
@@ -34,6 +35,7 @@ function getCellAttr(cell, attrName) {
 function collectProfileElements(graph) {
     const elements = [];
     if (!graph?.getModel) return elements;
+    const library = getLoadProfileLibrary(graph);
     const cells = graph.getModel().getChildCells(graph.getDefaultParent(), true, true) || [];
     for (const cell of cells) {
         const styleStr = cell.getStyle?.();
@@ -54,11 +56,15 @@ function collectProfileElements(graph) {
         const userFriendlyName = getCellAttr(cell, 'name') || technicalName;
         const basePMw = parseFloat(getCellAttr(cell, 'p_mw')) || (elementType === 'load' ? 15 : 20);
 
+        // A load following a profile from the diagram's library takes it
+        // instead of the values entered here.
+        const profileId = elementType === 'load' ? (getCellAttr(cell, 'load_profile_id') || '') : '';
         elements.push({
             key: technicalName,
             label: userFriendlyName,
             elementType,
-            basePMw
+            basePMw,
+            libraryProfile: profileId ? (library[profileId]?.name || `${profileId} (not in the library)`) : ''
         });
     }
     return elements;
@@ -121,10 +127,14 @@ class TimeSeriesSimulationDialog {
         // Duration
         const tsSection = document.createElement('div');
         tsSection.innerHTML = '<h3 style="margin: 0 0 12px 0; color: #007cba; font-size: 15px;">Simulation horizon</h3>';
-        const timeStepsEl = this.createNumberInput('time_steps', 'Duration (hours / time steps)', '24', '1', '8760',
-            'Each time step runs one AC power flow (1 hour by default).');
+        const timeStepsEl = this.createNumberInput('time_steps', 'Duration (time steps)', '24', '1', '8760',
+            'Each time step runs one AC power flow.');
         tsSection.appendChild(timeStepsEl);
         const timeStepsInput = timeStepsEl.querySelector('#time_steps');
+        const stepSizeEl = this.createNumberInput('time_step_s', 'Time step (s)', '3600', 'any', '86400',
+            '3600 s (an hour) by default. Loads following a profile from the load profile library take its value '
+            + 'at each step, or its mean over the step when the step is longer than the profile\'s samples.');
+        tsSection.appendChild(stepSizeEl);
         form.appendChild(tsSection);
 
         // Load & generation profiles
@@ -298,8 +308,10 @@ class TimeSeriesSimulationDialog {
                 }
 
                 const timeSteps = Math.max(1, Math.min(8760, parseInt(getField('time_steps').value, 10) || 24));
+                const stepS = parseFloat(getField('time_step_s')?.value);
                 const params = {
                     time_steps: timeSteps,
+                    time_step_s: stepS > 0 ? stepS : 3600,
                     profile_mode: 'custom',
                     load_profile: getField('quick_load_preset')?.value || 'constant',
                     generation_profile: getField('quick_gen_preset')?.value || 'constant',
@@ -415,6 +427,12 @@ class TimeSeriesSimulationDialog {
         const initialSteps = parseInt(this._timeStepsInput?.value, 10) || 24;
         hint.textContent = `Base P from diagram: ${el.basePMw} MW — enter ${initialSteps} values`;
         card.appendChild(hint);
+        if (el.libraryProfile) {
+            const follows = document.createElement('div');
+            follows.style.cssText = 'font-size:12px;color:#0c5460;background:#d1ecf1;border-radius:4px;padding:5px 8px;margin-bottom:6px;';
+            follows.textContent = `Follows the load profile "${el.libraryProfile}" from the library: the values below are not used.`;
+            card.appendChild(follows);
+        }
 
         const textarea = document.createElement('textarea');
         textarea.rows = 3;

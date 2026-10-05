@@ -674,6 +674,9 @@ export function configureLoadAttributes(grafka, vertex, options = {}) {
     g.setAttribute("dc_it_share_percent", String(options.dc_it_share_percent ?? "85"));
     g.setAttribute("dc_ups_hold_s", String(options.dc_ups_hold_s ?? "0"));
     g.setAttribute("dc_ride_through_csv", options.dc_ride_through_csv || "0,0.9\n10,0.9\n20,0.9");
+    // A profile from the diagram's load profile library (none by default).
+    g.setAttribute("load_profile_id", String(options.load_profile_id ?? ""));
+    g.setAttribute("load_profile_q_mode", String(options.load_profile_q_mode ?? "pf"));
 
     grafka.getModel().setValue(vertex, g)
     

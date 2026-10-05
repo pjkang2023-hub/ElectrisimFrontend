@@ -2,6 +2,7 @@
 import { TransientStabilityDialog } from './dialogs/TransientStabilityDialog.js';
 import ENV from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
+import { referencedLoadProfiles } from './utils/loadProfileLibrary.js';
 import {
     startSimulationProgress,
     settleSimulationProgress,
@@ -112,6 +113,8 @@ window.transientStabilityAndes = function (a, b, c) {
             toggle_gen: values.toggle_gen || '',
             toggle_gen_t: String(values.toggle_gen_t ?? '2.0'),
             poi_bus: values.poi_bus || '',
+            // The library profiles some load follows through the run.
+            load_profiles: referencedLoadProfiles(b),
             user_email: getUserEmail()
         };
 

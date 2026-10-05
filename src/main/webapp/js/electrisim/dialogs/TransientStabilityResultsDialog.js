@@ -215,6 +215,14 @@
                     values: this.results.frequency_hz
                 }], 'f [Hz]');
             }
+            // Loads following a profile from the diagram's library, and the power each was set to.
+            const followed = this.results.load_profiles || [];
+            if (followed.length) {
+                makeChart('Loads following a load profile (P, MW)', followed.map(lp => ({
+                    name: `${lp.load} (${lp.profile}${lp.q_mode === 'constant' ? ', constant Q' : ''})`,
+                    values: lp.p_mw
+                })), 'P [MW]');
+            }
         }
 
         exportCsv() {

@@ -1,5 +1,6 @@
 import ENV from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
+import { referencedLoadProfiles } from './utils/loadProfileLibrary.js';
 import {
     startSimulationProgress,
     settleSimulationProgress,
@@ -59,6 +60,9 @@ function timeSeriesSimulationPandaPower(apka, graph) {
                 const simulationParameters = {
                     typ: 'TimeSeriesSimulationPandaPower Parameters',
                     time_steps: String(params.time_steps ?? 24),
+                    time_step_s: String(params.time_step_s ?? 3600),
+                    // The library profiles some load follows.
+                    load_profiles: referencedLoadProfiles(graph),
                     load_profile: params.load_profile || 'constant',
                     generation_profile: params.generation_profile || 'constant',
                     profile_mode: params.profile_mode || 'custom',

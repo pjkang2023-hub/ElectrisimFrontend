@@ -6,6 +6,7 @@ import {
     syncHarmonicSpectrumTriStateFromDialogData,
     valuesFromHarmonicSpectrumTriState
 } from './utils/loadHarmonicSpectrumTriStateUi.js';
+import { getLoadProfileLibrary } from './utils/loadProfileLibrary.js';
 
 // Default values for load parameters (based on pandapower documentation)
 export const defaultLoadData = {
@@ -37,6 +38,8 @@ export const defaultLoadData = {
     dc_it_share_percent: 85,
     dc_ups_hold_s: 0,
     dc_ride_through_csv: '0,0.9\n10,0.9\n20,0.9',
+    load_profile_id: '',
+    load_profile_q_mode: 'pf',
 };
 
 export class LoadDialog extends Dialog {
@@ -331,8 +334,43 @@ export class LoadDialog extends Dialog {
                 type: 'textarea',
                 value: this.data.dc_ride_through_csv,
                 rows: 6
+            },
+            {
+                id: 'load_profile_id',
+                label: 'Power profile',
+                symbol: 'load_profile_id',
+                description: 'The load follows this profile from the diagram\'s load profile library in the time series and transient stability studies. 1.0 p.u. is its drawn P. Manage the library under Simulate > Load Profiles.',
+                type: 'select',
+                options: this._loadProfileOptions(),
+                value: this.data.load_profile_id
+            },
+            {
+                id: 'load_profile_q_mode',
+                label: 'Reactive power with the profile',
+                symbol: 'load_profile_q_mode',
+                description: 'Constant power factor scales Q with P; constant Q keeps the drawn Q.',
+                type: 'select',
+                options: [
+                    { value: 'pf', label: 'Constant power factor' },
+                    { value: 'constant', label: 'Constant Q' }
+                ],
+                value: this.data.load_profile_q_mode
             }
         ];
+    }
+
+    /** None, then each profile in the diagram's library. */
+    _loadProfileOptions() {
+        const options = [{ value: '', label: 'None (constant power)' }];
+        try {
+            const library = getLoadProfileLibrary(this.graph);
+            Object.entries(library).forEach(([id, entry]) => {
+                options.push({ value: id, label: entry?.name || id });
+            });
+        } catch (e) {
+            console.warn('Load profile library unavailable:', e);
+        }
+        return options;
     }
 
     /** OPF: align P/Q limits from load-flow tab; marginal/cp2 stay as entered (may be empty). */
