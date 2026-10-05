@@ -89,6 +89,17 @@ export class ArcFlashDialog extends Dialog {
                 value: '0.2',
                 min: '0.001',
                 step: '0.001'
+            },
+            {
+                // As in the short-circuit study, so its bolted fault currents
+                // are the same: c max 1.05 at 6 %, 1.10 at 10 %.
+                id: 'lv_tol_percent',
+                label: 'Voltage tolerance in low voltage grids (sets c max for the bolted fault current)',
+                type: 'radio',
+                options: [
+                    { value: '6', label: '6%', default: true },
+                    { value: '10', label: '10%' }
+                ]
             }
         ];
     }

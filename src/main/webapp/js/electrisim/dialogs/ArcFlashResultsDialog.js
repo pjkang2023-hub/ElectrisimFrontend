@@ -211,7 +211,8 @@ export class ArcFlashResultsDialog {
             : 'Gap, enclosure and working distance typical for each bus voltage (IEEE 1584-2018 Table 8)';
         box.appendChild(document.createTextNode(
             `Electrode ${p.electrode_config || 'VCB'} · ${equipment} · ` +
-            `Clearing ${p.clearing_time_s ?? '—'} s / Iarc-min ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s · Fault 3ph max`
+            `Clearing ${p.clearing_time_s ?? '—'} s / Iarc-min ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s · Fault 3ph max` +
+            (p.lv_tol_percent != null ? ` · LV tolerance ${p.lv_tol_percent} %` : '')
         ));
         container.appendChild(box);
     }

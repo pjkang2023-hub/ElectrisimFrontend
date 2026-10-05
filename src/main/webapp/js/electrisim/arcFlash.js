@@ -241,6 +241,7 @@ PPE Cat ${cell.ppe_category ?? 'N/A'}${methodTag}`;
                 enclosure_depth_mm: values.enclosure_depth_mm || '508',
                 clearing_time_s: values.clearing_time_s || '0.2',
                 clearing_time_min_s: values.clearing_time_min_s || values.clearing_time_s || '0.2',
+                lv_tol_percent: values.lv_tol_percent || '6',
                 user_email: getUserEmail()
             };
 
