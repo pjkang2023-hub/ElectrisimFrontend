@@ -8,12 +8,12 @@
 // of each edge: the payload used to send a VSC's AC bus only, and a DC line no
 // buses at all, so the backend left both out.
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter'];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
     'DC Bus': 'bus_dc', 'DC Line': 'line_dc', 'VSC': 'vsc', 'B2B VSC': 'b2b_vsc',
-    'Load DC': 'load_dc', 'Source DC': 'source_dc'
+    'Load DC': 'load_dc', 'Source DC': 'source_dc', 'DC/DC Converter': 'dc_dc_converter'
 };
 
 function shapeOf(cell) {
@@ -161,6 +161,20 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             row: withOptional(row, cell, ['breaker_type', 'rated_voltage_kv', 'rated_current_ka', 'breaking_capacity_ka',
                 'opening_time_ms', 'limiting_inductance_mh', 'arrester_clamp_kv', 'arrester_energy_kj',
                 'cost_per_unit_by_currency'])
+        };
+    }
+    case 'DC/DC Converter': {
+        // Its input on the left pin, its output on the right.
+        const { dc } = connectedBuses(cell, model);
+        const row = {
+            ...common(cell, `DC/DC Converter${next('dcDcConverter')}`),
+            bus_in: dc[0]?.key || null,
+            bus_out: dc[1]?.key || null,
+        };
+        return {
+            arrayKey: 'dcDcConverter',
+            row: withOptional(row, cell, ['control_mode', 'vm_out_pu', 'p_set_mw', 'rated_mw', 'vn_in_kv', 'vn_out_kv',
+                'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC Capacitor': {

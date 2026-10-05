@@ -1945,6 +1945,7 @@ function loadFlowPandaPower(a, b, c) {
         B2BVSC: 0,
         dcCapacitor: 0,
         dcBreaker: 0,
+        dcDcConverter: 0,
         dcLine: 0,
         line: 0,
         switch: 0
@@ -2058,6 +2059,7 @@ function loadFlowPandaPower(a, b, c) {
         B2BVSC: [],
         dcCapacitor: [],
         dcBreaker: [],
+        dcDcConverter: [],
         dcLine: [],
         line: [],
         switch: []
@@ -3194,6 +3196,18 @@ P_dc-[MW]: ${formatNumber(cell.p_dc_mw_m)}`, { width: 70, height: 56, positionX:
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC Capacitor')}
 U[pu]: ${formatNumber(cell.vm_pu)}
 E[kJ]: ${formatNumber(cell.energy_kj)}`, { width: 60, height: 40, positionX: -0.3 });
+            });
+        },
+        dcdcconverters: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const body = cell.in_service === false ? 'Out of service' : `P_in[MW]: ${formatNumber(cell.p_in_mw)}
+P_out[MW]: ${formatNumber(cell.p_out_mw)}
+Loss[MW]: ${formatNumber(cell.loss_mw)}
+Loading[%]: ${formatNumber(cell.loading_percent)}`;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC/DC Converter')}
+${body}`, { width: 70, height: 60, positionX: 0.5, positionY: 1.2 });
             });
         },
         dcbreakers: (data, b) => {
@@ -4788,6 +4802,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcCapacitor);
         addComponents(componentArrays.dcLine);
         addComponents(componentArrays.dcBreaker);
+        addComponents(componentArrays.dcDcConverter);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);
         

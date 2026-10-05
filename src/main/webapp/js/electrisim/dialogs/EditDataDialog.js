@@ -23,6 +23,7 @@ import { DcBusDialog } from '../dcBusDialog.js';
 import { LoadDcDialog } from '../loadDcDialog.js';
 import { DcCapacitorDialog } from '../dcCapacitorDialog.js';
 import { DcBreakerDialog } from '../dcBreakerDialog.js';
+import { DcDcConverterDialog } from '../dcDcConverterDialog.js';
 import { SourceDcDialog } from '../sourceDcDialog.js';
 import { SwitchDialog } from '../switchDialog.js';
 import { updateSwitchCellStyle } from '../configureAttributes.js';
@@ -332,6 +333,12 @@ export class EditDataDialog {
             // A DC breaker: the same layout, its own fields and symbol
             if (this.elementType === "DC Breaker") {
                 this.handleLoadDc(DcBreakerDialog);
+                return;
+            }
+
+            // A DC/DC converter: the same layout, its own fields
+            if (this.elementType === "DC/DC Converter") {
+                this.handleLoadDc(DcDcConverterDialog);
                 return;
             }
             
@@ -3306,6 +3313,11 @@ export class EditDataDialog {
                 gridOptions: null, // Modern dialog handles this
                 rowDefs: null,
                 helpUrl: 'https://pandapower.readthedocs.io/en/v3.4.0/elements/bus_dc.html'
+            }),
+            'DC/DC Converter': () => ({
+                gridOptions: null, // Modern dialog handles this
+                rowDefs: null,
+                helpUrl: 'https://electrisim.com/documentation.html#vsc'
             }),
             'DC Breaker': () => ({
                 gridOptions: null, // Modern dialog handles this

@@ -1434,6 +1434,30 @@ export function configureDcCapacitorAttributes(grafka, vertex, options = {}) {
     grafka.insertVertex(vertex, null, '', 0.5, 0, 0, 0, null, true);
 }
 
+export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    g.setAttribute("name", options.name || "DC/DC Converter");
+
+    // Input on its left pin, output on its right
+    g.setAttribute("Load_flow_parameters", "");
+    g.setAttribute("control_mode", options.control_mode || "voltage");
+    g.setAttribute("vm_out_pu", String(options.vm_out_pu ?? "1.0"));
+    g.setAttribute("p_set_mw", String(options.p_set_mw ?? "0.1"));
+    g.setAttribute("rated_mw", String(options.rated_mw ?? "1"));
+    g.setAttribute("vn_in_kv", String(options.vn_in_kv ?? "0.8"));
+    g.setAttribute("vn_out_kv", String(options.vn_out_kv ?? "0.4"));
+    g.setAttribute("efficiency_percent", String(options.efficiency_percent ?? "98"));
+    g.setAttribute("no_load_loss_kw", String(options.no_load_loss_kw ?? "1"));
+    g.setAttribute("bidirectional", String(options.bidirectional ?? "false"));
+    g.setAttribute("in_service", String(options.in_service ?? "true"));
+
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+
+    grafka.getModel().setValue(vertex, g);
+}
+
 /** The DC breaker's symbol, open or closed. */
 export function updateDcBreakerCellStyle(grafka, vertex, closed) {
     if (!grafka || !vertex) return;
@@ -1668,6 +1692,7 @@ if (typeof window !== 'undefined') {
     window.configureSourceDcAttributes = configureSourceDcAttributes;
     window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
     window.configureDcBreakerAttributes = configureDcBreakerAttributes;
+    window.configureDcDcConverterAttributes = configureDcDcConverterAttributes;
     window.updateDcBreakerCellStyle = updateDcBreakerCellStyle;
     window.configureSwitchAttributes = configureSwitchAttributes;
     window.updateSwitchCellStyle = updateSwitchCellStyle;
