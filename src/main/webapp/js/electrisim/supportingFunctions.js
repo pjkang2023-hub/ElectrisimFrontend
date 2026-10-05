@@ -2791,6 +2791,8 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                         parallel: `${parallel}`,
                         type: `${type}`,
                         in_service: `${in_service}`,
+                        pp_import_from_bus: `${fromBusName}`,
+                        pp_import_to_bus: `${toBusName}`,
                     };
                     const useLineVertex =
                         lineNamesNeedingVertex.has(String(name)) ||

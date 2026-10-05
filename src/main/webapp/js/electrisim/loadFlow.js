@@ -1390,6 +1390,12 @@ function cellIsLineGraphVertex(v) {
  * Walks through Switch and Line *vertices* placed in series (Bus–Line–Switch–Bus style drawings).
  */
 function resolveGraphEndpointToBusSemantic(fromVertex, enteredViaEdge, model, maxHops) {
+    const bus = resolveGraphEndpointToBusCell(fromVertex, enteredViaEdge, model, maxHops);
+    return bus ? cellSemanticId(bus) : '';
+}
+
+/** The bus vertex itself, as resolveGraphEndpointToBusSemantic finds it. */
+function resolveGraphEndpointToBusCell(fromVertex, enteredViaEdge, model, maxHops) {
     const limit = maxHops != null ? maxHops : 48;
     const visited = new Set();
     // Track which graph edge each search frame came in through. Without this the DFS can hop
@@ -1402,7 +1408,7 @@ function resolveGraphEndpointToBusSemantic(fromVertex, enteredViaEdge, model, ma
         if (visited.has(v.id)) continue;
         visited.add(v.id);
         if (cellIsElectricalBusVertex(v)) {
-            return cellSemanticId(v);
+            return v;
         }
         if (cellIsSwitchVertexForLine(v) || cellIsLineGraphVertex(v)) {
             const edges = edgesOfVertex(v, model);
@@ -1415,7 +1421,7 @@ function resolveGraphEndpointToBusSemantic(fromVertex, enteredViaEdge, model, ma
             }
         }
     }
-    return '';
+    return null;
 }
 
 /**
@@ -1433,9 +1439,30 @@ function getLineBusEndpointsForPayload(cell, model) {
         return ed.target && ed.target !== cell ? ed.target : ed.source;
     };
     const edges = edgesOfVertex(cell, model);
+    // Each end with its bus and whether its edge runs into the line. The ends
+    // came out in the order the edges were added, so a breaker added after
+    // the line turned it round: LA1, drawn from the substation, exported from
+    // A1. An imported line names its ends; otherwise an edge into the line is
+    // its from end and one out of it its to end, when there is one of each.
+    const ends = [];
     for (let i = 0; i < edges.length; i++) {
-        add(resolveGraphEndpointToBusSemantic(other(edges[i]), edges[i], model));
+        const busCell = resolveGraphEndpointToBusCell(other(edges[i]), edges[i], model);
+        if (!busCell) continue;
+        const into = edges[i].target === cell || (edges[i].target && cell && edges[i].target.id === cell.id);
+        ends.push({ id: cellSemanticId(busCell), busCell, into });
     }
+    const attr = (c, k) => (c && c.value && typeof c.value.getAttribute === 'function') ? (c.value.getAttribute(k) || '') : '';
+    const fromName = attr(cell, 'pp_import_from_bus');
+    const toName = attr(cell, 'pp_import_to_bus');
+    const named = (name) => ends.find((e) => name && (attr(e.busCell, 'name') === name || attr(e.busCell, 'userFriendlyName') === name));
+    const fromEnd = named(fromName);
+    const toEnd = named(toName);
+    if (fromEnd && toEnd && fromEnd !== toEnd) {
+        ends.sort((a, b) => (a === fromEnd ? -1 : b === fromEnd ? 1 : 0));
+    } else if (ends.filter((e) => e.into).length === 1 && ends.filter((e) => !e.into).length === 1) {
+        ends.sort((a, b) => Number(b.into) - Number(a.into));
+    }
+    ends.forEach((e) => add(e.id));
     if (cell.source && cell.target) {
         add(resolveGraphEndpointToBusSemantic(cell.source, cell, model));
         add(resolveGraphEndpointToBusSemantic(cell.target, cell, model));

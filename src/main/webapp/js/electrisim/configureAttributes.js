@@ -1354,6 +1354,12 @@ export function configureLineAttributes(grafka, vertex, options = {}) {
     g.setAttribute("Economic_parameters", "");
     g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "0");
 
+    // An imported line's own ends, by bus name: which edge of a line drawn as
+    // a symbol is its from end is otherwise only the order the edges were
+    // added in, and a breaker added later turned lines round.
+    if (options.pp_import_from_bus) g.setAttribute("pp_import_from_bus", String(options.pp_import_from_bus));
+    if (options.pp_import_to_bus) g.setAttribute("pp_import_to_bus", String(options.pp_import_to_bus));
+
     grafka.getModel().setValue(vertex, g) 
 }
 
