@@ -202,6 +202,15 @@ export class ProtectionCoordinationResultsDialog {
                 unprot.textContent = `${sc.unprotected_sources.join(', ')} keeps feeding this fault: no breaker with a relay lies between it and the fault.`;
                 section.appendChild(unprot);
             }
+            // Inverter-based sources: about their rated current, until their
+            // own protection disconnects them - not enough to trip a relay.
+            if (sc.unprotected_inverter_sources && sc.unprotected_inverter_sources.length) {
+                const inv = document.createElement('div');
+                inv.style.cssText = 'padding:6px 8px;border:1px solid #e2e3e5;background:#f8f9fa;color:#41464b;border-radius:4px;margin-bottom:6px;font-size:12px;';
+                const one = sc.unprotected_inverter_sources.length === 1;
+                inv.textContent = `${sc.unprotected_inverter_sources.join(', ')} (inverter-based) also ${one ? 'feeds' : 'feed'} this fault, at about ${one ? 'its' : 'their'} rated current, until ${one ? 'its' : 'their'} own protection disconnects ${one ? 'it' : 'them'}: no breaker with a relay lies between.`;
+                section.appendChild(inv);
+            }
 
             if (sc.short_circuit && sc.short_circuit.ikss_ka != null) {
                 const scBox = document.createElement('div');

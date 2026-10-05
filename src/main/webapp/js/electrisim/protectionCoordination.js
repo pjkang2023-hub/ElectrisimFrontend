@@ -213,6 +213,9 @@ function downloadProtectionResultsText(dataJson) {
             if (sc.unprotected_sources && sc.unprotected_sources.length) {
                 lines.push(`  WARNING: ${sc.unprotected_sources.join(', ')} feeds the fault with no relayed breaker in between`);
             }
+            if (sc.unprotected_inverter_sources && sc.unprotected_inverter_sources.length) {
+                lines.push(`  Note: ${sc.unprotected_inverter_sources.join(', ')} (inverter-based) also feed${sc.unprotected_inverter_sources.length === 1 ? 's' : ''} the fault until disconnected by ${sc.unprotected_inverter_sources.length === 1 ? 'its' : 'their'} own protection`);
+            }
             if (sc.short_circuit && sc.short_circuit.ikss_ka != null) {
                 lines.push(`  Short-circuit at fault bus: Ikss=${sc.short_circuit.ikss_ka} kA`);
             }
