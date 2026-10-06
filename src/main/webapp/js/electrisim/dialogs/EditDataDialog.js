@@ -24,6 +24,7 @@ import { LoadDcDialog } from '../loadDcDialog.js';
 import { DcCapacitorDialog } from '../dcCapacitorDialog.js';
 import { DcBreakerDialog } from '../dcBreakerDialog.js';
 import { DcDcConverterDialog } from '../dcDcConverterDialog.js';
+import { DER_DIALOGS } from '../derDialog.js';
 import { SstDialog } from '../sstDialog.js';
 import { SourceDcDialog } from '../sourceDcDialog.js';
 import { SwitchDialog } from '../switchDialog.js';
@@ -340,6 +341,12 @@ export class EditDataDialog {
             // A DC/DC converter: the same layout, its own fields
             if (this.elementType === "DC/DC Converter") {
                 this.handleLoadDc(DcDcConverterDialog);
+                return;
+            }
+
+            // A battery, supercapacitor, flywheel, SOFC system or PV array: the same layout, its own fields
+            if (DER_DIALOGS[this.elementType]) {
+                this.handleLoadDc(DER_DIALOGS[this.elementType]);
                 return;
             }
 
@@ -3331,6 +3338,11 @@ export class EditDataDialog {
                 rowDefs: null,
                 helpUrl: 'https://electrisim.com/documentation.html#vsc'
             }),
+            ...Object.fromEntries(Object.keys(DER_DIALOGS).map(kind => [kind, () => ({
+                gridOptions: null, // Modern dialog handles this
+                rowDefs: null,
+                helpUrl: 'https://electrisim.com/documentation.html#load-dc'
+            })])),
             'DC Breaker': () => ({
                 gridOptions: null, // Modern dialog handles this
                 rowDefs: null,

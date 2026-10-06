@@ -2,8 +2,12 @@
 //
 // Its input (left pin) draws what its output (right pin) delivers, divided by
 // its efficiency, plus its no-load loss. In voltage mode it holds its output
-// voltage; in power mode it delivers a set power into an output network
-// another element holds. Laid out as the DC load's dialog, which it extends.
+// voltage, in droop lowering it with its power; in power mode it delivers a
+// set power into an output network another element holds. Behind a source or
+// store (on its input): dispatch (a set power), MPPT (its PV array's maximum
+// power), follower (its SOFC's set power) or smoothing (its store takes its
+// output network's load swings; none in a load flow). Laid out as the DC
+// load's dialog, which it extends.
 import { LoadDcDialog } from './loadDcDialog.js';
 
 export const defaultDcDcConverterData = {
@@ -17,6 +21,10 @@ export const defaultDcDcConverterData = {
     efficiency_percent: 98,
     no_load_loss_kw: 1,
     bidirectional: false,
+    droop_percent: 5,           // droop: its output voltage falls this much at its rated power
+    smoothing_tau_s: 10,        // smoothing: its store takes the load's changes faster than this
+    soc_ref_percent: 50,        // smoothing: the state of charge its store is brought back to
+    soc_gain: 0.1,              // smoothing: how strongly, in p.u. of its rating per unit of state of charge
     emt_model: 'average',       // EMT study: a dual active bridge, averaged or switched
     switching_khz: 20,          // EMT study: its bridges' switching frequency
     current_limit_pu: 1.2,      // EMT study: its output current limit, per unit of its rated current
@@ -39,17 +47,26 @@ export class DcDcConverterDialog extends LoadDcDialog {
                 id: 'control_mode',
                 label: 'Control',
                 symbol: 'control_mode',
-                description: 'Hold the output voltage (the converter supplies its output network), or deliver a set power into an output network a VSC or another converter holds.',
+                description: "Hold the output voltage (it supplies its output network), lowered with its power in droop; or deliver power into an output network a VSC or another converter holds: a set power, or - with a source or store on its input - dispatch (its set power), MPPT (its PV array's maximum power), follower (its SOFC's set power), or smoothing (its store takes its output network's load swings; none in a load flow).",
                 type: 'select',
                 options: [
                     { value: 'voltage', label: 'Hold output voltage' },
-                    { value: 'power', label: 'Deliver a set power' }
+                    { value: 'droop', label: 'Droop (voltage falls with power)' },
+                    { value: 'power', label: 'Deliver a set power' },
+                    { value: 'dispatch', label: 'Dispatch its store or source' },
+                    { value: 'mppt', label: 'MPPT (PV array)' },
+                    { value: 'follower', label: 'Follower (SOFC)' },
+                    { value: 'smoothing', label: 'Smoothing (store takes load swings)' }
                 ],
                 value: this.data.control_mode
             },
             num('vm_out_pu', 'Output voltage set point', 'p.u.', 'Voltage mode: the output bus voltage it holds.', '0.01'),
-            { ...num('p_set_mw', 'Set power', 'MW', 'Power mode: what it delivers at its output. Negative sends power from the output to the input.', '0.01'), min: undefined },
+            { ...num('p_set_mw', 'Set power', 'MW', 'Power and dispatch modes: what it delivers at its output. Negative sends power from the output to the input (charging a store on its input).', '0.01'), min: undefined },
             num('rated_mw', 'Rated power', 'MW', 'Its loading is reported against it.', '0.1'),
+            num('droop_percent', 'Droop', '%', 'Droop: its output voltage falls by this at its rated power.', '0.5'),
+            num('smoothing_tau_s', 'Smoothing time constant', 's', "Smoothing: its store takes its output network's load changes faster than this; slower ones pass to the network (time-series and EMT studies).", '1'),
+            num('soc_ref_percent', 'Smoothing: state of charge to return to', '%', "Smoothing: its store's state of charge is brought back toward this.", '1'),
+            num('soc_gain', 'Smoothing: state-of-charge gain', 'p.u.', 'Smoothing: how strongly - its rating per unit of state of charge away from the reference.', '0.01'),
             num('vn_in_kv', 'Input nominal voltage', 'kV', 'Checked against the input (left) DC bus.', '0.01'),
             num('vn_out_kv', 'Output nominal voltage', 'kV', 'Checked against the output (right) DC bus.', '0.01'),
             num('efficiency_percent', 'Efficiency', '%', 'Its input draws the output power divided by this, plus the no-load loss.', '0.1'),

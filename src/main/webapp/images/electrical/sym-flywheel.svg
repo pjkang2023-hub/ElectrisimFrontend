@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-25 -44 50 64">
+    <!-- Flywheel: the lead to its DC bus at the top, its machine converter's box, the rotor turning below -->
+    <line x1="0" y1="-42" x2="0" y2="-30" stroke="#1a1a2e" stroke-width="2"/>
+    <rect x="-11" y="-30" width="22" height="12" fill="none" stroke="#1a1a2e" stroke-width="1.8"/>
+    <line x1="-11" y1="-18" x2="11" y2="-30" stroke="#1a1a2e" stroke-width="1"/>
+    <text x="-5" y="-25" text-anchor="middle" font-family="monospace" font-size="5" fill="#c0392b">=</text>
+    <text x="5" y="-20" text-anchor="middle" font-family="monospace" font-size="6" fill="#1a1a2e">~</text>
+    <line x1="0" y1="-18" x2="0" y2="-12" stroke="#1a1a2e" stroke-width="2"/>
+    <circle cx="0" cy="2" r="14" fill="none" stroke="#1a1a2e" stroke-width="2"/>
+    <circle cx="0" cy="2" r="3" fill="#1a1a2e"/>
+    <path d="M -9 -4 A 10 10 0 0 1 9 -4" fill="none" stroke="#c0392b" stroke-width="1.5"/>
+    <polygon points="9,-4 5,-6 8,-0.5" fill="#c0392b"/>
+</svg>

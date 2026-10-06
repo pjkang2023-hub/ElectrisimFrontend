@@ -51,6 +51,12 @@ export const ELECTRICAL_SYMBOLS = {
   'sym-ssc': { url: BASE + 'sym-ssc.svg', ...fit(58, 62) },
   'sym-dc-line': { url: BASE + 'sym-dc-line.svg', ...fit(74, 48) },
   'sym-load-dc': { url: BASE + 'sym-load-dc.svg', ...fit(46, 60) },
+  // The microgrid's sources and stores, each with its lead to a DC bus at the top.
+  'sym-battery': { url: BASE + 'sym-battery.svg', ...fit(50, 64) },
+  'sym-supercap': { url: BASE + 'sym-supercap.svg', ...fit(50, 64) },
+  'sym-flywheel': { url: BASE + 'sym-flywheel.svg', ...fit(50, 64) },
+  'sym-sofc': { url: BASE + 'sym-sofc.svg', ...fit(50, 64) },
+  'sym-pv-array': { url: BASE + 'sym-pv-array.svg', ...fit(50, 64) },
   'sym-switch': { url: BASE + 'sym-switch.svg', ...fit(74, 38) },
   'sym-switch-closed': { url: BASE + 'sym-switch-closed.svg', ...fit(74, 38) },
   'sym-vsc': { url: BASE + 'sym-vsc.svg', ...fit(80, 52) },

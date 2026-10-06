@@ -2061,6 +2061,7 @@ function loadFlowPandaPower(a, b, c) {
         dcCapacitor: [],
         dcBreaker: [],
         dcDcConverter: [],
+        der: [],
         sst: [],
         dcLine: [],
         line: [],
@@ -3225,6 +3226,33 @@ Loss[MW]: ${formatNumber(cell.loss_mw)}
 Loading[%]: ${formatNumber(cell.loading_percent)}`;
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'DC/DC Converter')}
 ${body}`, { width: 70, height: 60, positionX: 0.5, positionY: 1.2 });
+            });
+        },
+        // Sources and stores: power, voltage and each kind's state.
+        ders: (data, b) => {
+            const state = (cell) => {
+                switch (cell.kind) {
+                case 'Battery': return `SoC[%]: ${formatNumber(cell.soc_percent)}
+C-rate: ${formatNumber(cell.c_rate)}`;
+                case 'Supercapacitor': return `U_cap[V]: ${formatNumber(cell.v_cap_v)}
+E_usable[kJ]: ${formatNumber(cell.usable_kj)}`;
+                case 'Flywheel': return `Speed[%]: ${formatNumber(cell.speed_percent)}
+E_usable[kWh]: ${formatNumber(cell.usable_kwh)}`;
+                case 'SOFC': return `H2[kg/h]: ${formatNumber(cell.h2_kg_h)}
+Eff[%]: ${formatNumber(cell.efficiency_percent)}`;
+                case 'PV Array': return `P_mpp[kW]: ${formatNumber(cell.p_mpp_kw)}
+T_cell[C]: ${formatNumber(cell.cell_temperature_c)}`;
+                default: return '';
+                }
+            };
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const body = cell.in_service === false || cell.p_mw === null ? 'Out of service' : `P[MW]: ${formatNumber(cell.p_mw)}
+U[kV]: ${formatNumber(cell.v_kv)}
+${state(cell)}`;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, cell.kind)}
+${body}`, { width: 70, height: 66, positionX: -0.3 });
             });
         },
         dcbreakers: (data, b) => {
@@ -4820,6 +4848,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcLine);
         addComponents(componentArrays.dcBreaker);
         addComponents(componentArrays.dcDcConverter);
+        addComponents(componentArrays.der);
         addComponents(componentArrays.sst);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);

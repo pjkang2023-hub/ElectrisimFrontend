@@ -448,6 +448,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
         dcCapacitor: [],
         dcBreaker: [],
         dcDcConverter: [],
+        der: [],
         sst: [],
         dcLine: [],
         line: []
@@ -1619,6 +1620,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
     addComponents(componentArrays.dcLine);
     addComponents(componentArrays.dcBreaker);
     addComponents(componentArrays.dcDcConverter);
+    addComponents(componentArrays.der);
     addComponents(componentArrays.sst);
     addComponents(componentArrays.line);
     addComponents(componentArrays.switch);

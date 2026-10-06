@@ -8,7 +8,9 @@
 // of each edge: the payload used to send a VSC's AC bus only, and a DC line no
 // buses at all, so the backend left both out.
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer'];
+import { DER_TYPES, derFields } from './derParameters.js';
+
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
@@ -194,7 +196,8 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         return {
             arrayKey: 'dcDcConverter',
             row: withOptional(row, cell, ['control_mode', 'vm_out_pu', 'p_set_mw', 'rated_mw', 'vn_in_kv', 'vn_out_kv',
-                'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'emt_model', 'switching_khz', 'current_limit_pu',
+                'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'droop_percent', 'smoothing_tau_s',
+                'soc_ref_percent', 'soc_gain', 'emt_model', 'switching_khz', 'current_limit_pu',
                 'c_out_mf', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
@@ -264,6 +267,12 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         return { arrayKey: 'dcLine', row };
     }
     default:
+        if (DER_TYPES.includes(componentType)) {
+            // A source or store: its one pin on a DC bus - its own, behind a DC/DC converter, or a network bus.
+            const { dc, ac } = connectedBuses(cell, model);
+            const row = { ...common(cell, `${componentType}${next('der')}`), bus: (dc[0] || ac[0])?.key || null };
+            return { arrayKey: 'der', row: withOptional(row, cell, [...derFields(componentType), 'cost_per_unit_by_currency']) };
+        }
         return null;
     }
 }

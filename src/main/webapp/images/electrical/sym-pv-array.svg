@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-25 -44 50 64">
+    <!-- PV array: the lead to its DC bus at the top, a panel of cells, sunlight on it -->
+    <line x1="0" y1="-42" x2="0" y2="-20" stroke="#1a1a2e" stroke-width="2"/>
+    <rect x="-18" y="-20" width="36" height="28" fill="none" stroke="#1a1a2e" stroke-width="2"/>
+    <line x1="-6" y1="-20" x2="-6" y2="8" stroke="#1a1a2e" stroke-width="1"/>
+    <line x1="6" y1="-20" x2="6" y2="8" stroke="#1a1a2e" stroke-width="1"/>
+    <line x1="-18" y1="-6" x2="18" y2="-6" stroke="#1a1a2e" stroke-width="1"/>
+    <line x1="-18" y1="-20" x2="18" y2="8" stroke="#1a1a2e" stroke-width="1"/>
+    <line x1="-12" y1="18" x2="-6" y2="11" stroke="#e1a100" stroke-width="1.5"/>
+    <polygon points="-6,11 -10,12 -7,15" fill="#e1a100"/>
+    <line x1="4" y1="18" x2="10" y2="11" stroke="#e1a100" stroke-width="1.5"/>
+    <polygon points="10,11 6,12 9,15" fill="#e1a100"/>
+    <text x="16" y="-23" text-anchor="middle" font-family="monospace" font-size="7" font-weight="bold" fill="#c0392b">DC</text>
+</svg>

@@ -8,6 +8,7 @@ import {
     WIND_POWER_CURVE_DEFAULT_RATED_MW,
     computeWindTurbinePMw
 } from './windTurbineDialog.js';
+import { DER_TYPES, derDefaults } from './utils/derParameters.js';
 import {
     defaultQCap2dState,
     serializeQCap2d,
@@ -1475,6 +1476,11 @@ export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
     g.setAttribute("efficiency_percent", String(options.efficiency_percent ?? "98"));
     g.setAttribute("no_load_loss_kw", String(options.no_load_loss_kw ?? "1"));
     g.setAttribute("bidirectional", String(options.bidirectional ?? "false"));
+    // Droop, and smoothing behind a store
+    g.setAttribute("droop_percent", String(options.droop_percent ?? "5"));
+    g.setAttribute("smoothing_tau_s", String(options.smoothing_tau_s ?? "10"));
+    g.setAttribute("soc_ref_percent", String(options.soc_ref_percent ?? "50"));
+    g.setAttribute("soc_gain", String(options.soc_gain ?? "0.1"));
     g.setAttribute("in_service", String(options.in_service ?? "true"));
     // For the EMT study: a dual active bridge, its switching frequency, current limit and output capacitor (0: 2 ms of its rating)
     g.setAttribute("emt_model", options.emt_model || "average");
@@ -1487,6 +1493,31 @@ export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
 
     grafka.getModel().setValue(vertex, g);
 }
+
+/**
+ * A battery's, supercapacitor's, flywheel's, SOFC system's or PV array's
+ * attributes on drop: its defaults (utils/derParameters.js), or an import's values.
+ */
+export function configureDerAttributes(kind, grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    var defaults = derDefaults(kind);
+    g.setAttribute("name", options.name || defaults.name || kind);
+    g.setAttribute("Load_flow_parameters", "");
+    Object.keys(defaults).forEach(function (key) {
+        if (key === "name") return;
+        g.setAttribute(key, String(options[key] ?? defaults[key]));
+    });
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+    grafka.getModel().setValue(vertex, g);
+}
+
+export const configureBatteryAttributes = (grafka, vertex, options) => configureDerAttributes('Battery', grafka, vertex, options);
+export const configureSupercapacitorAttributes = (grafka, vertex, options) => configureDerAttributes('Supercapacitor', grafka, vertex, options);
+export const configureFlywheelAttributes = (grafka, vertex, options) => configureDerAttributes('Flywheel', grafka, vertex, options);
+export const configureSofcAttributes = (grafka, vertex, options) => configureDerAttributes('SOFC', grafka, vertex, options);
+export const configurePvArrayAttributes = (grafka, vertex, options) => configureDerAttributes('PV Array', grafka, vertex, options);
 
 /** The DC breaker's symbol, open or closed. */
 export function updateDcBreakerCellStyle(grafka, vertex, closed) {
@@ -1730,6 +1761,13 @@ if (typeof window !== 'undefined') {
     window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
     window.configureDcBreakerAttributes = configureDcBreakerAttributes;
     window.configureDcDcConverterAttributes = configureDcDcConverterAttributes;
+    window.configureDerAttributes = configureDerAttributes;
+    window.configureBatteryAttributes = configureBatteryAttributes;
+    window.configureSupercapacitorAttributes = configureSupercapacitorAttributes;
+    window.configureFlywheelAttributes = configureFlywheelAttributes;
+    window.configureSofcAttributes = configureSofcAttributes;
+    window.configurePvArrayAttributes = configurePvArrayAttributes;
+    window.ELECTRISIM_DER_TYPES = DER_TYPES;
     window.configureSstAttributes = configureSstAttributes;
     window.updateDcBreakerCellStyle = updateDcBreakerCellStyle;
     window.configureSwitchAttributes = configureSwitchAttributes;
