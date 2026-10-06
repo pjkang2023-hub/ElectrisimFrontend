@@ -339,7 +339,7 @@ export class LoadDialog extends Dialog {
                 id: 'load_profile_id',
                 label: 'Power profile',
                 symbol: 'load_profile_id',
-                description: 'The load follows this profile from the diagram\'s load profile library in the time series and transient stability studies. 1.0 p.u. is its drawn P. Manage the library under Simulate > Load Profiles.',
+                description: 'The load follows this profile from the diagram\'s load profile library in the time series, transient stability and EMT studies. 1.0 p.u. is its drawn P. Manage the library under Simulate > Load Profiles.',
                 type: 'select',
                 options: this._loadProfileOptions(),
                 value: this.data.load_profile_id

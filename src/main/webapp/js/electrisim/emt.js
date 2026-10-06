@@ -2,6 +2,7 @@
 import { formatResultNameHeader, enrichResultJsonWithDialogNames } from './utils/attributeUtils.js';
 import { EmtDialog } from './dialogs/EmtDialog.js';
 import { EmtResultsDialog } from './dialogs/EmtResultsDialog.js';
+import { referencedLoadProfiles } from './utils/loadProfileLibrary.js';
 import ENV from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
 import {
@@ -134,6 +135,8 @@ ${brk.exceeds_capacity || brk.exceeds_energy ? 'EXCEEDS' : 'OK'}`, { width: 72, 
             const simulationParameters = {
                 typ: 'EmtStudy Parameters',
                 ...values,
+                // The library profiles some load follows through the run.
+                load_profiles: referencedLoadProfiles(b),
                 user_email: getUserEmail()
             };
             try {

@@ -1,5 +1,6 @@
 import { Dialog } from './Dialog.js';
 import { createEconomicTabContent, buildCostPerUnitByCurrency } from './utils/economicTabHelper.js';
+import { getLoadProfileLibrary } from './utils/loadProfileLibrary.js';
 
 // Default values for Load DC parameters (based on pandapower documentation)
 export const defaultLoadDcData = {
@@ -12,6 +13,7 @@ export const defaultLoadDcData = {
     v_min_pu: 0.8,
     filter_l_mh: 0,
     filter_c_uf: 0,
+    load_profile_id: '',
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -128,6 +130,15 @@ export class LoadDcDialog extends Dialog {
                 min: '0'
             },
             {
+                id: 'load_profile_id',
+                label: 'Power profile (EMT)',
+                symbol: 'load_profile_id',
+                description: 'For the EMT study: the load follows this profile from the diagram\'s load profile library, its power set point moving with it. 1.0 p.u. is its set power. Manage the library under Simulate > Load Profiles.',
+                type: 'select',
+                options: this._loadProfileOptions(),
+                value: this.data.load_profile_id
+            },
+            {
                 id: 'in_service',
                 label: 'In Service',
                 symbol: 'in_service',
@@ -146,6 +157,20 @@ export class LoadDcDialog extends Dialog {
         ];
     }
     
+    /** None, then each profile in the diagram's library. */
+    _loadProfileOptions() {
+        const options = [{ value: '', label: 'None (constant power)' }];
+        try {
+            const library = getLoadProfileLibrary(this.graph);
+            Object.entries(library).forEach(([id, entry]) => {
+                options.push({ value: id, label: entry?.name || id });
+            });
+        } catch (e) {
+            console.warn('Load profile library unavailable:', e);
+        }
+        return options;
+    }
+
     getDescription() {
         return '<strong>Configure Load DC Parameters</strong><br>Set parameters for DC load. See the <a href="https://electrisim.com/documentation.html#load-dc" target="_blank" rel="noopener noreferrer">Electrisim documentation</a>.';
     }

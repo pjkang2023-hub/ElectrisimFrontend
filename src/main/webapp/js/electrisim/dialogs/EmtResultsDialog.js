@@ -63,6 +63,7 @@ export class EmtResultsDialog {
             this._renderAc(body);
             this._renderFault(body);
             this._renderConverters(body);
+            this._renderProfiles(body);
             this._renderBreakers(body);
             this._renderLoads(body);
             this._renderBuses(body);
@@ -133,6 +134,21 @@ export class EmtResultsDialog {
             { label: 'Fastest rise (kA/ms)', value: r => fmt(r.didt_max_ka_per_ms, 1) },
             { label: 'At the end (kA)', value: r => fmt(r.i_final_ka) }
         ], [f]));
+    }
+
+    _renderProfiles(body) {
+        const rows = this.emt.profiled_loads || [];
+        if (!rows.length) return;
+        this._h(body, 'Loads following a profile');
+        body.appendChild(this._table([
+            { label: 'Load', align: 'left', value: l => `${this._escape(l.label)} <span style="color:#6c757d;">(${l.kind === 'DC load' ? 'DC' : 'AC'})</span>` },
+            { label: 'Profile', align: 'left', value: l => this._escape(l.profile) },
+            { label: 'Set power (MW)', title: '1.0 p.u. of its profile', value: l => fmt(l.p_set_mw) },
+            { label: 'At the start (MW)', value: l => fmt(l.p_start_mw) },
+            { label: 'Least / most (MW)', title: 'Its profile\'s, through the run', value: l => `${fmt(l.p_min_mw)} / ${fmt(l.p_max_mw)}` },
+            { label: 'Last cycle: profile (MW)', title: 'Its profile\'s mean over the run\'s last cycle', value: l => fmt(l.p_end_mw) },
+            { label: 'Last cycle: drawn (MW)', title: 'What it drew over the run\'s last cycle: an AC load, an impedance following its profile, with its voltage; a DC load by its model (constant current below its minimum voltage)', value: l => fmt(l.p_drawn_end_mw) }
+        ], rows));
     }
 
     _renderConverters(body) {

@@ -88,6 +88,17 @@ export class EmtDialog extends Dialog {
             { id: 'step_percent', label: 'Step (% of its power; negative steps down)', type: 'number', value: '20', step: '5' },
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
             {
+                id: 'profile_section', label: 'Load profiles',
+                subtitle: 'AC and DC loads given a profile in their dialogs follow it through the run (manage the library under Simulate > Load Profiles), the load flow starting at its value this far into it. A profile changes over tens of milliseconds and more: a longer time step (10 µs or so) suits a run of a second or two.',
+                type: 'section'
+            },
+            { id: 'profile_start_s', label: 'Start this far into the profiles (s)', type: 'number', value: '0', min: '0', step: '0.01' },
+            {
+                id: 'profile_repeat', label: 'After a profile ends',
+                type: 'select',
+                options: [{ value: 'true', label: 'It repeats', default: true }, { value: 'false', label: 'It holds its last value' }]
+            },
+            {
                 id: 'model_section', label: 'Model',
                 subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit, and blocks on DC undervoltage or overcurrent. A DC/DC converter is a dual active bridge holding its output voltage or delivering its set power within its current limit, blocking on undervoltage; an SST its rectifier, DC/DC stage and grid-following inverter, each so. Each is an average-value or a switching model, set in its dialog.',
                 type: 'section'

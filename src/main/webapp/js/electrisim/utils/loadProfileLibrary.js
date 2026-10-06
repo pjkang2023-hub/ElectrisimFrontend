@@ -192,7 +192,7 @@ export function newProfileId(library) {
 
 function isLoadCell(cell) {
     const style = String(cell?.style || '');
-    return /shapeELXXX=Load(;|$)/.test(style);
+    return /shapeELXXX=Load( DC)?(;|$)/.test(style);     // AC loads, and DC loads (in the EMT study)
 }
 
 /** The loads that follow each profile: {id: [load names]}. */
