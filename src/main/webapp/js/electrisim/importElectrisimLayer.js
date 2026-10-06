@@ -45,6 +45,8 @@ const SYMBOLS = {
     PCS: { img: 'sym-pcs.svg', w: 44, h: 56 },
     'Grounding Transformer': { img: 'sym-grounding-transformer.svg', w: 37, h: 56, top: [0.5, 0] },
     Switch: { img: 'sym-switch-closed.svg', w: 56, h: 29 },
+    // Drawn as the palette's symbol only behind a DC breaker; otherwise a connector.
+    'DC Line': { img: 'sym-dc-line.svg', w: 56, h: 36 },
     ...Object.fromEntries(SOURCES.map(k => [k, {
         img: { Battery: 'sym-battery.svg', Supercapacitor: 'sym-supercap.svg', Flywheel: 'sym-flywheel.svg',
             SOFC: 'sym-sofc.svg', 'PV Array': 'sym-pv-array.svg' }[k], w: 43, h: 56 }])),
@@ -56,7 +58,7 @@ const CONFIGURE = {
     'DC Bus': configureDcBusAttributes, 'Load DC': configureLoadDcAttributes, 'Source DC': configureSourceDcAttributes,
     'DC Capacitor': configureDcCapacitorAttributes, 'DC Breaker': configureDcBreakerAttributes,
     'DC/DC Converter': configureDcDcConverterAttributes, 'Solid-State Transformer': configureSstAttributes,
-    VSC: configureVscAttributes, Switch: configureSwitchAttributes,
+    VSC: configureVscAttributes, Switch: configureSwitchAttributes, 'DC Line': configureDCLineAttributes,
 };
 
 const ROW = 130;        // row pitch
@@ -71,6 +73,7 @@ function pinsOf(kind, role) {
     case 'Solid-State Transformer': return role === 'bus_mv' ? [0, side] : role === 'bus_lv_dc' ? [1, side] : [0.5, 1];
     case 'DC/DC Converter': return role === 'bus_in' ? [0, side] : [1, side];
     case 'DC Breaker': case 'Switch': return role === 'bus' ? [0, side] : [1, side];
+    case 'DC Line': return role === 'from_bus' ? [2 / 70, 12 / 48] : [68 / 70, 12 / 48];   // the symbol's two leads
     case 'PCS': return role === 'bus' ? [0.5, 0] : [0.5, 1];
     default: return SYMBOLS[kind]?.top || TOP;
     }
@@ -95,6 +98,10 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
     const model = graph.getModel();
     const byId = new Map(elements.map(e => [e.id, e]));
     const link = (e, role) => e.connections?.[role]?.id;
+    // A DC cable a breaker switches is drawn as the palette's DC Line symbol, wired
+    // bus - breaker - cable - bus: a connector's ends are buses, so it cannot carry one.
+    const guarded = new Set(elements.filter(e => e.kind === 'DC Breaker').map(e => link(e, 'element'))
+        .filter(id => byId.get(id)?.kind === 'DC Line'));
 
     // --- The tree: each element's parent, by what feeds it ------------------------
     const parentOf = new Map();
@@ -189,7 +196,7 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
     const cell = new Map();
     let added = 0;
     elements.forEach((e) => {
-        if (e.kind === 'DC Line') return;
+        if (e.kind === 'DC Line' && !guarded.has(e.id)) return;
         const p = place.get(e.id);
         if (!p) return;
         const style = e.kind === 'DC Bus' ? DC_BUS_STYLE : `${IMG}${SYMBOLS[e.kind].img};shapeELXXX=${e.kind}`;
@@ -235,6 +242,8 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
         Object.entries(e.connections || {}).forEach(([role, c]) => {
             // Behind a breaker, it reaches its bus through the breaker alone.
             if (role === 'bus' && (behind === 'DC Breaker' || behind === 'Switch')) return;
+            // A cable behind a breaker: its end at the breaker's bus is the breaker's.
+            if (e.kind === 'DC Line' && behind === 'DC Breaker' && c.id === link(byId.get(parentOf.get(e.id)), 'bus')) return;
             const pin = pinsOf(e.kind, role);
             let target = c.ac_bus_name ? findAcBus(c.ac_bus_name) : cell.get(c.id);
             if (!target) return;
@@ -242,8 +251,11 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
             if (c.ac_bus_name || targetKind === 'DC Bus') {
                 wire(v, pin, target, busPin(target, v, pin));
             } else if (role === 'source' || role === 'element') {
-                // An element behind it (a PCS's source, a breaker's load): its own lead.
-                wire(v, pin, target, pinsOf(targetKind, 'bus'));
+                // An element behind it (a PCS's source, a breaker's load): its own lead -
+                // a cable's the end that faces the breaker's bus.
+                const lead = targetKind === 'DC Line'
+                    ? (link(byId.get(c.id), 'from_bus') === link(e, 'bus') ? 'from_bus' : 'to_bus') : 'bus';
+                wire(v, pin, target, pinsOf(targetKind, lead));
             }
         });
     });
