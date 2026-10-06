@@ -44,7 +44,7 @@ export class EmtResultsDialog {
         shell.style.cssText = "background: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.28); max-width: 1180px; width: 100%; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; color: #212529;";
         const header = document.createElement('div');
         header.style.cssText = 'padding: 18px 24px; border-bottom: 1px solid #e9ecef; display: flex; align-items: center; justify-content: space-between;';
-        header.innerHTML = '<h2 style="margin:0;font-size:18px;font-weight:700;">EMT Study Results (DC networks)</h2>';
+        header.innerHTML = '<h2 style="margin:0;font-size:18px;font-weight:700;">EMT Study Results</h2>';
         const x = document.createElement('button');
         x.textContent = '×';
         x.title = 'Close';
@@ -60,6 +60,7 @@ export class EmtResultsDialog {
             body.innerHTML = `<div style="padding:12px;background:#f8d7da;color:#842029;border-radius:6px;">${this._escape(this.results.message || 'The EMT study failed.')}</div>`;
         } else {
             this._renderMethod(body);
+            this._renderAc(body);
             this._renderFault(body);
             this._renderBreakers(body);
             this._renderLoads(body);
@@ -250,6 +251,85 @@ export class EmtResultsDialog {
                 }
             }
         });
+    }
+
+    _renderAc(body) {
+        const ac = this.emt.ac;
+        if (!ac) return;
+        const f = ac.fault;
+        if (f) {
+            this._h(body, `AC fault (${this._escape(f.kind)}) on ${f.bus} at ${fmt(f.t_ms, 1)} ms${f.t_off_ms != null ? `, cleared at ${fmt(f.t_off_ms, 1)} ms` : ''}`);
+            body.appendChild(this._table([
+                { label: 'Phase', align: 'left', value: p => p.phase },
+                { label: 'Peak current (kA)', value: p => fmt(p.i_peak_ka) },
+                { label: 'Rms current (kA)', title: 'Over the last cycle of the fault, its DC offset included', value: p => fmt(p.i_rms_ka) },
+                { label: 'Symmetrical (kA)', title: 'Its 50 Hz component over the last cycle of the fault, as a short-circuit study gives it', value: p => fmt(p.i_sym_ka) }
+            ], f.phases || []));
+        }
+        this._h(body, 'AC bus voltages (rms over a cycle)');
+        body.appendChild(this._table([
+            { label: 'AC bus', align: 'left', value: b => this._escape(b.label) },
+            { label: 'Nominal (kV)', value: b => fmt(b.vn_kv, 2) },
+            { label: 'Lowest phase (p.u.)', value: b => fmt(b.v_rms_min_pu) },
+            { label: 'At (ms)', value: b => fmt(b.t_min_ms, 2) },
+            { label: 'At the end (p.u.)', value: b => fmt(b.v_rms_final_pu) }
+        ], ac.buses || []));
+        this._h(body, 'AC waveforms');
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex;gap:12px;align-items:center;margin-bottom:8px;flex-wrap:wrap;';
+        const which = document.createElement('select');
+        which.style.cssText = 'padding:4px 8px;border:1px solid #ced4da;border-radius:4px;';
+        (ac.buses || []).forEach((b, i) => {
+            const o = document.createElement('option');
+            o.value = `b${i}`;
+            o.textContent = `${b.label}: phase voltages`;
+            which.appendChild(o);
+        });
+        (ac.branches || []).forEach((b, i) => {
+            const o = document.createElement('option');
+            o.value = `r${i}`;
+            o.textContent = `${b.label}: phase currents`;
+            which.appendChild(o);
+        });
+        row.appendChild(which);
+        body.appendChild(row);
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'height:320px;position:relative;margin-bottom:8px;';
+        const canvas = document.createElement('canvas');
+        wrap.appendChild(canvas);
+        body.appendChild(wrap);
+        const draw = async () => {
+            let ChartCtor;
+            try {
+                ChartCtor = await loadChartJs();
+            } catch (e) {
+                return;
+            }
+            const isBus = which.value.startsWith('b');
+            const item = isBus ? ac.buses[Number(which.value.slice(1))] : ac.branches[Number(which.value.slice(1))];
+            const w = isBus ? item.waveform : item;
+            const keys = isBus ? ['v_a_kv', 'v_b_kv', 'v_c_kv'] : ['i_a_ka', 'i_b_ka', 'i_c_ka'];
+            const datasets = keys.map((key, i) => ({
+                label: `Phase ${'abc'[i]}`,
+                data: (w.t_ms || []).map((t, k) => ({ x: t, y: w[key][k] })),
+                borderColor: ['#c0392b', '#e1a100', '#007cba'][i], borderWidth: 1.3, pointRadius: 0, backgroundColor: 'transparent'
+            }));
+            this.acChart?.destroy?.();
+            this.acChart = new ChartCtor(canvas, {
+                type: 'line',
+                data: { datasets },
+                options: {
+                    responsive: true, maintainAspectRatio: false, animation: false, parsing: false,
+                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+                    scales: {
+                        x: { type: 'linear', title: { display: true, text: 'Time [ms]' } },
+                        y: { title: { display: true, text: isBus ? 'Voltage [kV]' : 'Current [kA]' } }
+                    }
+                }
+            });
+        };
+        which.onchange = draw;
+        draw();
     }
 
     _renderWarnings(body) {

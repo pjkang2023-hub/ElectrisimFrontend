@@ -60,6 +60,14 @@ EMT
 U min[pu]: ${fmt(bus.v_min_pu)} at ${fmt(bus.t_min_ms, 2)} ms
 U end[pu]: ${fmt(bus.v_final_pu)}`, { width: 72, height: 50, positionX: 0.5, positionY: 1.2 });
             });
+            ((emt.ac && emt.ac.buses) || []).forEach((bus) => {
+                const cell = bus.id != null ? model.getCell(bus.id) : null;
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, bus.label, 'Bus')}
+EMT
+U rms min[pu]: ${fmt(bus.v_rms_min_pu)} at ${fmt(bus.t_min_ms, 1)} ms
+U rms end[pu]: ${fmt(bus.v_rms_final_pu)}`, { width: 76, height: 50, positionX: 0.5, positionY: 1.6 });
+            });
             (emt.breakers || []).forEach((brk) => {
                 const cell = brk.id != null ? model.getCell(brk.id) : null;
                 if (!cell) return;
