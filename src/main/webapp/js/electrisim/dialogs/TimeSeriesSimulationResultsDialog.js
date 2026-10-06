@@ -306,7 +306,8 @@
                 ));
                 container.appendChild(section);
             }
-            if (!this.results.voltage_statistics && !this.results.loading_statistics) {
+            this.renderMicrogridStatistics(container);
+            if (!this.results.voltage_statistics && !this.results.loading_statistics && !this.results.microgrid) {
                 container.innerHTML += '<p style="color:#666;">No statistics available.</p>';
             }
         }
@@ -428,6 +429,51 @@
             this.addSeriesChart(container, this.results.storages, 'Battery power (+ charging)', 'P (MW)', 'p_mw', timeSteps, '#00838f');
             this.addSeriesChart(container, (this.results.storages || []).filter(s => s.soc_percent != null),
                 `Battery state of charge (end of ${this.isHourly() ? 'hour' : 'step'})`, 'SOC (%)', 'soc_percent', timeSteps, '#00838f');
+            this.addMicrogridPlots(container, timeSteps);
+        }
+
+        /** The microgrid's sources and stores, their PCS and the smoothing converters. */
+        addMicrogridPlots(container, timeSteps) {
+            const mg = this.results.microgrid;
+            if (!mg) return;
+            const byLabel = rows => (rows || []).map(r => ({ ...r, name: r.label || r.name }));
+            const ders = byLabel(mg.ders);
+            this.addSeriesChart(container, ders, 'Sources and stores: power (+ delivering)', 'P (MW)', 'p_mw', timeSteps, '#6a1b9a');
+            this.addSeriesChart(container, ders.filter(r => r.soc_percent_end != null),
+                `Stores: state of charge (end of ${this.isHourly() ? 'hour' : 'step'})`, 'SOC (%)', 'soc_percent_end', timeSteps, '#6a1b9a');
+            const pcs = byLabel(mg.pcs);
+            this.addSeriesChart(container, pcs, 'PCS active power', 'P (MW)', 'p_mw', timeSteps, '#4527a0');
+            if (new Set(pcs.map(r => Number(r.frequency_hz).toFixed(6))).size > 1) {      // islanded, its frequency moving
+                this.addSeriesChart(container, pcs, 'Islanded frequency', 'f (Hz)', 'frequency_hz', timeSteps, '#4527a0');
+            }
+            (mg.smoothing || []).forEach((sm) => {
+                const series = sm.series || [];
+                const at = key => timeSteps.map(ts => series.find(r => r.time_step === ts)?.[key] ?? null);
+                this.addLineChart(container, `Smoothing - ${sm.label} (${sm.store}, tau ${sm.tau_s} s)`, 'P (MW)', timeSteps, [
+                    { label: 'Racks', data: at('p_rack_mw') },
+                    { label: 'Feed', data: at('p_feed_mw') },
+                    { label: `${sm.store}`, data: at('p_store_mw') },
+                ], '#00695c');
+            });
+        }
+
+        renderMicrogridStatistics(container) {
+            const mg = this.results.microgrid;
+            if (!mg) return;
+            const f = (v, d = 4) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? '-' : Number(v).toFixed(d));
+            const add = (title, headers, rows) => {
+                if (!rows.length) return;
+                const section = document.createElement('div');
+                section.innerHTML = `<h3 style="margin:18px 0 8px;font-size:15px;color:#333;">${title}</h3>`;
+                section.appendChild(this.buildStatsTable(headers, rows));
+                container.appendChild(section);
+            };
+            add('Rack smoothing', ['Converter', 'Store', 'Rack peak (MW)', 'Feed peak (MW)', 'Rack ramp (MW/s)', 'Feed ramp (MW/s)', 'Store peak (MW)', 'Limited steps'],
+                (mg.smoothing || []).map(s => [s.label, s.store, f(s.rack_peak_mw), f(s.feed_peak_mw), f(s.rack_ramp_mw_s, 6), f(s.feed_ramp_mw_s, 6), f(s.store_peak_mw), s.limited_steps]));
+            add('Sources and stores', ['Element', 'Kind', 'Delivered (MWh)', 'Drawn from store (MWh)', 'SOC min (%)', 'SOC max (%)', 'Stored start (MWh)', 'Stored end (MWh)', 'Equivalent full cycles'],
+                (mg.stores || []).map(s => [s.label, s.kind, f(s.delivered_mwh, 6), f(s.drawn_mwh, 6), f(s.soc_min_percent, 2), f(s.soc_max_percent, 2), f(s.stored_start_mwh, 6), f(s.stored_end_mwh, 6), f(s.equivalent_full_cycles, 3)]));
+            add('Dispatch', ['Dispatch', 'Unserved load (MWh)', 'Curtailed PV (MWh)'],
+                [[mg.dispatch ? 'rule-based' : 'off (set points)', f(mg.unserved_mwh, 6), f(mg.curtailed_mwh, 6)]]);
         }
 
         addSeriesChart(container, rows, title, yLabel, key, timeSteps, color) {

@@ -124,9 +124,10 @@ export function analyseProfile(t, p, stepThresholdPu = DEFAULT_STEP_THRESHOLD_PU
 const round6 = v => Number(Number(v).toPrecision(6));
 
 /** The stored form: regular profiles keep a time step instead of every time. */
-export function profileEntry(name, t, p, source = '') {
+export function profileEntry(name, t, p, source = '', kind = 'power') {
     const report = analyseProfile(t, p);
     const entry = { name: String(name || 'Profile'), source: String(source || ''), p: p.map(round6) };
+    if (kind && kind !== 'power') entry.kind = kind;
     if (report.regular_sampling) {
         entry.t0 = round6(t[0]);
         entry.dt = round6(report.time_step_s);
@@ -195,18 +196,46 @@ function isLoadCell(cell) {
     return /shapeELXXX=Load( DC)?(;|$)/.test(style);     // AC loads, and DC loads (in the EMT study)
 }
 
-/** The loads that follow each profile: {id: [load names]}. */
+function isPvArrayCell(cell) {
+    return /shapeELXXX=PV Array(;|$)/.test(String(cell?.style || ''));
+}
+
+/** A profile's kind: a load's power (p.u.), or a PV array's irradiance (W/m2) or ambient temperature (C). */
+export const PROFILE_KINDS = { power: 'Power (p.u.)', irradiance: 'Irradiance (W/m2)', temperature: 'Temperature (C)' };
+
+export function profileKind(entry) {
+    return entry?.kind && PROFILE_KINDS[entry.kind] ? entry.kind : 'power';
+}
+
+/** The loads, and PV arrays, that follow each profile: {id: [names]}. */
 export function profileUsers(graph) {
     const users = {};
     const cells = graph?.getModel?.()?.cells || {};
     Object.values(cells).forEach((cell) => {
-        if (!isLoadCell(cell) || !cell.value?.getAttribute) return;
-        const id = cell.value.getAttribute('load_profile_id');
-        if (!id) return;
-        const name = cell.value.getAttribute('name') || cell.value.getAttribute('label') || cell.id;
-        (users[id] = users[id] || []).push(name);
+        if (!cell.value?.getAttribute) return;
+        const keys = isLoadCell(cell) ? ['load_profile_id']
+            : isPvArrayCell(cell) ? ['irradiance_profile_id', 'temperature_profile_id'] : [];
+        keys.forEach((key) => {
+            const id = cell.value.getAttribute(key);
+            if (!id) return;
+            const name = cell.value.getAttribute('name') || cell.value.getAttribute('label') || cell.id;
+            (users[id] = users[id] || []).push(name);
+        });
     });
     return users;
+}
+
+/** None, then each library entry of ``kind``. */
+export function profileOptions(graph, kind = 'power', none = 'None') {
+    const options = [{ value: '', label: none }];
+    try {
+        Object.entries(getLoadProfileLibrary(graph)).forEach(([id, entry]) => {
+            if (profileKind(entry) === kind) options.push({ value: id, label: entry?.name || id });
+        });
+    } catch (e) {
+        console.warn('Load profile library unavailable:', e);
+    }
+    return options;
 }
 
 /** The library entries some load follows, for a study's parameters. */

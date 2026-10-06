@@ -135,6 +135,20 @@ class TimeSeriesSimulationDialog {
             '3600 s (an hour) by default. Loads following a profile from the load profile library take its value '
             + 'at each step, or its mean over the step when the step is longer than the profile\'s samples.');
         tsSection.appendChild(stepSizeEl);
+        // The microgrid's rule-based dispatch.
+        const dispatchWrap = document.createElement('label');
+        dispatchWrap.style.cssText = 'display:flex; gap:8px; align-items:flex-start; font-size:13px; margin-top:8px;';
+        const dispatchBox = document.createElement('input');
+        dispatchBox.type = 'checkbox';
+        dispatchBox.id = 'microgrid_dispatch';
+        dispatchWrap.appendChild(dispatchBox);
+        dispatchWrap.appendChild(document.createTextNode('Microgrid dispatch: PV at its maximum power; SOFCs follow the '
+            + 'demand averaged (time constant below), within their ramp rates; batteries behind dispatch converters or '
+            + 'grid-following PCS take what the grid would supply, within their windows and C-rates. Islanded, load is '
+            + 'shed or PV curtailed when the grid-forming PCS\'s batteries cannot follow.'));
+        tsSection.appendChild(dispatchWrap);
+        tsSection.appendChild(this.createNumberInput('sofc_tau_s', 'SOFC demand averaging (s)', '900', 'any', '86400',
+            'Under the dispatch, each SOFC follows the demand averaged over this.'));
         form.appendChild(tsSection);
 
         // Load & generation profiles
@@ -320,6 +334,8 @@ class TimeSeriesSimulationDialog {
                     calculate_voltage_angles: getField('calculate_voltage_angles').value,
                     init: getField('init').value,
                     export_to_xlsx: exportCheckbox.checked,
+                    microgrid_dispatch: !!document.getElementById('microgrid_dispatch')?.checked,
+                    sofc_tau_s: parseFloat(getField('sofc_tau_s')?.value) || 900,
                     element_profiles: {}
                 };
 

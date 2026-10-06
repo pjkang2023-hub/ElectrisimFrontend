@@ -364,7 +364,7 @@ export class LoadDialog extends Dialog {
         const options = [{ value: '', label: 'None (constant power)' }];
         try {
             const library = getLoadProfileLibrary(this.graph);
-            Object.entries(library).forEach(([id, entry]) => {
+            Object.entries(library).filter(([, entry]) => !entry?.kind || entry.kind === 'power').forEach(([id, entry]) => {
                 options.push({ value: id, label: entry?.name || id });
             });
         } catch (e) {

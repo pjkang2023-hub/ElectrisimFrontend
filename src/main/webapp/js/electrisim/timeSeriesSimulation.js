@@ -71,6 +71,8 @@ function timeSeriesSimulationPandaPower(apka, graph) {
                     algorithm: params.algorithm || 'nr',
                     calculate_voltage_angles: params.calculate_voltage_angles || 'auto',
                     init: params.init || 'auto',
+                    microgrid_dispatch: !!params.microgrid_dispatch,
+                    sofc_tau_s: String(params.sofc_tau_s ?? 900),
                     user_email: getUserEmail()
                 };
 

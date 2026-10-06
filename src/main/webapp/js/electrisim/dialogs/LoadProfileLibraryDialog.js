@@ -4,6 +4,8 @@ import {
     parseProfile,
     analyseProfile,
     profileEntry,
+    profileKind,
+    PROFILE_KINDS,
     entryArrays,
     getLoadProfileLibrary,
     setLoadProfileLibrary,
@@ -120,9 +122,20 @@ export class LoadProfileLibraryDialog {
         dt.min = '0';
         dt.placeholder = 'only for one column';
         dt.style.cssText = 'padding:6px 8px; border:1px solid #ced4da; border-radius:4px; width:150px;';
+        const kind = document.createElement('select');
+        kind.id = 'loadProfileKind';
+        kind.style.cssText = 'padding:6px 8px; border:1px solid #ced4da; border-radius:4px;';
+        Object.entries(PROFILE_KINDS).forEach(([value, label]) => {
+            const o = document.createElement('option');
+            o.value = value;
+            o.textContent = label;
+            kind.appendChild(o);
+        });
+        this._kindInput = kind;
         row.appendChild(field('File', file));
         row.appendChild(field('Name', name));
         row.appendChild(field('Time step (s)', dt));
+        row.appendChild(field('Kind', kind));
         box.appendChild(row);
         const preview = document.createElement('div');
         box.appendChild(preview);
@@ -160,7 +173,7 @@ export class LoadProfileLibraryDialog {
         add.onclick = () => {
             const library = { ...getLoadProfileLibrary(this.graph) };
             const id = newProfileId(library);
-            library[id] = profileEntry(nameInput.value.trim() || source, t, p, source);
+            library[id] = profileEntry(nameInput.value.trim() || source, t, p, source, this._kindInput?.value || 'power');
             setLoadProfileLibrary(this.graph, library);
             this.pending = null;
             this._render();
@@ -276,7 +289,8 @@ export class LoadProfileLibraryDialog {
             const who = users[id] || [];
             const used = document.createElement('div');
             used.style.cssText = 'font-size:12px; color:#495057;';
-            used.textContent = who.length ? `Followed by: ${who.join(', ')}` : 'No load follows it yet.';
+            used.textContent = `${PROFILE_KINDS[profileKind(entry)]} · `
+                + (who.length ? `Followed by: ${who.join(', ')}` : 'Nothing follows it yet.');
             if (entry.source) used.textContent += ` · from ${entry.source}`;
             row.appendChild(used);
             try {

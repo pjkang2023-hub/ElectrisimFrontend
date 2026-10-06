@@ -110,8 +110,10 @@ export const DER_PARAMETERS = {
         num('modules_series', 'Modules in series', '', 18, 'Its string voltage.', '1', '1'),
         num('strings_parallel', 'Strings in parallel', '', 10, 'Its current.', '1', '1'),
         num('loss_percent', 'Losses', '%', 3, 'Wiring, mismatch and soiling, taken from its current.', '0.1'),
-        num('irradiance_wm2', 'Irradiance', 'W/m2', 1000, 'On its modules\' plane.', '10'),
+        num('irradiance_wm2', 'Irradiance', 'W/m2', 1000, 'On its modules\' plane. In the time series, its profile\'s value at each step if it has one.', '10'),
         { ...num('ambient_c', 'Ambient temperature', 'C', 25, 'Its cells run hotter, by its NOCT.', '1'), min: undefined },
+        { ...sel('irradiance_profile_id', 'Irradiance profile (time series)', '', [], 'An irradiance profile (W/m2) from the diagram\'s load profile library, followed through a time series.'), profileKind: 'irradiance' },
+        { ...sel('temperature_profile_id', 'Temperature profile (time series)', '', [], 'An ambient temperature profile (C) from the library, followed through a time series.'), profileKind: 'temperature' },
         inService
     ]
 };

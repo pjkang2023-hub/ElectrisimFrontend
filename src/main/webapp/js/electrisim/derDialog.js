@@ -3,6 +3,7 @@
 // DC load's dialog, which they extend.
 import { LoadDcDialog } from './loadDcDialog.js';
 import { DER_PARAMETERS, DER_DESCRIPTIONS, derDefaults } from './utils/derParameters.js';
+import { profileOptions } from './utils/loadProfileLibrary.js';
 
 class DerDialog extends LoadDcDialog {
     constructor(editorUi, kind) {
@@ -10,7 +11,11 @@ class DerDialog extends LoadDcDialog {
         this.kind = kind;
         this.title = `${kind} Parameters`;
         this.data = { ...derDefaults(kind), cost_per_unit_by_currency: '0' };
-        this.loadFlowParameters = DER_PARAMETERS[kind].map(p => ({ ...p, options: p.options ? [...p.options] : undefined }));
+        this.loadFlowParameters = DER_PARAMETERS[kind].map(p => ({
+            ...p,
+            // A profile field lists the library's profiles of its kind.
+            options: p.profileKind ? profileOptions(this.graph, p.profileKind) : (p.options ? [...p.options] : undefined),
+        }));
         this.shortCircuitParameters = [];
         this.opfParameters = [];
     }
