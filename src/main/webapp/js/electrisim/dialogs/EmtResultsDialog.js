@@ -141,10 +141,13 @@ export class EmtResultsDialog {
         this._h(body, 'Converters');
         body.appendChild(this._table([
             { label: 'Converter', align: 'left', value: c => this._escape(c.label) },
-            { label: 'Model', align: 'left', value: c => (c.model === 'average' ? 'Average value' : this._escape(c.model)) },
-            { label: 'P out (MW)', title: 'Into its AC bus, at the start and at the end; negative draws from it', value: c => `${fmt(c.p_start_mw)} → ${fmt(c.p_end_mw)}` },
-            { label: 'Q out (Mvar)', title: 'Into its AC bus, at the start and at the end', value: c => `${fmt(c.q_start_mvar)} → ${fmt(c.q_end_mvar)}` },
-            { label: 'DC voltage (kV)', title: 'Lowest, and at the end', value: c => `${fmt(c.v_dc_min_kv)} / ${fmt(c.v_dc_end_kv)}` },
+            {
+                label: 'Model', align: 'left',
+                value: c => (c.model === 'switching' ? `Switching, ${fmt(c.switching_khz, 1)} kHz` : 'Average value')
+            },
+            { label: 'P out (MW)', title: 'Into its AC bus over its first and its last cycle; negative draws from it', value: c => `${fmt(c.p_start_mw)} → ${fmt(c.p_end_mw)}` },
+            { label: 'Q out (Mvar)', title: 'Into its AC bus at the fundamental, over its first and its last cycle', value: c => `${fmt(c.q_start_mvar)} → ${fmt(c.q_end_mvar)}` },
+            { label: 'DC voltage (kV)', title: 'Lowest, and at the end: its mean over each half carrier period', value: c => `${fmt(c.v_dc_min_kv)} / ${fmt(c.v_dc_end_kv)}` },
             { label: 'Peak current (kA rms)', value: c => fmt(c.i_peak_ka) },
             { label: 'Rating (MVA)', value: c => fmt(c.rated_mva) },
             { label: 'Limit (kA rms)', title: 'The most current its controls let it carry', value: c => fmt(c.current_limit_ka) },

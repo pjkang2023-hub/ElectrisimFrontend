@@ -1645,6 +1645,8 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("rated_mva", String(options.rated_mva ?? "0"));
     g.setAttribute("dc_link_mf", String(options.dc_link_mf ?? "0"));
     g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
+    g.setAttribute("emt_model", options.emt_model || "average");       // 'average' or 'switching'
+    g.setAttribute("switching_khz", String(options.switching_khz ?? "5"));
     
     // Economic parameters
     g.setAttribute("Economic_parameters", "");

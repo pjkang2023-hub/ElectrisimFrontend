@@ -15,6 +15,8 @@ export const defaultVscData = {
     rated_mva: 0,               // EMT study: its rating; 0 = 1.25 x its load-flow power
     dc_link_mf: 0,              // EMT study: its DC-link capacitance; 0 = 4 ms of its rating stored
     current_limit_pu: 1.2,      // EMT study: its current limit, per unit of its rated current
+    emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
+    switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -141,6 +143,26 @@ export class VscDialog extends Dialog {
                 value: String(this.data.current_limit_pu),
                 step: '0.05',
                 min: '0.1'
+            },
+            {
+                id: 'emt_model',
+                label: 'Model (EMT)',
+                symbol: 'emt_model',
+                description: 'For the EMT study: average (its phase voltages averaged over each switching period - fast) or switching (a two-level bridge switched by PWM - its ripple and harmonics, with a time step of a fiftieth of its switching period or less).',
+                type: 'select',
+                options: ['average', 'switching'],
+                value: this.data.emt_model
+            },
+            {
+                id: 'switching_khz',
+                label: 'Switching frequency (EMT)',
+                symbol: 'switching_khz',
+                unit: 'kHz',
+                description: 'For the EMT study: its PWM carrier frequency. Its controller samples at its peaks and valleys - twice this - in both models.',
+                type: 'number',
+                value: String(this.data.switching_khz),
+                step: '0.5',
+                min: '0.5'
             },
             {
                 id: 'in_service',
@@ -437,8 +459,18 @@ export class VscDialog extends Dialog {
                     margin: '0'
                 });
             } else {
-                input = document.createElement('input');
-                input.type = param.type;
+                if (param.type === 'select') {
+                    input = document.createElement('select');
+                    (param.options || []).forEach((opt) => {
+                        const o = document.createElement('option');
+                        o.value = opt;
+                        o.textContent = opt;
+                        input.appendChild(o);
+                    });
+                } else {
+                    input = document.createElement('input');
+                    input.type = param.type;
+                }
                 input.value = param.value;
                 Object.assign(input.style, {
                     width: isNameField ? '100%' : '180px',

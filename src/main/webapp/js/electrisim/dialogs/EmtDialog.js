@@ -89,13 +89,13 @@ export class EmtDialog extends Dialog {
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
             {
                 id: 'model_section', label: 'Model',
-                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit (set in its dialog), and blocks on DC undervoltage or overcurrent. DC/DC converter and SST outputs hold their DC voltage until they block on undervoltage; converter inputs are constant-power loads.',
+                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit, as an average-value or a switching model (set in its dialog), and blocks on DC undervoltage or overcurrent. DC/DC converter and SST outputs hold their DC voltage until they block on undervoltage; converter inputs are constant-power loads.',
                 type: 'section'
             },
             { id: 'vsc_block_pu', label: 'Converters block below (p.u. of their DC voltage)', type: 'number', value: '0.8', min: '0', step: '0.05' },
             { id: 'max_section_km', label: 'Longest pi section of a DC cable (km)', type: 'number', value: '1', min: '0.001', step: '0.1' },
             { id: 'ac_max_section_km', label: 'Longest pi section of an AC line (km)', type: 'number', value: '50', min: '0.001', step: '5' },
-            { id: 'run_section', label: 'Simulation', type: 'section', subtitle: 'The step holds until 10 ms after the last event, then is ten times longer (20 µs at most).' },
+            { id: 'run_section', label: 'Simulation', type: 'section', subtitle: 'The step holds until 10 ms after the last event, then is ten times longer (20 µs at most, and a fiftieth of the switching period of a switching VSC at most).' },
             { id: 'time_step_us', label: 'Time step (µs)', type: 'number', value: '1', min: '0.01', step: '0.5' },
             { id: 'duration_ms', label: 'Duration (ms)', type: 'number', value: '50', min: '1', step: '10' }
         ];
