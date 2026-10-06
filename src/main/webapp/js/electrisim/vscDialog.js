@@ -12,6 +12,9 @@ export const defaultVscData = {
     control_value_ac: 1.0,      // AC control setpoint (voltage in pu or reactive power in MVar)
     control_mode_dc: "p_mw",    // DC control mode: 'vm_pu' or 'p_mw'
     control_value_dc: 0.0,      // DC control setpoint (voltage in pu or active power in MW)
+    rated_mva: 0,               // EMT study: its rating; 0 = 1.25 x its load-flow power
+    dc_link_mf: 0,              // EMT study: its DC-link capacitance; 0 = 4 ms of its rating stored
+    current_limit_pu: 1.2,      // EMT study: its current limit, per unit of its rated current
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -105,6 +108,39 @@ export class VscDialog extends Dialog {
                 type: 'number',
                 value: this.data.control_value_dc.toString(),
                 step: '0.1'
+            },
+            {
+                id: 'rated_mva',
+                label: 'Rating (EMT)',
+                symbol: 'rated_mva',
+                unit: 'MVA',
+                description: 'For the EMT study: its rating, which its current limit and DC link scale with. 0 takes 1.25 times its load-flow power.',
+                type: 'number',
+                value: String(this.data.rated_mva),
+                step: '0.01',
+                min: '0'
+            },
+            {
+                id: 'dc_link_mf',
+                label: 'DC-link capacitance (EMT)',
+                symbol: 'dc_link_mf',
+                unit: 'mF',
+                description: 'For the EMT study: its DC-link capacitor. 0 stores 4 ms of its rating at its DC voltage.',
+                type: 'number',
+                value: String(this.data.dc_link_mf),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'current_limit_pu',
+                label: 'Current limit (EMT)',
+                symbol: 'current_limit_pu',
+                unit: 'p.u.',
+                description: 'For the EMT study: the most current its controls let it carry, per unit of its rated current - active current first. It blocks at 2.5 times this, or when its DC voltage falls below 0.8 p.u.',
+                type: 'number',
+                value: String(this.data.current_limit_pu),
+                step: '0.05',
+                min: '0.1'
             },
             {
                 id: 'in_service',

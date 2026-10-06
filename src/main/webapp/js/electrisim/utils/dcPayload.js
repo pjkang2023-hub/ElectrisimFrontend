@@ -231,7 +231,10 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         }
         const svc = inService(cell);
         if (svc !== undefined) row.in_service = svc;
-        return { arrayKey: isB2b ? 'B2BVSC' : 'VSC', row: withOptional(row, cell, ['cost_per_unit_by_currency']) };
+        // Its rating, DC link and current limit: for the EMT study.
+        const optional = isB2b ? ['cost_per_unit_by_currency']
+            : ['rated_mva', 'dc_link_mf', 'current_limit_pu', 'cost_per_unit_by_currency'];
+        return { arrayKey: isB2b ? 'B2BVSC' : 'VSC', row: withOptional(row, cell, optional) };
     }
     case 'DC Line': {
         let from = null;

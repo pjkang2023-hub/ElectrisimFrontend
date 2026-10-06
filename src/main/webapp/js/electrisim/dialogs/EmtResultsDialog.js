@@ -62,6 +62,7 @@ export class EmtResultsDialog {
             this._renderMethod(body);
             this._renderAc(body);
             this._renderFault(body);
+            this._renderConverters(body);
             this._renderBreakers(body);
             this._renderLoads(body);
             this._renderBuses(body);
@@ -132,6 +133,27 @@ export class EmtResultsDialog {
             { label: 'Fastest rise (kA/ms)', value: r => fmt(r.didt_max_ka_per_ms, 1) },
             { label: 'At the end (kA)', value: r => fmt(r.i_final_ka) }
         ], [f]));
+    }
+
+    _renderConverters(body) {
+        const rows = this.emt.converters || [];
+        if (!rows.length) return;
+        this._h(body, 'Converters');
+        body.appendChild(this._table([
+            { label: 'Converter', align: 'left', value: c => this._escape(c.label) },
+            { label: 'Model', align: 'left', value: c => (c.model === 'average' ? 'Average value' : this._escape(c.model)) },
+            { label: 'P out (MW)', title: 'Into its AC bus, at the start and at the end; negative draws from it', value: c => `${fmt(c.p_start_mw)} → ${fmt(c.p_end_mw)}` },
+            { label: 'Q out (Mvar)', title: 'Into its AC bus, at the start and at the end', value: c => `${fmt(c.q_start_mvar)} → ${fmt(c.q_end_mvar)}` },
+            { label: 'DC voltage (kV)', title: 'Lowest, and at the end', value: c => `${fmt(c.v_dc_min_kv)} / ${fmt(c.v_dc_end_kv)}` },
+            { label: 'Peak current (kA rms)', value: c => fmt(c.i_peak_ka) },
+            { label: 'Rating (MVA)', value: c => fmt(c.rated_mva) },
+            { label: 'Limit (kA rms)', title: 'The most current its controls let it carry', value: c => fmt(c.current_limit_ka) },
+            { label: 'At its limit (ms)', title: 'How long its controls held its current at its limit', value: c => fmt(c.limited_ms, 1) },
+            {
+                label: 'Blocked (ms)', value: c => (c.blocked_ms != null ? fmt(c.blocked_ms, 2) : '—'),
+                style: c => (c.blocked_ms != null ? 'color:#842029;font-weight:700;' : '')
+            }
+        ], rows));
     }
 
     _renderBreakers(body) {

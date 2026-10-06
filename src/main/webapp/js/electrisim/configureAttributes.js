@@ -1641,6 +1641,10 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("control_mode_dc", options.control_mode_dc || "p_mw");   // 'vm_pu' or 'p_mw'
     g.setAttribute("control_value_dc", options.control_value_dc || "0.0");  // DC control setpoint
     g.setAttribute("in_service", options.in_service !== undefined ? options.in_service : true);
+    // For the EMT study: its rating (0: 1.25 x its load-flow power), DC link (0: 4 ms of its rating) and current limit
+    g.setAttribute("rated_mva", String(options.rated_mva ?? "0"));
+    g.setAttribute("dc_link_mf", String(options.dc_link_mf ?? "0"));
+    g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
     
     // Economic parameters
     g.setAttribute("Economic_parameters", "");

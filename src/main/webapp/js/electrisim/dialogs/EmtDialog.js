@@ -89,7 +89,7 @@ export class EmtDialog extends Dialog {
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
             {
                 id: 'model_section', label: 'Model',
-                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. Until the converter models of the next phase, VSCs and converter outputs hold their DC voltage until they block on undervoltage; converter inputs are constant-power loads.',
+                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit (set in its dialog), and blocks on DC undervoltage or overcurrent. DC/DC converter and SST outputs hold their DC voltage until they block on undervoltage; converter inputs are constant-power loads.',
                 type: 'section'
             },
             { id: 'vsc_block_pu', label: 'Converters block below (p.u. of their DC voltage)', type: 'number', value: '0.8', min: '0', step: '0.05' },
