@@ -5,6 +5,8 @@
 // its sizing: its voltage, capacity and power are entered as ratings, or built
 // from a module times modules in series and strings in parallel.
 //
+// The PCS joins one of them to an AC bus: grid-following or grid-forming.
+//
 // One list per kind serves its dialog, its defaults on drop and its payload.
 
 export const DER_TYPES = ['Battery', 'Supercapacitor', 'Flywheel', 'SOFC', 'PV Array'];
@@ -114,6 +116,32 @@ export const DER_PARAMETERS = {
     ]
 };
 
+DER_PARAMETERS.PCS = [
+    name('PCS'),
+    sel('control', 'Control', 'grid_following', [
+        { value: 'grid_following', label: 'Grid-following' },
+        { value: 'grid_forming', label: 'Grid-forming' }
+    ], 'Grid-following: it delivers the power its source gives (a PV array\'s maximum power, an SOFC\'s set power) or its set power (a battery, a flywheel), with its Q. Grid-forming: it holds its bus\'s voltage; islanded, the grid-forming PCS share the load by their P-f droops.'),
+    num('s_rated_mva', 'Rated power', 'MVA', 1, 'Its P and Q stay within this circle, its active power first.', '0.1'),
+    num('vn_ac_kv', 'AC voltage', 'kV', 0, 'Checked against its AC bus: a PCS at 0.69 kV on an 11 or 25 kV bus needs its transformer drawn between them. 0: not checked.', '0.01'),
+    num('efficiency_percent', 'Efficiency', '%', 98, 'Its DC side draws the AC power over this, plus its no-load loss.', '0.1'),
+    num('no_load_loss_kw', 'No-load loss', 'kW', 0, 'Drawn from its DC side whatever it delivers.', '0.1'),
+    { ...num('p_set_mw', 'Set power', 'MW', 0, 'A battery\'s or flywheel\'s AC power: positive discharges, negative charges. Grid-forming: its share of the load before droop.', '0.01'), min: undefined },
+    sel('q_mode', 'Reactive power', 'q', [
+        { value: 'q', label: 'Set Q' },
+        { value: 'pf', label: 'Power factor' },
+        { value: 'qv', label: 'Q(V) droop' }
+    ], 'Grid-following: a set Q, a power factor (negative absorbs Q), or Q from its bus voltage.'),
+    { ...num('q_set_mvar', 'Set Q', 'Mvar', 0, 'Positive supplies Q.', '0.01'), min: undefined },
+    { ...num('pf', 'Power factor', '', 1, 'Negative absorbs Q.', '0.01'), min: '-1' },
+    num('qv_droop_percent', 'Q(V) droop', '%', 5, 'Grid-following Q(V): its rated Q at this voltage deviation from its voltage set point.', '0.5'),
+    num('vm_set_pu', 'Voltage set point', 'p.u.', 1, 'Grid-forming: the voltage it holds at no Q; grid-following Q(V): its reference.', '0.01'),
+    num('droop_pf_percent', 'P-f droop', '%', 2, 'Grid-forming: its frequency falls by this at its rated power above its set power. Islanded units share the load by rating / droop.', '0.1'),
+    num('droop_qv_percent', 'Q-V droop', '%', 5, 'Grid-forming: its voltage falls by this at its rated Q. 0 holds its set point.', '0.5'),
+    num('current_limit_pu', 'Current limit', 'p.u.', 1.2, 'Short circuit: it feeds this times its rated current (IEC and ANSI), grid-forming or grid-following.', '0.05'),
+    inService
+];
+
 /** Each kind's defaults, as attributes on its cell. */
 export function derDefaults(kind) {
     const out = {};
@@ -131,5 +159,6 @@ export const DER_DESCRIPTIONS = {
     Supercapacitor: 'A capacitance behind its ESR. Behind a DC/DC converter on its own bus (its voltage swings over its window), or directly on a bus as DC-link capacitance - in a 48 V rack or on the 800 V row bus.',
     Flywheel: 'Its rotor\'s energy, 1/2 J w^2, its machine converter holding its DC link: on its own bus behind a DC/DC converter (smoothing or dispatch), or directly on a bus at a set power.',
     SOFC: 'Its stacks\' polarisation curve (Padulles), scaled to its rating and voltage. On its own bus behind a DC/DC converter in follower mode, or directly on a bus at the current its curve gives there.',
-    'PV Array': 'Its module\'s single-diode model, fitted to its datasheet, at its irradiance and temperature. On its own bus behind a DC/DC converter in MPPT mode, or directly on a bus on its I-V curve.'
+    'PV Array': 'Its module\'s single-diode model, fitted to its datasheet, at its irradiance and temperature. On its own bus behind a DC/DC converter in MPPT mode, or directly on a bus on its I-V curve.',
+    PCS: 'A bidirectional inverter joining a battery, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it.'
 };

@@ -1518,6 +1518,7 @@ export const configureSupercapacitorAttributes = (grafka, vertex, options) => co
 export const configureFlywheelAttributes = (grafka, vertex, options) => configureDerAttributes('Flywheel', grafka, vertex, options);
 export const configureSofcAttributes = (grafka, vertex, options) => configureDerAttributes('SOFC', grafka, vertex, options);
 export const configurePvArrayAttributes = (grafka, vertex, options) => configureDerAttributes('PV Array', grafka, vertex, options);
+export const configurePcsAttributes = (grafka, vertex, options) => configureDerAttributes('PCS', grafka, vertex, options);
 
 /** The DC breaker's symbol, open or closed. */
 export function updateDcBreakerCellStyle(grafka, vertex, closed) {
@@ -1767,6 +1768,7 @@ if (typeof window !== 'undefined') {
     window.configureFlywheelAttributes = configureFlywheelAttributes;
     window.configureSofcAttributes = configureSofcAttributes;
     window.configurePvArrayAttributes = configurePvArrayAttributes;
+    window.configurePcsAttributes = configurePcsAttributes;
     window.ELECTRISIM_DER_TYPES = DER_TYPES;
     window.configureSstAttributes = configureSstAttributes;
     window.updateDcBreakerCellStyle = updateDcBreakerCellStyle;

@@ -243,6 +243,9 @@ export class BessPreliminaryDesignDialog extends Dialog {
             }),
             this._field('lvVoltage_kV', 'LV / PCS voltage (kV)', v('lvVoltage_kV', 0.69)),
             this._field('useQCurve', 'Use PCS P–Q capability curve', v('useQCurve', false), 'checkbox'),
+            this._field('pcsPair', 'Draw each PCS and its battery as separate elements', v('pcsPair', false), 'checkbox', null, {
+                description: 'The microgrid pair: a PCS (grid-following) and a Battery with its own energy, voltage and C-rates behind it, so the load flow reports its state of charge and DC side, and the short-circuit studies its current limit. Unticked: a Storage element with a Source DC rack, as before. The preliminary design study runs on either.',
+            }),
             this._section('HV cable to BESS site (optional)'),
             this._field('hvCableEnabled', 'HV cable between grid POC and plant substation', v('hvCableEnabled', false), 'checkbox', null, {
                 description: 'When the contractual POC is at the DSO substation and the BESS HV/MV transformer is at the customer site, enable this to insert an HV line and a BESS_HV bus between POC_HV and the plant transformer. Grid-code P/Q and envelope cases stay at POC_HV.',
@@ -362,6 +365,7 @@ export class BessPreliminaryDesignDialog extends Dialog {
             pcsPerWinding: int('pcsPerWinding', 2) === 4 ? 4 : 2,
             specifyQDirectly: raw.specifyQDirectly === true || raw.specifyQDirectly === 'true',
             useQCurve: raw.useQCurve === true || raw.useQCurve === 'true',
+            pcsPair: raw.pcsPair === true || raw.pcsPair === 'true',
             tapSweep: raw.tapSweep === true || raw.tapSweep === 'true',
             hvTrafoEnabled: !(raw.hvTrafoEnabled === false || raw.hvTrafoEnabled === 'false'),
             oltcEnabled: true,

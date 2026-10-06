@@ -10,7 +10,7 @@
 
 import { DER_TYPES, derFields } from './derParameters.js';
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES, 'PCS'];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
@@ -265,6 +265,18 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             'in_service', 'cost_per_unit_by_currency'
         ]);
         return { arrayKey: 'dcLine', row };
+    }
+    case 'PCS': {
+        // Its AC bus; its DC side: its source wired to it, or a DC bus with its source alone on it.
+        const { ac, dc } = connectedBuses(cell, model);
+        const source = edgesOf(cell, model).map(e => opposite(e, cell)).find(o => o && DER_TYPES.includes(shapeOf(o)));
+        const row = {
+            ...common(cell, `PCS${next('pcs')}`),
+            bus: ac[0]?.key || null,
+            bus_dc: dc[0]?.key || null,
+            der: source ? busKey(source) : null,
+        };
+        return { arrayKey: 'pcs', row: withOptional(row, cell, [...derFields('PCS'), 'cost_per_unit_by_currency']) };
     }
     default:
         if (DER_TYPES.includes(componentType)) {

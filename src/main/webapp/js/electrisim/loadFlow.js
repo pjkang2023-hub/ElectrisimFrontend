@@ -2062,6 +2062,7 @@ function loadFlowPandaPower(a, b, c) {
         dcBreaker: [],
         dcDcConverter: [],
         der: [],
+        pcs: [],
         sst: [],
         dcLine: [],
         line: [],
@@ -3253,6 +3254,19 @@ U[kV]: ${formatNumber(cell.v_kv)}
 ${state(cell)}`;
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, cell.kind)}
 ${body}`, { width: 70, height: 66, positionX: -0.3 });
+            });
+        },
+        // PCS: AC power, loading, DC power and, islanded, frequency.
+        pcs: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const body = cell.in_service === false || cell.p_mw === null ? 'Out of service' : `P[MW]: ${formatNumber(cell.p_mw)}
+Q[MVar]: ${formatNumber(cell.q_mvar)}
+Loading[%]: ${formatNumber(cell.loading_percent)}
+P_dc[MW]: ${formatNumber(cell.p_dc_mw)}${cell.islanded ? `\nf[Hz]: ${formatNumber(cell.frequency_hz)}` : ''}`;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'PCS')}
+${body}`, { width: 70, height: 72, positionX: 1.2, positionY: 0.4 });
             });
         },
         dcbreakers: (data, b) => {
@@ -4849,6 +4863,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcBreaker);
         addComponents(componentArrays.dcDcConverter);
         addComponents(componentArrays.der);
+        addComponents(componentArrays.pcs);
         addComponents(componentArrays.sst);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);

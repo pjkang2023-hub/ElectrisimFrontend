@@ -6,6 +6,8 @@
  *     → DC bus → Battery rack). PCS is the Storage element (AC load-flow).
  *     Battery DC Pmax is a tighter AC Storage P limit; the DC island is shown
  *     on the SLD but stripped before AC load-flow.
+ * With params.pcsPair, each PCS is the PCS element (grid-following) and each
+ * rack a Battery element behind it, on the same DC bus.
  */
 import {
     configureExternalGridAttributes,
@@ -17,6 +19,8 @@ import {
     configureThreeWindingTransformerAttributes,
     configureDcBusAttributes,
     configureSourceDcAttributes,
+    configurePcsAttributes,
+    configureBatteryAttributes,
 } from './configureAttributes.js';
 import {
     vertexStyleFromElectrisimSymbol,
@@ -55,11 +59,41 @@ const TRAFO_V_STYLE = vertexStyleFromElectrisimSymbol('sym-transformer-v', 'Tran
 const TRAFO_H_STYLE = vertexStyleFromElectrisimSymbol('sym-transformer', 'Transformer');
 const LOAD_STYLE = vertexStyleFromElectrisimSymbol('sym-load', 'Load');
 /** Image styles are built at use time so a stale catalog cannot freeze a blank rectangle. */
-function pcsStyle() {
-    return `${vertexStyleFromElectrisimSymbol('sym-pcs', 'Storage')};noLabel=1`;
+function pcsStyle(pair = false) {
+    return `${vertexStyleFromElectrisimSymbol('sym-pcs', pair ? 'PCS' : 'Storage')};noLabel=1`;
 }
-function batteryStyle() {
-    return `${vertexStyleFromElectrisimSymbol('sym-storage-v', 'Source DC')};noLabel=1`;
+function batteryStyle(pair = false) {
+    return pair
+        ? `${vertexStyleFromElectrisimSymbol('sym-battery', 'Battery')};noLabel=1`
+        : `${vertexStyleFromElectrisimSymbol('sym-storage-v', 'Source DC')};noLabel=1`;
+}
+
+/** The PCS element's attributes from the Storage nameplate: its rating, set power 0, grid-following. */
+function configurePairPcs(graph, cell, opts) {
+    configurePcsAttributes(graph, cell, {
+        name: opts.name || 'PCS',
+        control: 'grid_following',
+        s_rated_mva: String(opts.sn_mva ?? 5),
+        p_set_mw: '0',
+    });
+}
+
+/** The Battery element behind a pair PCS: its energy, DC voltage and C-rates from the plant's ratings. */
+function configurePairBattery(graph, cell, params, storage, name) {
+    const dcKv = Number(params.dcVoltage_kV) || 1.5;
+    const eMwh = Number(storage?.value?.getAttribute?.('max_e_mwh')) || Number(params.maxE_mwh) || 0;
+    const sn = Number(storage?.value?.getAttribute?.('s_rated_mva')) || Number(params.storageSnMva) || 5;
+    const energyMwh = eMwh > 0 ? eMwh : 2 * sn;
+    const pDis = Math.abs(Number(params.pMaxDischarge_MW) || 0) || sn;
+    const pChg = Math.abs(Number(params.pMaxCharge_MW) || 0) || sn;
+    configureBatteryAttributes(graph, cell, {
+        name,
+        sizing: 'ratings',
+        vn_v: String(dcKv * 1000),
+        capacity_kwh: String(energyMwh * 1000),
+        c_rate_discharge: String(Math.max(pDis / energyMwh, 0.01)),
+        c_rate_charge: String(Math.max(pChg / energyMwh, 0.01)),
+    });
 }
 
 /**
@@ -657,13 +691,23 @@ function storageNameplate(params, suggested, storName) {
     };
 }
 
-function insertStorage(graph, parent, bus, opts, role, offsetX = 0) {
+function insertStorage(graph, parent, bus, opts, role, offsetX = 0, pair = false) {
     const [sw, sh] = pcsSymbolSize();
     const bg = graph.getCellGeometry(bus);
     const cx = bg.x + bg.width / 2 - sw / 2 + offsetX;
     const cy = bg.y + bg.height + COMP_GAP;
-    const v = graph.insertVertex(parent, null, '', cx, cy, sw, sh, pcsStyle());
+    const v = graph.insertVertex(parent, null, '', cx, cy, sw, sh, pcsStyle(pair));
     const pcsName = opts.name || 'PCS';
+    if (pair) {
+        configurePairPcs(graph, v, opts);
+        setCellAttr(graph, v, 'max_e_mwh', opts.max_e_mwh ?? 0);
+        const edge = ensureEdge(graph, parent, v, bus, edgeStyleDeviceToBus(v, bus));
+        nudgeResultChild(graph, edge, BOX.storage);
+        tagRole(graph, v, role);
+        replaceRelativeLabels(graph, v, pcsName);
+        placeNameChild(graph, v, 0, 0.28);
+        return v;
+    }
     configureStorageAttributes(graph, v, {
         name: pcsName,
         p_mw: String(opts.p_mw ?? 0),
@@ -710,20 +754,24 @@ function placeDcRack(graph, parent, storage, idx, params, existing) {
     }
     ensureBusPlaceholder(graph, dcBus, BOX.dcBus);
 
-    const [bw, bh] = symWh('sym-storage-v', 40, 56);
+    const pair = params.pcsPair === true;
+    const [bw, bh] = pair ? symWh('sym-battery', 43, 56) : symWh('sym-storage-v', 40, 56);
     const battName = `Battery_${idx + 1}`;
     const battX = sg.x + sg.width / 2 - bw / 2;
     const battY = dcY + BUS_H + COMP_GAP;
     const battPmax = Math.abs(Number(params.batteryPmax_MW) || 0);
+    const configureRack = (cell) => (pair
+        ? configurePairBattery(graph, cell, params, storage, battName)
+        : configureSourceDcAttributes(graph, cell, { name: battName, vm_pu: '1.0' }));
     let rack = existing[`battery_${idx}`];
     if (!rack) {
-        rack = graph.insertVertex(parent, null, '', battX, battY, bw, bh, batteryStyle());
-        configureSourceDcAttributes(graph, rack, { name: battName, vm_pu: '1.0' });
+        rack = graph.insertVertex(parent, null, '', battX, battY, bw, bh, batteryStyle(pair));
+        configureRack(rack);
         tagRole(graph, rack, `battery_${idx}`);
     } else {
-        configureSourceDcAttributes(graph, rack, { name: battName, vm_pu: '1.0' });
+        configureRack(rack);
         tagRole(graph, rack, `battery_${idx}`);
-        graph.getModel().setStyle(rack, batteryStyle());
+        graph.getModel().setStyle(rack, batteryStyle(pair));
         placeCell(graph, rack, battX, battY, bw, bh);
     }
     if (battPmax > 0) {
@@ -1177,22 +1225,28 @@ function buildPlant(graph, params) {
         const placePcs = (bus, idx, offsetX) => {
             const storName = pcsUnitName(params, idx);
             const pcsOpts = storageNameplate(params, suggested, storName);
+            const pair = params.pcsPair === true;
             let storage = existing[`storage_${idx}`];
             if (!storage) {
-                storage = insertStorage(graph, parent, bus, pcsOpts, `storage_${idx}`, offsetX);
+                storage = insertStorage(graph, parent, bus, pcsOpts, `storage_${idx}`, offsetX, pair);
             } else {
-                configureStorageAttributes(graph, storage, {
-                    ...pcsOpts,
-                    sn_mva: String(pcsOpts.sn_mva),
-                    max_e_mwh: String(pcsOpts.max_e_mwh),
-                });
-                if (pcsOpts.battery_dc_pmax_mw) {
+                if (pair) {
+                    configurePairPcs(graph, storage, pcsOpts);
+                    setCellAttr(graph, storage, 'max_e_mwh', pcsOpts.max_e_mwh ?? 0);
+                } else {
+                    configureStorageAttributes(graph, storage, {
+                        ...pcsOpts,
+                        sn_mva: String(pcsOpts.sn_mva),
+                        max_e_mwh: String(pcsOpts.max_e_mwh),
+                    });
+                }
+                if (pcsOpts.battery_dc_pmax_mw && !pair) {
                     setCellAttr(graph, storage, 'battery_dc_pmax_mw', pcsOpts.battery_dc_pmax_mw);
                 }
                 tagRole(graph, storage, `storage_${idx}`);
                 const [sw, sh] = pcsSymbolSize();
                 const bg = graph.getCellGeometry(bus);
-                graph.getModel().setStyle(storage, pcsStyle());
+                graph.getModel().setStyle(storage, pcsStyle(pair));
                 placeCell(graph, storage, bg.x + bg.width / 2 - sw / 2 + offsetX, bg.y + bg.height + COMP_GAP, sw, sh);
                 const stEdge = ensureEdge(graph, parent, storage, bus, edgeStyleDeviceToBus(storage, bus));
                 nudgeResultChild(graph, stEdge, BOX.storage);

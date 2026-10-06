@@ -17,7 +17,7 @@ class DerDialog extends LoadDcDialog {
 
     getDescription() {
         return `<strong>Configure ${this.kind} Parameters</strong><br>${DER_DESCRIPTIONS[this.kind]} `
-            + 'Its pin goes to a DC bus. Fields marked Ratings:, Cells: or Modules: are used with that sizing.';
+            + (this.kind === 'PCS' ? '' : 'Its pin goes to a DC bus, or to a PCS. Fields marked Ratings:, Cells: or Modules: are used with that sizing.');
     }
 }
 
@@ -26,12 +26,13 @@ export class SupercapacitorDialog extends DerDialog { constructor(ui) { super(ui
 export class FlywheelDialog extends DerDialog { constructor(ui) { super(ui, 'Flywheel'); } }
 export class SofcDialog extends DerDialog { constructor(ui) { super(ui, 'SOFC'); } }
 export class PvArrayDialog extends DerDialog { constructor(ui) { super(ui, 'PV Array'); } }
+export class PcsDialog extends DerDialog { constructor(ui) { super(ui, 'PCS'); } }
 
 export const DER_DIALOGS = {
     Battery: BatteryDialog, Supercapacitor: SupercapacitorDialog, Flywheel: FlywheelDialog,
-    SOFC: SofcDialog, 'PV Array': PvArrayDialog
+    SOFC: SofcDialog, 'PV Array': PvArrayDialog, PCS: PcsDialog
 };
 
 if (typeof window !== 'undefined') {
-    Object.assign(window, { BatteryDialog, SupercapacitorDialog, FlywheelDialog, SofcDialog, PvArrayDialog });
+    Object.assign(window, { BatteryDialog, SupercapacitorDialog, FlywheelDialog, SofcDialog, PvArrayDialog, PcsDialog });
 }
