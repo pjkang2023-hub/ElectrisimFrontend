@@ -87,6 +87,9 @@ export class EmtDialog extends Dialog {
             },
             { id: 'step_percent', label: 'Step (% of its power; negative steps down)', type: 'number', value: '20', step: '5' },
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
+            { id: 'pv_section', label: 'An irradiance step', type: 'section', subtitle: 'Every PV array’s irradiance stepping, to see its converter’s MPPT follow. Empty: none.' },
+            { id: 'pv_step_wm2', label: 'Irradiance after the step (W/m²)', type: 'number', value: '', min: '0', step: '50' },
+            { id: 'pv_step_time_ms', label: 'Step time (ms)', type: 'number', value: '20', min: '0', step: '1' },
             {
                 id: 'profile_section', label: 'Load profiles',
                 subtitle: 'AC and DC loads given a profile in their dialogs follow it through the run (manage the library under Simulate > Load Profiles), the load flow starting at its value this far into it. A profile changes over tens of milliseconds and more: a longer time step (10 µs or so) suits a run of a second or two.',

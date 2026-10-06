@@ -63,6 +63,8 @@ export class EmtResultsDialog {
             this._renderAc(body);
             this._renderFault(body);
             this._renderConverters(body);
+            this._renderDers(body);
+            this._renderSmoothing(body);
             this._renderProfiles(body);
             this._renderBreakers(body);
             this._renderLoads(body);
@@ -151,12 +153,44 @@ export class EmtResultsDialog {
         ], rows));
     }
 
+    /** The sources and stores: power, voltage and state at the start and the end. */
+    _renderDers(body) {
+        const rows = this.emt.ders || [];
+        if (!rows.length) return;
+        const STATE = {
+            Battery: ['soc_percent', 'SoC (%)'], Supercapacitor: ['v_cap_v', 'Capacitor (V)'], Flywheel: ['speed_percent', 'Speed (%)'],
+            SOFC: ['p_h2_atm', 'H2 (atm)'], 'PV Array': ['irradiance_wm2', 'Irradiance (W/m²)']
+        };
+        this._h(body, 'Sources and stores');
+        body.appendChild(this._table([
+            { label: 'Element', align: 'left', value: d => `${this._escape(d.label)} <span style="color:#6c757d;">(${this._escape(d.kind)}, ${d.coupling === 'direct' ? 'on its bus' : 'behind its converter'})</span>` },
+            { label: 'P (MW)', title: 'Delivering, at the start and the end', value: d => `${fmt(d.p_start_mw)} → ${fmt(d.p_end_mw)}` },
+            { label: 'Voltage (kV)', title: 'Lowest, and at the end', value: d => `${fmt(d.v_min_kv)} / ${fmt(d.v_end_kv)}` },
+            { label: 'State', align: 'left', value: d => { const [k, l] = STATE[d.kind] || []; return k ? `${l} ${fmt(d[k + '_start'], 3)} → ${fmt(d[k + '_end'], 3)}` : '—'; } },
+            { label: 'At its limit (ms)', title: 'A flywheel: how long its rotor’s power limit held', value: d => (d.limited_ms != null ? fmt(d.limited_ms, 1) : '—') }
+        ], rows));
+    }
+
+    /** Smoothing converters: the racks' and the feed's peaks and steepest ramps. */
+    _renderSmoothing(body) {
+        const rows = (this.emt.converters || []).filter(c => c.smoothing);
+        if (!rows.length) return;
+        this._h(body, 'Rack smoothing');
+        body.appendChild(this._table([
+            { label: 'Converter', align: 'left', value: c => this._escape(c.label) },
+            { label: 'Racks peak / feed peak (MW)', value: c => `${fmt(c.smoothing.rack_peak_mw)} / ${fmt(c.smoothing.feed_peak_mw)}` },
+            { label: 'Racks ramp / feed ramp (MW/s)', title: 'Steepest, between its samples', value: c => `${fmt(c.smoothing.rack_ramp_mw_s, 2)} / ${fmt(c.smoothing.feed_ramp_mw_s, 2)}` },
+            { label: 'Store peak (MW)', value: c => fmt(c.smoothing.store_peak_mw) },
+            { label: 'At its limits (ms)', value: c => fmt(c.smoothing.limited_ms, 1) }
+        ], rows));
+    }
+
     _renderConverters(body) {
         const rows = this.emt.converters || [];
         if (!rows.length) return;
         this._h(body, 'Converters');
         body.appendChild(this._table([
-            { label: 'Converter', align: 'left', value: c => `${this._escape(c.label)}${c.kind === 'DC/DC' ? ' <span style="color:#6c757d;">(DC/DC)</span>' : ''}` },
+            { label: 'Converter', align: 'left', value: c => `${this._escape(c.label)}${c.kind === 'DC/DC' ? ` <span style="color:#6c757d;">(DC/DC${c.control && !['voltage', 'power'].includes(c.control) ? ', ' + this._escape(c.control) : ''})</span>` : ''}` },
             {
                 label: 'Model', align: 'left',
                 value: c => (c.model === 'switching' ? `Switching, ${fmt(c.switching_khz, 1)} kHz` : 'Average value')
