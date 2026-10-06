@@ -87,7 +87,7 @@ export class EmtDialog extends Dialog {
             },
             { id: 'step_percent', label: 'Step (% of its power; negative steps down)', type: 'number', value: '20', step: '5' },
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
-            { id: 'island_section', label: 'Islanding', type: 'section', subtitle: 'The external grids’ breakers open, each phase at its current’s zero: the grid-forming PCS carry the network on by their droops. Empty: none.' },
+            { id: 'island_section', label: 'Islanding', type: 'section', subtitle: 'The external grids’ breakers open, each phase at its current’s zero: the grid-forming PCS and the generators’ governors carry the network on by their droops. Empty: none.' },
             { id: 'island_time_ms', label: 'Islanding time (ms)', type: 'number', value: '', min: '0', step: '1' },
             { id: 'pv_section', label: 'An irradiance step', type: 'section', subtitle: 'Every PV array’s irradiance stepping, to see its converter’s MPPT follow. Empty: none.' },
             { id: 'pv_step_wm2', label: 'Irradiance after the step (W/m²)', type: 'number', value: '', min: '0', step: '50' },
@@ -105,8 +105,17 @@ export class EmtDialog extends Dialog {
             },
             {
                 id: 'model_section', label: 'Model',
-                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit, and blocks on DC undervoltage or overcurrent. A DC/DC converter is a dual active bridge holding its output voltage or delivering its set power within its current limit, blocking on undervoltage; an SST its rectifier, DC/DC stage and grid-following inverter, each so. Each is an average-value or a switching model, set in its dialog.',
+                subtitle: 'Breakers trip above their trip current and open after their opening time, into their surge arresters. A VSC on the AC network runs under its controls - its DC voltage or power, its reactive power or AC voltage - within its current limit, and blocks on DC undervoltage or overcurrent. A DC/DC converter is a dual active bridge holding its output voltage or delivering its set power within its current limit, blocking on undervoltage; an SST its rectifier, DC/DC stage and grid-following inverter, each so. Each is an average-value or a switching model, set in its dialog. A generator modelled as a machine is its internal voltage behind x′d on a rotor of inertia H, under its governor and exciter as set in its Dynamics tab.',
                 type: 'section'
+            },
+            {
+                id: 'generator_model', label: 'Generators',
+                type: 'select',
+                options: [
+                    { value: 'auto', label: 'Machines when the study islands, else sources behind x"d', default: true },
+                    { value: 'machine', label: 'Machines: rotor swing, governor and exciter from their Dynamics tabs' },
+                    { value: 'source', label: 'Sources behind x"d (a stiff frequency)' }
+                ]
             },
             { id: 'vsc_block_pu', label: 'Converters block below (p.u. of their DC voltage)', type: 'number', value: '0.8', min: '0', step: '0.05' },
             { id: 'max_section_km', label: 'Longest pi section of a DC cable (km)', type: 'number', value: '1', min: '0.001', step: '0.1' },

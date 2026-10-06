@@ -63,6 +63,7 @@ export class EmtResultsDialog {
             this._renderAc(body);
             this._renderFault(body);
             this._renderIsland(body);
+            this._renderMachines(body);
             this._renderConverters(body);
             this._renderDers(body);
             this._renderSmoothing(body);
@@ -179,6 +180,22 @@ export class EmtResultsDialog {
             { label: 'Voltage (kV)', title: 'Lowest, and at the end', value: d => `${fmt(d.v_min_kv)} / ${fmt(d.v_end_kv)}` },
             { label: 'State', align: 'left', value: d => { const [k, l] = STATE[d.kind] || []; return k ? `${l} ${fmt(d[k + '_start'], 3)} → ${fmt(d[k + '_end'], 3)}` : '—'; } },
             { label: 'At its limit (ms)', title: 'A flywheel: how long its rotor’s power limit held', value: d => (d.limited_ms != null ? fmt(d.limited_ms, 1) : '—') }
+        ], rows));
+    }
+
+    /** Synchronous machines: electrical and mechanical power, frequency, rotor angle and internal voltage. */
+    _renderMachines(body) {
+        const rows = this.emt.machines || [];
+        if (!rows.length) return;
+        this._h(body, 'Synchronous machines');
+        body.appendChild(this._table([
+            { label: 'Generator', align: 'left', value: m => `${this._escape(m.label)} <span style="color:#6c757d;">(${m.governor ? 'governor' : 'no governor'}, ${m.exciter ? 'exciter' : 'E′ held'})</span>` },
+            { label: 'P (MW)', title: 'Electrical, at its terminals: at the start and the end', value: m => `${fmt(m.p_start_mw)} → ${fmt(m.p_end_mw)}` },
+            { label: 'Pm (MW)', title: 'Mechanical, from its governor: at the start and the end', value: m => `${fmt(m.pm_start_mw)} → ${fmt(m.pm_end_mw)}` },
+            { label: 'Q (Mvar)', title: 'At the end', value: m => fmt(m.q_end_mvar) },
+            { label: 'Frequency (Hz)', title: 'Its rotor\'s: lowest / highest / at the end', value: m => `${fmt(m.f_min_hz, 3)} / ${fmt(m.f_max_hz, 3)} / ${fmt(m.f_end_hz, 3)}` },
+            { label: 'Rotor angle (°)', title: 'How far it moved through the run', value: m => fmt(m.delta_end_deg, 1) },
+            { label: 'E′ (p.u.)', title: 'Its internal voltage at the end', value: m => fmt(m.e_end_pu, 3) }
         ], rows));
     }
 
