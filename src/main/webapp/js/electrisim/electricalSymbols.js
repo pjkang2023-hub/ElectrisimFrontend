@@ -46,6 +46,7 @@ export const ELECTRICAL_SYMBOLS = {
   'sym-storage-v': { url: BASE + 'sym-storage-v.svg', w: 40, h: 56 },
   // Vertical PCS / inverter for BESS SLD (AC top, DC bottom). Still shapeELXXX=Storage.
   'sym-pcs': { url: BASE + 'sym-pcs.svg', w: 56, h: 72 },
+  'sym-grounding-transformer': { url: BASE + 'sym-grounding-transformer.svg', w: 37, h: 56 },
   'sym-svc': { url: BASE + 'sym-svc.svg', ...fit(58, 68) },
   'sym-tcsc': { url: BASE + 'sym-tcsc.svg', ...fit(92, 46) },
   'sym-ssc': { url: BASE + 'sym-ssc.svg', ...fit(58, 62) },

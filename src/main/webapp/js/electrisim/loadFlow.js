@@ -2063,6 +2063,7 @@ function loadFlowPandaPower(a, b, c) {
         dcDcConverter: [],
         der: [],
         pcs: [],
+        groundingTransformer: [],
         sst: [],
         dcLine: [],
         line: [],
@@ -3268,6 +3269,16 @@ Q_cap[MVar]: ${formatNumber(cell.q_capability_mvar)}
 P_dc[MW]: ${formatNumber(cell.p_dc_mw)}${cell.islanded ? `\nf[Hz]: ${formatNumber(cell.frequency_hz)}` : ''}`;
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'PCS')}
 ${body}`, { width: 70, height: 84, positionX: 1.2, positionY: 0.4 });
+            });
+        },
+        groundingtransformers: (data, b) => {
+            data.forEach(cell => {
+                const resultCell = getResultGraphCell(cell);
+                if (!resultCell) return;
+                const body = cell.in_service === false ? 'Out of service' : `I_g alone[A]: ${formatNumber(cell.i_ground_alone_a)}
+R_N[Ohm]: ${formatNumber(cell.r_n_ohm)}`;
+                placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'Grounding Transformer')}
+${body}`, { width: 70, height: 44, positionX: 1.2, positionY: 0.4 });
             });
         },
         dcbreakers: (data, b) => {
@@ -4865,6 +4876,7 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
         addComponents(componentArrays.dcDcConverter);
         addComponents(componentArrays.der);
         addComponents(componentArrays.pcs);
+        addComponents(componentArrays.groundingTransformer);
         addComponents(componentArrays.sst);
         addComponents(componentArrays.line);
         addComponents(componentArrays.switch);

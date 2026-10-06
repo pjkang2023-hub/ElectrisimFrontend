@@ -450,6 +450,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
         dcDcConverter: [],
         der: [],
         pcs: [],
+        groundingTransformer: [],
         sst: [],
         dcLine: [],
         line: []
@@ -1623,6 +1624,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
     addComponents(componentArrays.dcDcConverter);
     addComponents(componentArrays.der);
     addComponents(componentArrays.pcs);
+    addComponents(componentArrays.groundingTransformer);
     addComponents(componentArrays.sst);
     addComponents(componentArrays.line);
     addComponents(componentArrays.switch);

@@ -10,7 +10,7 @@
 
 import { DER_TYPES, derFields } from './derParameters.js';
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES, 'PCS'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES, 'PCS', 'Grounding Transformer'];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
@@ -277,6 +277,22 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             der: source ? busKey(source) : null,
         };
         return { arrayKey: 'pcs', row: withOptional(row, cell, [...derFields('PCS'), 'cost_per_unit_by_currency']) };
+    }
+    case 'Grounding Transformer': {
+        // Its bus: wired to it, or beyond its breaker (a Switch), which then names it as its element.
+        let bus = connectedBuses(cell, model).ac[0]?.key || null;
+        if (!bus) {
+            edgesOf(cell, model).forEach((edge) => {
+                const sw = opposite(edge, cell);
+                if (bus || !sw || shapeOf(sw) !== 'Switch') return;
+                edgesOf(sw, model).forEach((e2) => {
+                    const beyond = opposite(e2, sw);
+                    if (!bus && beyond && beyond !== cell && isAcBusCell(beyond)) bus = busKey(beyond);
+                });
+            });
+        }
+        const row = { ...common(cell, `Grounding Transformer${next('groundingTransformer')}`), bus };
+        return { arrayKey: 'groundingTransformer', row: withOptional(row, cell, [...derFields('Grounding Transformer'), 'cost_per_unit_by_currency']) };
     }
     default:
         if (DER_TYPES.includes(componentType)) {

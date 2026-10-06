@@ -145,6 +145,19 @@ DER_PARAMETERS.PCS = [
     inService
 ];
 
+// A zigzag grounding transformer: an AC element, its dialog built the same way.
+DER_PARAMETERS['Grounding Transformer'] = [
+    name('Grounding transformer'),
+    num('vn_kv', 'Rated voltage', 'kV', 0, 'Checked against its bus. 0: its bus\u2019s voltage.', '0.1'),
+    num('i_rated_a', 'Rated neutral current', 'A', 400, 'The ground fault current it is rated to carry, for its rated time; with no neutral resistor given, the one that passes this current.', '10'),
+    num('t_rated_s', 'Rated time', 's', 10, 'How long it carries its rated neutral current.', '1'),
+    { ...num('r_n_ohm', 'Neutral resistor', '\u03a9', '', 'Between its star point and ground. Blank: V_ph / its rated neutral current (low-resistance grounding). 0: solidly grounded.', '0.1'), min: '0' },
+    num('x_n_ohm', 'Neutral reactor', '\u03a9', 0, 'In series with the neutral resistor, if any.', '0.1'),
+    { ...num('x0_ohm', 'Zero-sequence reactance', '\u03a9', '', 'Its own, per phase. Blank: 12 % of V_ph / its rated neutral current.', '0.01'), min: '0' },
+    { ...num('r0_ohm', 'Zero-sequence resistance', '\u03a9', '', 'Its own, per phase. Blank: a tenth of its zero-sequence reactance.', '0.01'), min: '0' },
+    inService
+];
+
 /** Each kind's defaults, as attributes on its cell. */
 export function derDefaults(kind) {
     const out = {};
@@ -163,5 +176,6 @@ export const DER_DESCRIPTIONS = {
     Flywheel: 'Its rotor\'s energy, 1/2 J w^2, its machine converter holding its DC link: on its own bus behind a DC/DC converter (smoothing or dispatch), or directly on a bus at a set power.',
     SOFC: 'Its stacks\' polarisation curve (Padulles), scaled to its rating and voltage. On its own bus behind a DC/DC converter in follower mode, or directly on a bus at the current its curve gives there.',
     'PV Array': 'Its module\'s single-diode model, fitted to its datasheet, at its irradiance and temperature. On its own bus behind a DC/DC converter in MPPT mode, or directly on a bus on its I-V curve.',
-    PCS: 'A bidirectional inverter joining a battery, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it.'
+    PCS: 'A bidirectional inverter joining a battery, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it.',
+    'Grounding Transformer': 'A zigzag grounding transformer: the ground of a three-wire network, on the grid and islanded. It carries no balanced current; a ground fault sees its zero-sequence impedance plus three times its neutral resistor. Its pin (top) on its bus, directly or through its breaker (a Switch).'
 };
