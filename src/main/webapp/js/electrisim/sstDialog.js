@@ -16,6 +16,8 @@ export const defaultSstData = {
     dcdc_rated_mw: 1, dcdc_efficiency_percent: 98, dcdc_no_load_kw: 2, vm_lv_dc_pu: 1.0,
     inverter_mode: 'grid_following',
     inv_rated_mw: 0.5, inv_efficiency_percent: 97.5, inv_no_load_kw: 1, p_ac_mw: 0.1, q_ac_mvar: 0, vm_lv_ac_pu: 1.0,
+    // EMT study: its stages' model, switching frequencies and current limit
+    emt_model: 'average', switching_khz: 5, dcdc_switching_khz: 20, current_limit_pu: 1.2,
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -60,6 +62,21 @@ export class SstDialog extends LoadDcDialog {
             num('p_ac_mw', 'Grid-following: active power', 'MW', 'Into the LV AC port. Negative draws power from it.', '0.01', undefined),
             num('q_ac_mvar', 'Grid-following: reactive power', 'Mvar', 'Into the LV AC port.', '0.01', undefined),
             num('vm_lv_ac_pu', 'Grid-forming: LV AC voltage set point', 'p.u.', 'The voltage it holds at the LV AC port.', '0.01'),
+            {
+                id: 'emt_model',
+                label: 'Model (EMT)',
+                symbol: 'emt_model',
+                description: 'For the EMT study, its stages: its rectifier (a VSC on the MV bus holding its link), its DC/DC stage (a dual active bridge holding its LV DC port) and a grid-following inverter (a VSC delivering its set power) - average (fast) or switching. A grid-forming inverter stays a source behind its impedance.',
+                type: 'select',
+                options: [
+                    { value: 'average', label: 'Average value' },
+                    { value: 'switching', label: 'Switching' }
+                ],
+                value: this.data.emt_model
+            },
+            num('switching_khz', 'Rectifier and inverter: switching frequency (EMT)', 'kHz', 'For the EMT study: their PWM carrier.', '0.5'),
+            num('dcdc_switching_khz', 'DC/DC stage: switching frequency (EMT)', 'kHz', 'For the EMT study: its bridges\' square waves.', '1'),
+            num('current_limit_pu', 'Current limit (EMT)', 'p.u.', 'For the EMT study: each stage\'s current limit, per unit of its rated current. Each blocks when its DC voltage falls below 0.8 p.u.', '0.05'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];
     }

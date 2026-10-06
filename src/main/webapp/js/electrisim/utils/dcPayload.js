@@ -179,7 +179,8 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'rect_rated_mw', 'rect_efficiency_percent', 'rect_no_load_kw',
                 'dcdc_rated_mw', 'dcdc_efficiency_percent', 'dcdc_no_load_kw', 'vm_lv_dc_pu',
                 'inverter_mode', 'inv_rated_mw', 'inv_efficiency_percent', 'inv_no_load_kw', 'p_ac_mw', 'q_ac_mvar',
-                'vm_lv_ac_pu', 'in_service', 'cost_per_unit_by_currency'])
+                'vm_lv_ac_pu', 'emt_model', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
+                'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC/DC Converter': {
@@ -193,7 +194,8 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         return {
             arrayKey: 'dcDcConverter',
             row: withOptional(row, cell, ['control_mode', 'vm_out_pu', 'p_set_mw', 'rated_mw', 'vn_in_kv', 'vn_out_kv',
-                'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'in_service', 'cost_per_unit_by_currency'])
+                'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'emt_model', 'switching_khz', 'current_limit_pu',
+                'c_out_mf', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC Capacitor': {

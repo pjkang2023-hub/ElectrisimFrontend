@@ -1446,7 +1446,9 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         rect_rated_mw: "1", rect_efficiency_percent: "98.5", rect_no_load_kw: "2",
         dcdc_rated_mw: "1", dcdc_efficiency_percent: "98", dcdc_no_load_kw: "2", vm_lv_dc_pu: "1.0",
         inverter_mode: "grid_following", inv_rated_mw: "0.5", inv_efficiency_percent: "97.5", inv_no_load_kw: "1",
-        p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true"
+        p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true",
+        // For the EMT study
+        emt_model: "average", switching_khz: "5", dcdc_switching_khz: "20", current_limit_pu: "1.2"
     };
     Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
 
@@ -1473,6 +1475,11 @@ export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
     g.setAttribute("no_load_loss_kw", String(options.no_load_loss_kw ?? "1"));
     g.setAttribute("bidirectional", String(options.bidirectional ?? "false"));
     g.setAttribute("in_service", String(options.in_service ?? "true"));
+    // For the EMT study: a dual active bridge, its switching frequency, current limit and output capacitor (0: 2 ms of its rating)
+    g.setAttribute("emt_model", options.emt_model || "average");
+    g.setAttribute("switching_khz", String(options.switching_khz ?? "20"));
+    g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
+    g.setAttribute("c_out_mf", String(options.c_out_mf ?? "0"));
 
     g.setAttribute("Economic_parameters", "");
     g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");

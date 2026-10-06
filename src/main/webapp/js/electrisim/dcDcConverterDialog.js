@@ -17,6 +17,10 @@ export const defaultDcDcConverterData = {
     efficiency_percent: 98,
     no_load_loss_kw: 1,
     bidirectional: false,
+    emt_model: 'average',       // EMT study: a dual active bridge, averaged or switched
+    switching_khz: 20,          // EMT study: its bridges' switching frequency
+    current_limit_pu: 1.2,      // EMT study: its output current limit, per unit of its rated current
+    c_out_mf: 0,                // EMT study: its output capacitor; 0 = 2 ms of its rating stored
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -50,7 +54,22 @@ export class DcDcConverterDialog extends LoadDcDialog {
             num('vn_out_kv', 'Output nominal voltage', 'kV', 'Checked against the output (right) DC bus.', '0.01'),
             num('efficiency_percent', 'Efficiency', '%', 'Its input draws the output power divided by this, plus the no-load loss.', '0.1'),
             num('no_load_loss_kw', 'No-load loss', 'kW', 'Drawn at its input whatever it delivers.', '0.1'),
-            { id: 'bidirectional', label: 'Bidirectional', symbol: 'bidirectional', description: 'Power may flow from its output to its input; otherwise such a flow is warned about.', type: 'checkbox', value: this.data.bidirectional },
+            { id: 'bidirectional', label: 'Bidirectional', symbol: 'bidirectional', description: 'Power may flow from its output to its input; otherwise such a flow is warned about. In the EMT study its current limit then holds either way; otherwise it cannot send power back.', type: 'checkbox', value: this.data.bidirectional },
+            {
+                id: 'emt_model',
+                label: 'Model (EMT)',
+                symbol: 'emt_model',
+                description: 'For the EMT study: a dual active bridge - two full bridges and a transformer - average (its phase shift giving its average currents: fast) or switching (its bridges switched, with a time step of a fiftieth of its switching period or less).',
+                type: 'select',
+                options: [
+                    { value: 'average', label: 'Average value' },
+                    { value: 'switching', label: 'Switching' }
+                ],
+                value: this.data.emt_model
+            },
+            num('switching_khz', 'Switching frequency (EMT)', 'kHz', 'For the EMT study: its bridges\' square waves. Its controller samples at each half period, in both models.', '1'),
+            num('current_limit_pu', 'Current limit (EMT)', 'p.u.', 'For the EMT study: the most output current its controls let it deliver, per unit of its rated current. It blocks when its input or output voltage falls below 0.8 p.u.', '0.05'),
+            num('c_out_mf', 'Output capacitance (EMT)', 'mF', 'For the EMT study: its output capacitor. 0 stores 2 ms of its rating at its output voltage.', '0.1'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];
     }
