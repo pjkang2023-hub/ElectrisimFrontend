@@ -62,6 +62,7 @@ export class EmtResultsDialog {
             this._renderMethod(body);
             this._renderAc(body);
             this._renderFault(body);
+            this._renderIsland(body);
             this._renderConverters(body);
             this._renderDers(body);
             this._renderSmoothing(body);
@@ -153,6 +154,16 @@ export class EmtResultsDialog {
         ], rows));
     }
 
+    _renderIsland(body) {
+        const isl = this.emt.island;
+        if (!isl) return;
+        const opened = (isl.opened_ms || []).map((t, k) => `${'abc'[k % 3]}: ${t != null ? fmt(t, 2) + ' ms' : 'still closed'}`).join(', ');
+        const note = document.createElement('div');
+        note.style.cssText = 'margin-top:12px;padding:8px 12px;background:#fff3cd;border-radius:6px;color:#664d03;';
+        note.textContent = `Islanded from ${fmt(isl.t_ms, 1)} ms - the grid's breaker phases opened at their currents' zeros (${opened}).`;
+        body.appendChild(note);
+    }
+
     /** The sources and stores: power, voltage and state at the start and the end. */
     _renderDers(body) {
         const rows = this.emt.ders || [];
@@ -190,7 +201,7 @@ export class EmtResultsDialog {
         if (!rows.length) return;
         this._h(body, 'Converters');
         body.appendChild(this._table([
-            { label: 'Converter', align: 'left', value: c => `${this._escape(c.label)}${c.kind === 'DC/DC' ? ` <span style="color:#6c757d;">(DC/DC${c.control && !['voltage', 'power'].includes(c.control) ? ', ' + this._escape(c.control) : ''})</span>` : ''}` },
+            { label: 'Converter', align: 'left', value: c => `${this._escape(c.label)}${c.kind === 'DC/DC' ? ` <span style="color:#6c757d;">(DC/DC${c.control && !['voltage', 'power'].includes(c.control) ? ', ' + this._escape(c.control) : ''})</span>` : (c.kind === 'PCS' ? ` <span style="color:#6c757d;">(PCS, ${c.control === 'grid_forming' ? 'grid-forming' : 'grid-following'})</span>` : '')}` },
             {
                 label: 'Model', align: 'left',
                 value: c => (c.model === 'switching' ? `Switching, ${fmt(c.switching_khz, 1)} kHz` : 'Average value')
@@ -201,6 +212,7 @@ export class EmtResultsDialog {
             { label: 'Peak current (kA)', title: 'A VSC\'s rms AC current; a DC/DC converter\'s output current (its mean over each half period)', value: c => fmt(c.i_peak_ka) },
             { label: 'Rating (MVA / MW)', value: c => fmt(c.kind === 'DC/DC' ? c.rated_mw : c.rated_mva) },
             { label: 'Limit (kA)', title: 'The most current its controls let it carry', value: c => fmt(c.current_limit_ka) },
+            { label: 'Frequency (Hz)', title: 'A grid-forming PCS: lowest, and at the end', value: c => (c.f_end_hz != null ? `${fmt(c.f_min_hz, 3)} / ${fmt(c.f_end_hz, 3)}` : '—') },
             { label: 'At its limit (ms)', title: 'How long its controls held its current at its limit', value: c => fmt(c.limited_ms, 1) },
             {
                 label: 'Blocked (ms)', value: c => (c.blocked_ms != null ? fmt(c.blocked_ms, 2) : '—'),

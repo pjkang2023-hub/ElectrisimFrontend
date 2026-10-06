@@ -87,6 +87,8 @@ export class EmtDialog extends Dialog {
             },
             { id: 'step_percent', label: 'Step (% of its power; negative steps down)', type: 'number', value: '20', step: '5' },
             { id: 'step_time_ms', label: 'Step time (ms)', type: 'number', value: '5', min: '0', step: '0.5' },
+            { id: 'island_section', label: 'Islanding', type: 'section', subtitle: 'The external grids’ breakers open, each phase at its current’s zero: the grid-forming PCS carry the network on by their droops. Empty: none.' },
+            { id: 'island_time_ms', label: 'Islanding time (ms)', type: 'number', value: '', min: '0', step: '1' },
             { id: 'pv_section', label: 'An irradiance step', type: 'section', subtitle: 'Every PV array’s irradiance stepping, to see its converter’s MPPT follow. Empty: none.' },
             { id: 'pv_step_wm2', label: 'Irradiance after the step (W/m²)', type: 'number', value: '', min: '0', step: '50' },
             { id: 'pv_step_time_ms', label: 'Step time (ms)', type: 'number', value: '20', min: '0', step: '1' },
