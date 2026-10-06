@@ -6,6 +6,7 @@ import {
 import { applyElectrisimImportSidecar as elApplySidecar } from './applyElectrisimImportSidecar.js';
 import { layoutRadialSld as elLayoutRadial, suggestImportSystem as elSuggestSystem } from './importRadialLayout.js';
 import { relayoutSld as elRelayoutSld } from './sldAutoLayout.js';
+import { drawElectrisimLayer as elDrawElectrisimLayer } from './importElectrisimLayer.js';
 
 /**
  * Are the geo coordinates worth using as a layout?
@@ -4341,6 +4342,16 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 if (sidecarModel) elApplySidecar(grafka, sidecarModel);
             } catch (_scErr) {
                 console.warn('Sidecar apply failed', _scErr);
+            }
+            try {
+                // The spec's DC and microgrid layer (/build-model's electrisim_elements), below the AC drawing.
+                const layer = safeJsonParse(data?._object?.electrisim_elements?._object);
+                if (layer && !Array.isArray(layer) && (layer.elements?.length || layer.load_profiles)) {
+                    parent._elBusByName = null;
+                    elDrawElectrisimLayer(grafka, parent, layer, name => findVertexByBusId(grafka, parent, name));
+                }
+            } catch (_layerErr) {
+                console.error('Drawing the DC and microgrid layer failed', _layerErr);
             }
             grafka.getModel().endUpdate();
         }
