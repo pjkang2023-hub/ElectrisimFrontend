@@ -1146,6 +1146,26 @@
                 head: ['Object id', 'Dialog name', 'P [MW]', 'Q [MVAr]'],
                 rows: rows.map(s => [nameOf(s, 'Storage'), dn(s) || '—', numF(s.p_mw), numF(s.q_mvar)]),
             };
+            case 'pcs': return {
+                title: 'PCS (inverter-based sources)',
+                head: ['Object id', 'Dialog name', 'Source', 'Control', 'S rated [MVA]', 'P [MW]', 'Q [MVAr]', 'Loading [%]', 'Q capability [MVAr]'],
+                rows: rows.map(r => [
+                    nameOf(r, 'PCS'), dn(r) || r.label || '—', `${r.source || '—'} (${({ Battery: 'battery', Flywheel: 'flywheel', SOFC: 'SOFC system', 'PV Array': 'PV array' })[r.source_kind] || r.source_kind || ''})`,
+                    r.control === 'grid_forming' ? 'Grid-forming' : 'Grid-following',
+                    numF(r.s_rated_mva), numF(r.p_mw), numF(r.q_mvar), numF(r.loading_percent, 1), numF(r.q_capability_mvar),
+                ]),
+            };
+            case 'ders': return {
+                title: 'Sources and stores',
+                head: ['Object id', 'Dialog name', 'Kind', 'Coupling', 'P [MW]', 'V [kV]', 'State'],
+                rows: rows.map(r => {
+                    const state = num(r.soc_percent) !== null ? `SoC ${numF(r.soc_percent, 1)} %`
+                        : num(r.speed_percent) !== null ? `speed ${numF(r.speed_percent, 1)} %`
+                        : num(r.energy_kwh) !== null ? `${numF(r.energy_kwh, 2)} kWh` : '—';
+                    return [nameOf(r, r.kind || 'DER'), dn(r) || r.label || '—', r.kind || '—', r.coupling || '—',
+                        numF(r.p_mw), numF(r.v_kv), state];
+                }),
+            };
             case 'pvsystems':
             case 'pvSystems': return {
                 title: 'PV systems',
@@ -1178,7 +1198,7 @@
             'externalgrids', 'busbars', 'lines',
             'transformers', 'transformers3W', 'transformers3w',
             'generators', 'staticgenerators', 'asymmetricstaticgenerators',
-            'loads', 'asymmetricloads', 'motors', 'storages',
+            'loads', 'asymmetricloads', 'motors', 'storages', 'pcs', 'ders',
             'pvsystems', 'pvSystems',
             'shunts', 'capacitors',
         ];

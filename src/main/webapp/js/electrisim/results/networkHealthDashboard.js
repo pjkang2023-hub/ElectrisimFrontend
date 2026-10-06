@@ -169,6 +169,7 @@
         const asymLoads    = arr('asymmetricloads', 'asymmetric_loads', 'asymmetricLoads');
         const motors       = arr('motors');
         const storages     = arr('storages');
+        const pcs          = arr('pcs');
         const pvSystems    = arr('pvsystems', 'pvSystems');
         const shunts       = arr('shunts');
         const capacitors   = arr('capacitors');
@@ -184,6 +185,8 @@
         //   storage:            +p_mw → charging (load), −p_mw → discharging (gen)
         const extSplit  = splitBySign(extGrids);
         const stoSplit  = splitBySign(storages);
+        // A PCS: +p_mw delivers into its AC bus (a source discharging), -p_mw takes from it (charging).
+        const pcsSplit  = splitBySign(pcs);
 
         const genInjectMw  = sumBusInject(generators);
         const sgenInjectMw = sumBusInject(sgens);
@@ -213,6 +216,7 @@
             { label: 'Asymmetric static gens',     value: asymSgenGen,   count: asymSgens.length },
             { label: 'PV systems',                 value: pvInjectMw,    count: pvSystems.length },
             { label: 'Storage (discharge)',        value: stoSplit.neg,  count: storages.length },
+            { label: 'PCS (delivering)',           value: pcsSplit.pos,  count: pcs.length },
             { label: 'Asymmetric loads (gen)',     value: asymLoadGen,   count: asymLoads.length },
         ].filter(x => x.count > 0 || x.value > 0.0001);
 
@@ -221,6 +225,7 @@
             { label: 'Asymmetric loads',           value: asymLoadLoad,          count: asymLoads.length },
             { label: 'Motors',                     value: sumOf(motors, 'p_mw'), count: motors.length },
             { label: 'Storage (charge)',           value: stoSplit.pos,          count: storages.length },
+            { label: 'PCS (charging)',             value: pcsSplit.neg,          count: pcs.length },
             { label: 'Shunt reactors',             value: shuntLoadMw,           count: shunts.length },
             { label: 'Capacitors',                 value: capacitorLoadMw,     count: capacitors.length },
         ].filter(x => x.count > 0 || x.value > 0.0001);
@@ -239,7 +244,7 @@
         // System losses from active-power balance (injections − withdrawals incl. grid export).
         const totalInjections =
             extSplit.pos + genInjectMw + sgenInjectMw + pvInjectMw +
-            asymSgenGen + asymLoadGen + stoSplit.neg;
+            asymSgenGen + asymLoadGen + stoSplit.neg + pcsSplit.pos;
         const totalWithdrawals = totalLoad + extSplit.neg;
 
         let totalLosses = 0;
@@ -404,7 +409,7 @@
                 transformers: trafos.length + trafos3w.length,
                 generators:
                     generators.length + sgens.length + asymSgens.length +
-                    extGrids.length + pvSystems.length,
+                    extGrids.length + pvSystems.length + pcs.length,
                 loads: loads.length + asymLoads.length + motors.length + storages.length,
             },
         };

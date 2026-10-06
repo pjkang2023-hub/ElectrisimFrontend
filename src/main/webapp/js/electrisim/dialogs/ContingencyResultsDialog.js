@@ -55,6 +55,7 @@ export class ContingencyResultsDialog {
             this._renderError(body);
         } else {
             this._renderSummary(body);
+            this._renderInverterSources(body);
             this._casesSection = document.createElement('div');
             body.appendChild(this._casesSection);
             this._renderContingencyCases(this._casesSection);
@@ -128,6 +129,25 @@ export class ContingencyResultsDialog {
             grid.appendChild(card);
         });
         container.appendChild(grid);
+    }
+
+    /** The PCS in the base case: each an outage case of its own, with its rating and the Q it has left. */
+    _renderInverterSources(container) {
+        const rows = this.results.inverter_sources || [];
+        if (!rows.length) return;
+        const kind = { grid_forming: 'Grid-forming', grid_following: 'Grid-following' };
+        const word = { Battery: 'battery', Flywheel: 'flywheel', SOFC: 'SOFC system', 'PV Array': 'PV array' };
+        container.appendChild(this._buildTable(
+            'Inverter-based sources (PCS)',
+            'Each PCS and the source behind it, in the base case. Each is also an outage case below. Q capability: the reactive power its rating leaves at its active power.',
+            ['PCS', 'Source', 'Control', 'S rated [MVA]', 'P [MW]', 'Q [Mvar]', 'Q capability [Mvar]', 'P max [MW]', 'P min [MW]', 'Current limit [p.u.]'],
+            [null, null, null, null, null, null, '± sqrt(S² - P²)', 'The most it can deliver from its source', 'The most it can take (negative: charging)', 'Its fault current over its rated current'],
+            rows.map(r => [
+                r.label, `${r.source} (${word[r.source_kind] || r.source_kind || ''})`, kind[r.control] || r.control,
+                this._fmt(r.s_rated_mva), this._fmt(r.p_mw), this._fmt(r.q_mvar), this._fmt(r.q_capability_mvar),
+                this._fmt(r.p_max_mw), this._fmt(r.p_min_mw), this._fmt(r.current_limit_pu)
+            ])
+        ));
     }
 
     _getFilteredCases() {

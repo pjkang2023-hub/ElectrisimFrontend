@@ -130,6 +130,7 @@
                 ['Buses', r.n_buses],
                 ['f base (Hz)', r.frequency_base_hz]
             ];
+            if (r.pcs?.length) items.push(['PCS', r.pcs.length]);
             const poi = r.poi_metrics || {};
             if (poi.poi_bus) {
                 // By the bus's diagram label, figures rounded (the cell id and
@@ -215,6 +216,18 @@
                     values: this.results.frequency_hz
                 }], 'f [Hz]');
             }
+            // Each PCS through the run, by its ANDES model: its power and Q, a battery's state of
+            // charge, a flywheel's speed, a grid-forming PCS's frequency.
+            const pcs = this.results.pcs || [];
+            if (pcs.length) {
+                const label = (r) => `${r.label} (${r.source}, ${r.model})`;
+                const series = (key) => pcs.filter(r => Array.isArray(r[key])).map(r => ({ name: label(r), values: r[key] }));
+                makeChart('PCS active power (MW)', series('p_mw'), 'P [MW]');
+                makeChart('PCS reactive power (Mvar)', series('q_mvar'), 'Q [Mvar]');
+                makeChart('Batteries behind a PCS: state of charge (%)', series('soc_percent'), 'SoC [%]');
+                makeChart('Flywheels behind a PCS: speed (%)', series('speed_percent'), 'Speed [%]');
+                makeChart('Grid-forming PCS: frequency (Hz)', series('frequency_hz'), 'f [Hz]');
+            }
             // Loads following a profile from the diagram's library, and the power each was set to.
             const followed = this.results.load_profiles || [];
             if (followed.length) {
@@ -246,6 +259,15 @@
                 cols.push('frequency_hz');
                 series.push(this.results.frequency_hz);
             }
+            (this.results.pcs || []).forEach((r) => {
+                [['p_mw', 'p_mw'], ['q_mvar', 'q_mvar'], ['soc_percent', 'soc_percent'], ['speed_percent', 'speed_percent'],
+                    ['frequency_hz', 'f_hz']].forEach(([key, col]) => {
+                    if (Array.isArray(r[key])) {
+                        cols.push(`${col}_${r.label}`);
+                        series.push(r[key]);
+                    }
+                });
+            });
             const rt = this.results.ride_through;
             if (rt?.enabled) {
                 cols.push('ride_through_pass');

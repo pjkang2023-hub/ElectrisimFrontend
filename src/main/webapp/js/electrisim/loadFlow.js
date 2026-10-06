@@ -3264,9 +3264,10 @@ ${body}`, { width: 70, height: 66, positionX: -0.3 });
                 const body = cell.in_service === false || cell.p_mw === null ? 'Out of service' : `P[MW]: ${formatNumber(cell.p_mw)}
 Q[MVar]: ${formatNumber(cell.q_mvar)}
 Loading[%]: ${formatNumber(cell.loading_percent)}
+Q_cap[MVar]: ${formatNumber(cell.q_capability_mvar)}
 P_dc[MW]: ${formatNumber(cell.p_dc_mw)}${cell.islanded ? `\nf[Hz]: ${formatNumber(cell.frequency_hz)}` : ''}`;
                 placeDcResult(b, resultCell, `${formatResultNameHeader(resultCell, cell.name, 'PCS')}
-${body}`, { width: 70, height: 72, positionX: 1.2, positionY: 0.4 });
+${body}`, { width: 70, height: 84, positionX: 1.2, positionY: 0.4 });
             });
         },
         dcbreakers: (data, b) => {
