@@ -3877,7 +3877,11 @@ Loading[%]: ${formatNumber(cell.loading_percent, 1)}`;
                                 cos_phi: 'cos_phi',
                                 pg_percent: 'pg_percent',
                                 power_station_trafo: 'power_station_trafo',
-                                in_service: { name: 'in_service', optional: true }
+                                in_service: { name: 'in_service', optional: true },
+                                // An island's machines share its load by their governors' droops
+                                // (the Dynamics tab's): without them it took TGOV1's 5 %.
+                                dyn_governor_model: { name: 'dyn_governor_model', optional: true },
+                                dyn_gov_R: { name: 'dyn_gov_R', optional: true }
                             })
                         };
                         componentArrays.generator.push(generator);

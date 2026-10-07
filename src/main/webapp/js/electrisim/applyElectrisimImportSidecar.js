@@ -79,6 +79,8 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'xdss_pu', g.xdss_pu);
             setAttr(cell, 'rdss_ohm', g.rdss_ohm ?? g.rdss_pu);
             setAttr(cell, 'cos_phi', g.cos_phi);
+            // Its Dynamics tab, as a spec gives it: the drawing kept the defaults.
+            Object.keys(g).filter((k) => k.startsWith('dyn_')).forEach((k) => setAttr(cell, k, g[k]));
         }
         const sgRow = pick(sidecar.sgen);
         // Imported elements carry their own names, so recognise them by shape.

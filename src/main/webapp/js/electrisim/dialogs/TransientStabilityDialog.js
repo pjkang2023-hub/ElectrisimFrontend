@@ -53,6 +53,12 @@ function collectBusesGeneratorsLines(graph) {
             buses.push({ value: technicalName, label });
         } else if (componentType === 'Line' || styleStr.includes('shapeELXXX=Line')) {
             lines.push({ value: technicalName, label });
+        } else if (componentType === 'Switch' || styleStr.includes('shapeELXXX=Switch')) {
+            // A breaker's outage is its line's or transformer's.
+            lines.push({ value: technicalName, label: /breaker|tie/i.test(label) ? label : `${label} (breaker)` });
+        } else if (componentType === 'External Grid' || styleStr.includes('shapeELXXX=External Grid')) {
+            // The utility lost: what it held islands, or runs on its own machines and grid-forming PCS.
+            lines.push({ value: technicalName, label: `${label} (utility trip)` });
         } else if (componentType === 'Generator' || styleStr.includes('shapeELXXX=Generator')) {
             generators.push({ value: technicalName, label });
             generatorBus = generatorBus || connectedBusName(cell);
@@ -137,7 +143,7 @@ export class TransientStabilityDialog extends Dialog {
             },
             {
                 id: 'toggle_line',
-                label: 'Line Outage (optional)',
+                label: 'Outage: line, breaker or External Grid (optional)',
                 type: 'select',
                 options: lines.map((l, i) => ({
                     value: l.value,
@@ -147,7 +153,7 @@ export class TransientStabilityDialog extends Dialog {
             },
             {
                 id: 'toggle_t',
-                label: 'Line Outage Time (s)',
+                label: 'Outage Time (s)',
                 type: 'number',
                 value: '2.0',
                 min: '0',
