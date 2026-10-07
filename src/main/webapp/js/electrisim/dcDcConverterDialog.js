@@ -28,7 +28,11 @@ export const defaultDcDcConverterData = {
     emt_model: 'average',       // EMT study: a dual active bridge, averaged or switched
     switching_khz: 20,          // EMT study: its bridges' switching frequency
     current_limit_pu: 1.2,      // EMT study: its output current limit, per unit of its rated current
-    c_out_mf: 0,                // EMT study: its output capacitor; 0 = 2 ms of its rating stored
+    c_out_mf: 0,                // EMT and DC fault studies: its output capacitor; 0 = 2 ms of its rating stored
+    c_out_esr_mohm: 0,          // EMT and DC fault studies: its output capacitor's series resistance; 0 = none
+    c_out_esl_uh: 0,            // ... and series inductance; 0 = none
+    c_in_esr_mohm: 0,           // EMT and DC fault studies: its input capacitor's (2 ms of its rating) series resistance
+    c_in_esl_uh: 0,             // ... and series inductance; 0 = none
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -86,7 +90,11 @@ export class DcDcConverterDialog extends LoadDcDialog {
             },
             num('switching_khz', 'Switching frequency (EMT)', 'kHz', 'For the EMT study: its bridges\' square waves. Its controller samples at each half period, in both models.', '1'),
             num('current_limit_pu', 'Current limit (EMT)', 'p.u.', 'For the EMT study: the most output current its controls let it deliver, per unit of its rated current. It blocks when its input or output voltage falls below 0.8 p.u.', '0.05'),
-            num('c_out_mf', 'Output capacitance (EMT)', 'mF', 'For the EMT study: its output capacitor. 0 stores 2 ms of its rating at its output voltage.', '0.1'),
+            num('c_out_mf', 'Output capacitance (EMT)', 'mF', 'For the EMT and DC fault studies: its output capacitor. 0 stores 2 ms of its rating at its output voltage.', '0.1'),
+            num('c_out_esr_mohm', 'Output capacitor ESR (EMT, DC fault)', 'mOhm', 'Its output capacitor\'s series resistance, which limits its discharge into a DC fault on its output bus. 0: none - into a hard fault there its peak is then not resolved.', '0.1'),
+            num('c_out_esl_uh', 'Output capacitor ESL (EMT, DC fault)', 'uH', 'Its output capacitor\'s series inductance, with its busbars. 0: none.', '0.01'),
+            num('c_in_esr_mohm', 'Input capacitor ESR (EMT, DC fault)', 'mOhm', 'Its input capacitor (2 ms of its rating at its input voltage): its series resistance, which limits its discharge into a DC fault on its input bus. 0: none.', '0.1'),
+            num('c_in_esl_uh', 'Input capacitor ESL (EMT, DC fault)', 'uH', 'Its input capacitor\'s series inductance, with its busbars. 0: none.', '0.01'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];
     }

@@ -13,7 +13,9 @@ export const defaultVscData = {
     control_mode_dc: "p_mw",    // DC control mode: 'vm_pu' or 'p_mw'
     control_value_dc: 0.0,      // DC control setpoint (voltage in pu or active power in MW)
     rated_mva: 0,               // EMT study: its rating; 0 = 1.25 x its load-flow power
-    dc_link_mf: 0,              // EMT study: its DC-link capacitance; 0 = 4 ms of its rating stored
+    dc_link_mf: 0,              // EMT and DC fault studies: its DC-link capacitance; 0 = 4 ms of its rating stored
+    dc_link_esr_mohm: 0,        // EMT and DC fault studies: its DC-link capacitor's series resistance; 0 = none
+    dc_link_esl_uh: 0,          // EMT and DC fault studies: its DC-link capacitor's series inductance; 0 = none
     current_limit_pu: 1.2,      // EMT study: its current limit, per unit of its rated current
     emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
@@ -127,10 +129,32 @@ export class VscDialog extends Dialog {
                 label: 'DC-link capacitance (EMT)',
                 symbol: 'dc_link_mf',
                 unit: 'mF',
-                description: 'For the EMT study: its DC-link capacitor. 0 stores 4 ms of its rating at its DC voltage.',
+                description: 'For the EMT and DC fault studies: its DC-link capacitor. 0 stores 4 ms of its rating at its DC voltage.',
                 type: 'number',
                 value: String(this.data.dc_link_mf),
                 step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'dc_link_esr_mohm',
+                label: 'DC-link ESR (EMT, DC fault)',
+                symbol: 'dc_link_esr_mohm',
+                unit: 'mOhm',
+                description: 'For the EMT and DC fault studies: its DC-link capacitor\'s series resistance, which limits its discharge into a DC fault. 0: none - into a hard fault at its bus its peak is then not resolved.',
+                type: 'number',
+                value: String(this.data.dc_link_esr_mohm),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'dc_link_esl_uh',
+                label: 'DC-link ESL (EMT, DC fault)',
+                symbol: 'dc_link_esl_uh',
+                unit: 'uH',
+                description: 'For the EMT and DC fault studies: its DC-link capacitor\'s series inductance, with its busbars. 0: none.',
+                type: 'number',
+                value: String(this.data.dc_link_esl_uh),
+                step: '0.01',
                 min: '0'
             },
             {

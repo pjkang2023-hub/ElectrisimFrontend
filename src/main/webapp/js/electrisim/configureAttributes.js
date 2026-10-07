@@ -1487,6 +1487,11 @@ export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
     g.setAttribute("switching_khz", String(options.switching_khz ?? "20"));
     g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
     g.setAttribute("c_out_mf", String(options.c_out_mf ?? "0"));
+    // For the EMT and DC fault studies: its output and input capacitors' ESR and ESL (0: none)
+    g.setAttribute("c_out_esr_mohm", String(options.c_out_esr_mohm ?? "0"));
+    g.setAttribute("c_out_esl_uh", String(options.c_out_esl_uh ?? "0"));
+    g.setAttribute("c_in_esr_mohm", String(options.c_in_esr_mohm ?? "0"));
+    g.setAttribute("c_in_esl_uh", String(options.c_in_esl_uh ?? "0"));
 
     g.setAttribute("Economic_parameters", "");
     g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
@@ -1684,6 +1689,9 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     // For the EMT study: its rating (0: 1.25 x its load-flow power), DC link (0: 4 ms of its rating) and current limit
     g.setAttribute("rated_mva", String(options.rated_mva ?? "0"));
     g.setAttribute("dc_link_mf", String(options.dc_link_mf ?? "0"));
+    // For the EMT and DC fault studies: its DC link's ESR and ESL (0: none)
+    g.setAttribute("dc_link_esr_mohm", String(options.dc_link_esr_mohm ?? "0"));
+    g.setAttribute("dc_link_esl_uh", String(options.dc_link_esl_uh ?? "0"));
     g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
     g.setAttribute("emt_model", options.emt_model || "average");       // 'average' or 'switching'
     g.setAttribute("switching_khz", String(options.switching_khz ?? "5"));
