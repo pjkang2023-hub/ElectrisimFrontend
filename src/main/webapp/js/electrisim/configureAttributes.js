@@ -1450,7 +1450,8 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         inverter_mode: "grid_following", inv_rated_mw: "0.5", inv_efficiency_percent: "97.5", inv_no_load_kw: "1",
         p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true",
         // For the EMT study
-        emt_model: "average", switching_khz: "5", dcdc_switching_khz: "20", current_limit_pu: "1.2"
+        emt_model: "average", switching_khz: "5", dcdc_switching_khz: "20", current_limit_pu: "1.2",
+        current_loop_hz: "500"
     };
     Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
 
@@ -1695,6 +1696,7 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
     g.setAttribute("emt_model", options.emt_model || "average");       // 'average' or 'switching'
     g.setAttribute("switching_khz", String(options.switching_khz ?? "5"));
+    g.setAttribute("current_loop_hz", String(options.current_loop_hz ?? "500"));   // EMT: its current loop's bandwidth
     
     // Economic parameters
     g.setAttribute("Economic_parameters", "");

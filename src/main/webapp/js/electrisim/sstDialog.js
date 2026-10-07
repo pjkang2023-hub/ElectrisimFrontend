@@ -17,7 +17,7 @@ export const defaultSstData = {
     inverter_mode: 'grid_following',
     inv_rated_mw: 0.5, inv_efficiency_percent: 97.5, inv_no_load_kw: 1, p_ac_mw: 0.1, q_ac_mvar: 0, vm_lv_ac_pu: 1.0,
     // EMT study: its stages' model, switching frequencies and current limit
-    emt_model: 'average', switching_khz: 5, dcdc_switching_khz: 20, current_limit_pu: 1.2,
+    emt_model: 'average', switching_khz: 5, dcdc_switching_khz: 20, current_limit_pu: 1.2, current_loop_hz: 500,
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -77,6 +77,7 @@ export class SstDialog extends LoadDcDialog {
             num('switching_khz', 'Rectifier and inverter: switching frequency (EMT)', 'kHz', 'For the EMT study: their PWM carrier.', '0.5'),
             num('dcdc_switching_khz', 'DC/DC stage: switching frequency (EMT)', 'kHz', 'For the EMT study: its bridges\' square waves.', '1'),
             num('current_limit_pu', 'Current limit (EMT)', 'p.u.', 'For the EMT study: each stage\'s current limit, per unit of its rated current. Each blocks when its DC voltage falls below 0.8 p.u.', '0.05'),
+            num('current_loop_hz', 'Rectifier and inverter: current loop bandwidth (EMT)', 'Hz', 'For the EMT study: the bandwidth of their current control. 500 Hz is fast; in an island no grid holds, f_sw / 20 (250 Hz at 5 kHz) keeps it clear of the resonance of the network.', '10'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];
     }

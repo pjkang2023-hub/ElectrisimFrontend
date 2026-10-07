@@ -141,6 +141,7 @@ DER_PARAMETERS.PCS = [
     num('droop_pf_percent', 'P-f droop', '%', 2, 'Grid-forming: its frequency falls by this at its rated power above its set power. Islanded units share the load by rating / droop.', '0.1'),
     num('droop_qv_percent', 'Q-V droop', '%', 5, 'Grid-forming: its voltage falls by this at its rated Q. 0 holds its set point.', '0.5'),
     num('current_limit_pu', 'Current limit', 'p.u.', 1.2, 'Short circuit: it feeds this times its rated current (IEC and ANSI), grid-forming or grid-following.', '0.05'),
+    num('current_loop_hz', 'Current loop bandwidth (EMT)', 'Hz', 500, 'Grid-following, for the EMT study: the bandwidth of its current control. 500 Hz is fast; against a weak network - an island no grid holds - a loop this fast can meet the resonance of the network: f_sw / 20 (250 Hz at 5 kHz) is usual for converters of some MW.', '10'),
     { ...num('opf_marginal_cost_eur_per_mwh', 'OPF marginal cost', 'EUR/MWh', '', 'Optimal power flow: what each MWh it delivers costs (charging, what each MWh it takes earns). Blank: the study’s default. It is dispatched within its source’s window: a battery’s state of charge and C-rates, an SOFC system’s minimum load and rating, a PV array’s MPP.', '1'), min: undefined },
     inService
 ];

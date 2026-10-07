@@ -19,6 +19,7 @@ export const defaultVscData = {
     current_limit_pu: 1.2,      // EMT study: its current limit, per unit of its rated current
     emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
+    current_loop_hz: 500,       // EMT study: its current loop's bandwidth
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -187,6 +188,17 @@ export class VscDialog extends Dialog {
                 value: String(this.data.switching_khz),
                 step: '0.5',
                 min: '0.5'
+            },
+            {
+                id: 'current_loop_hz',
+                label: 'Current loop bandwidth (EMT)',
+                symbol: 'current_loop_hz',
+                unit: 'Hz',
+                description: 'For the EMT study: the bandwidth of its current control. 500 Hz is fast; against a weak network - an island no grid holds - a loop this fast can meet the resonance of the network: f_sw / 20 (250 Hz at 5 kHz) is usual for converters of some MW.',
+                type: 'number',
+                value: String(this.data.current_loop_hz),
+                step: '10',
+                min: '10'
             },
             {
                 id: 'in_service',
