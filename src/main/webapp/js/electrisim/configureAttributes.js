@@ -1452,7 +1452,10 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true",
         // For the EMT study
         emt_model: "average", switching_khz: "5", dcdc_switching_khz: "20", current_limit_pu: "1.2",
-        current_loop_hz: "500"
+        current_loop_hz: "500",
+        // For the EMT and DC fault studies: its stages' capacitors' ESR and ESL (0: none)
+        rect_dc_link_esr_mohm: "0", rect_dc_link_esl_uh: "0", dcdc_c_in_esr_mohm: "0", dcdc_c_in_esl_uh: "0",
+        dcdc_c_out_esr_mohm: "0", dcdc_c_out_esl_uh: "0", inv_dc_link_esr_mohm: "0", inv_dc_link_esl_uh: "0"
     };
     Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
 

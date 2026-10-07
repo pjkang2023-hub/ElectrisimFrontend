@@ -182,7 +182,9 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'dcdc_rated_mw', 'dcdc_efficiency_percent', 'dcdc_no_load_kw', 'vm_lv_dc_pu',
                 'inverter_mode', 'inv_rated_mw', 'inv_efficiency_percent', 'inv_no_load_kw', 'p_ac_mw', 'q_ac_mvar',
                 'vm_lv_ac_pu', 'emt_model', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
-                'current_loop_hz', 'in_service', 'cost_per_unit_by_currency'])
+                'current_loop_hz', 'rect_dc_link_esr_mohm', 'rect_dc_link_esl_uh', 'dcdc_c_in_esr_mohm',
+                'dcdc_c_in_esl_uh', 'dcdc_c_out_esr_mohm', 'dcdc_c_out_esl_uh',
+                'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC/DC Converter': {
