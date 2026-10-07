@@ -139,7 +139,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         if (isLoad) {
             row.p_mw = attr(cell, 'p_mw', '0');
             withOptional(row, cell, ['load_model', 'share_p_percent', 'share_i_percent', 'share_r_percent',
-                'v_min_pu', 'filter_l_mh', 'filter_c_uf', 'load_profile_id']);
+                'v_min_pu', 'filter_l_mh', 'filter_r_mohm', 'filter_c_uf', 'load_profile_id']);
         } else {
             row.vm_pu = attr(cell, 'vm_pu', '1.0');
             withOptional(row, cell, ['r_sc_mohm', 'l_sc_uh']);

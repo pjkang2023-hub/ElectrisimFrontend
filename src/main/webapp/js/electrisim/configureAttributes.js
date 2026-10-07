@@ -1405,6 +1405,7 @@ export function configureLoadDcAttributes(grafka, vertex, options = {}) {
     g.setAttribute("share_r_percent", String(options.share_r_percent ?? "0"));
     g.setAttribute("v_min_pu", String(options.v_min_pu ?? "0.8"));
     g.setAttribute("filter_l_mh", String(options.filter_l_mh ?? "0"));
+    g.setAttribute("filter_r_mohm", String(options.filter_r_mohm ?? "0"));
     g.setAttribute("filter_c_uf", String(options.filter_c_uf ?? "0"));
     g.setAttribute("load_profile_id", String(options.load_profile_id ?? ""));   // EMT study: a library profile it follows
     
