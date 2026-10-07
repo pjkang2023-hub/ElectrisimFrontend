@@ -4325,6 +4325,19 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 elTransmissionFixLineSwitches(grafka, parent);
                 elTransmissionFixTrafoSwitches(grafka, parent);
             } catch (_rt) { /* layout tidy-up must never block the import */ }
+            try {
+                // The spec's DC and microgrid layer (/build-model's electrisim_elements),
+                // drawn before the layout below so it is laid out with the AC network:
+                // drawn after, in a band of its own, its converters hung far from
+                // their AC buses and its DC lines ran along its bars.
+                const layer = safeJsonParse(data?._object?.electrisim_elements?._object);
+                if (layer && !Array.isArray(layer) && (layer.elements?.length || layer.load_profiles)) {
+                    parent._elBusByName = null;
+                    elDrawElectrisimLayer(grafka, parent, layer, name => findVertexByBusId(grafka, parent, name));
+                }
+            } catch (_layerErr) {
+                console.error('Drawing the DC and microgrid layer failed', _layerErr);
+            }
             if (grafka._elxxxRelayoutSld) {
                 grafka._elxxxRelayoutSld = false;
                 try {
@@ -4342,16 +4355,6 @@ async function insertComponentsForData(grafka, a, target, point, data) {
                 if (sidecarModel) elApplySidecar(grafka, sidecarModel);
             } catch (_scErr) {
                 console.warn('Sidecar apply failed', _scErr);
-            }
-            try {
-                // The spec's DC and microgrid layer (/build-model's electrisim_elements), below the AC drawing.
-                const layer = safeJsonParse(data?._object?.electrisim_elements?._object);
-                if (layer && !Array.isArray(layer) && (layer.elements?.length || layer.load_profiles)) {
-                    parent._elBusByName = null;
-                    elDrawElectrisimLayer(grafka, parent, layer, name => findVertexByBusId(grafka, parent, name));
-                }
-            } catch (_layerErr) {
-                console.error('Drawing the DC and microgrid layer failed', _layerErr);
             }
             grafka.getModel().endUpdate();
         }

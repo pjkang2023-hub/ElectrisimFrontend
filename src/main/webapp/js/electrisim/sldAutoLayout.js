@@ -88,6 +88,27 @@ function pinAt(geo, fx, fy, rotation) {
     return { x: cx + dx * Math.cos(r) - dy * Math.sin(r), y: cy + dx * Math.sin(r) + dy * Math.cos(r) };
 }
 
+// The DC and microgrid layer's elements (importElectrisimLayer.js). Their ends
+// keep the pins they were wired on: the payload reads a DC/DC converter's input
+// as its left pin's bus, its output as its right's (dcPayload.js).
+const PINNED = new Set(['VSC', 'B2B VSC', 'Solid-State Transformer', 'DC/DC Converter', 'DC Line', 'PCS',
+    'Load DC', 'Source DC', 'DC Capacitor', 'Battery', 'Supercapacitor', 'Flywheel', 'SOFC', 'PV Array',
+    'Grounding Transformer']);
+const BUS_SHAPES = new Set(['Bus', 'DC Bus']);
+const SWITCH_SHAPES = new Set(['Switch', 'DC Breaker']);
+// Room between two bars on a row for the tie drawn between them, by what is on it.
+const TIE_ROOM = { coupler: 150, edge: 110, vertex: 150 };
+const TIE_SWITCH_ROOM = 80;
+
+/** The pin an edge uses on a cell, as {fx, fy}, or null when it floats. */
+function pinOf(edge, cell) {
+    const style = String((edge && edge.style) || '');
+    const side = edge.source === cell ? 'exit' : 'entry';
+    const x = new RegExp(`(?:^|;)${side}X=([-0-9.]+)`).exec(style);
+    const y = new RegExp(`(?:^|;)${side}Y=([-0-9.]+)`).exec(style);
+    return x && y ? { fx: parseFloat(x[1]), fy: parseFloat(y[1]) } : null;
+}
+
 function neighbours(model, cell) {
     const out = [];
     const n = model.getEdgeCount(cell);
@@ -108,8 +129,8 @@ function readNetwork(graph, parent) {
     const model = graph.getModel();
     const vertices = graph.getChildCells(parent, true, false) || [];
     const edges = graph.getChildCells(parent, false, true) || [];
-    const isBus = (c) => !!c && shapeOf(c) === 'Bus';
-    const isSwitch = (c) => !!c && shapeOf(c) === 'Switch';
+    const isBus = (c) => !!c && BUS_SHAPES.has(shapeOf(c));
+    const isSwitch = (c) => !!c && SWITCH_SHAPES.has(shapeOf(c));
     const buses = vertices.filter(isBus);
     if (!buses.length) return null;
 
@@ -119,19 +140,23 @@ function readNetwork(graph, parent) {
     vertices.forEach((cell) => {
         if (isBus(cell) || isSwitch(cell) || !cell.geometry) return;
         const terms = [];
+        const tails = [];
         neighbours(model, cell).forEach(({ edge, other }) => {
             if (isBus(other)) {
-                terms.push({ bus: other, legs: [edge], sw: null });
+                terms.push({ bus: other, legs: [edge], sw: null, pin: pinOf(edge, cell) });
             } else if (isSwitch(other)) {
                 neighbours(model, other).forEach(({ edge: e2, other: o2 }) => {
                     if (e2 !== edge && isBus(o2)) {
-                        terms.push({ bus: o2, legs: [edge, e2], sw: other });
+                        terms.push({ bus: o2, legs: [edge, e2], sw: other, pin: pinOf(edge, cell) });
                         chainSwitches.add(other);
                     }
                 });
+            } else if (PINNED.has(shapeOf(other)) && neighbours(model, other).length === 1) {
+                // On it alone, no bus of its own: a PCS's battery, PV array or SOFC.
+                tails.push({ cell: other, edge });
             }
         });
-        if (terms.length === 1) devices.push({ cell, shape: shapeOf(cell), term: terms[0] });
+        if (terms.length === 1) devices.push({ cell, shape: shapeOf(cell), term: terms[0], tails });
         else if (terms.length === 2 || terms.length === 3) {
             branches.push({ kind: shapeOf(cell) === 'Three Winding Transformer' ? 'trafo3'
                 : shapeOf(cell) === 'Transformer' ? 'trafo' : 'vertex', cell, terms });
@@ -236,9 +261,17 @@ export function relayoutSld(graph, parent) {
     // bar's devices), then this bar's devices in the slots its drops leave free.
     // Room from a drop to the next device: the drop's result box hangs to its right.
     const DROP_CLEAR = { trafo3: 110, trafo: 104, vertex: 100, edge: 100, coupler: 100 };
-    // Ports at the right end of a bar for the ring branches that end there.
-    const ringEnds = new Map(buses.map((b) => [b, 0]));
-    closures.forEach((br) => br.terms.forEach((t) => ringEnds.set(t.bus, ringEnds.get(t.bus) + 1)));
+    // Ports at the right end of a bar for the ring branches that end there. A
+    // tie drawn across between two neighbouring bars needs none, but room
+    // between them, right of the first.
+    const ringEnds = new Map();
+    const tieRoom = new Map();
+    const countRingEnds = () => {
+        buses.forEach((b) => ringEnds.set(b, 0));
+        closures.filter((br) => !br.barLevel)
+            .forEach((br) => br.terms.forEach((t) => ringEnds.set(t.bus, ringEnds.get(t.bus) + 1)));
+    };
+    countRingEnds();
     const layoutOf = new Map();
     const measure = (u) => {
         if (layoutOf.has(u)) return layoutOf.get(u);
@@ -274,7 +307,8 @@ export function relayoutSld(graph, parent) {
             portX.push(used);
         }
         const barRight = Math.max(BAR_MIN_W, entryOffset(u) + 80, used + BAR_PAD_R);
-        const m = { kidOffset, drops, deviceX, portX, ports: 0, barRight, width: Math.max(barRight, kidsRight) };
+        const m = { kidOffset, drops, deviceX, portX, ports: 0, barRight,
+            width: Math.max(barRight + (tieRoom.get(u) || 0), kidsRight) };
         layoutOf.set(u, m);
         return m;
     };
@@ -288,8 +322,42 @@ export function relayoutSld(graph, parent) {
         m.drops.forEach((d) => dropX.set(d.br, left + d.x));
         m.kidOffset.forEach((off, k) => place(k, left + off, depth + 1));
     };
-    let left = originX;
-    roots.forEach((r) => { place(r, left, 0); left += measure(r).width + SUBTREE_GAP * 2; });
+    const placeAll = () => {
+        pos.clear();
+        dropX.clear();
+        let left = originX;
+        roots.forEach((r) => { place(r, left, 0); left += measure(r).width + SUBTREE_GAP * 2; });
+    };
+    placeAll();
+
+    // A ring branch between two bars side by side on a row - a bus tie, the
+    // DC tie between two row groups - goes straight across between them. Its
+    // channel below the bars crossed every drop on the way: the campus's bus
+    // tie ran through eight transformer drops.
+    const neighbourBars = (a, b) => {
+        const pa = pos.get(a);
+        const pb = pos.get(b);
+        if (!pa || !pb || pa.y !== pb.y || a === b) return null;
+        const [l, r] = pa.x <= pb.x ? [a, b] : [b, a];
+        const between = buses.some((c) => c !== l && c !== r && pos.get(c) && pos.get(c).y === pa.y
+            && pos.get(c).x > pos.get(l).x && pos.get(c).x < pos.get(r).x);
+        return between ? null : { left: l, right: r };
+    };
+    closures.forEach((br) => {
+        if (br.terms.length !== 2 || !TIE_ROOM[br.kind]) return;
+        const pair = neighbourBars(br.terms[0].bus, br.terms[1].bus);
+        if (!pair) return;
+        br.barLevel = pair;
+        // An element on it carries its name above, clear of the next bar's.
+        const nameRoom = br.kind === 'vertex' ? String(attr(br.cell, 'name') || '').length * LABEL_CHAR_W + 24 : 0;
+        const room = Math.max(nameRoom, TIE_ROOM[br.kind] + br.terms.filter((t) => t.sw).length * TIE_SWITCH_ROOM);
+        tieRoom.set(pair.left, Math.max(tieRoom.get(pair.left) || 0, room));
+    });
+    if (closures.some((br) => br.barLevel)) {
+        countRingEnds();
+        layoutOf.clear();
+        placeAll();
+    }
 
     const entryX = (b) => pos.get(b).x + entryOffset(b);
 
@@ -306,6 +374,8 @@ export function relayoutSld(graph, parent) {
         model.setGeometry(cell, geo);
     };
     const restyle = (cell, keys) => model.setStyle(cell, setStyleKeys(model.getStyle(cell), keys));
+    // Elements whose name goes beside a turned symbol or above one on a tie.
+    const named = new Map();
 
     /**
      * Route an edge as straight segments through the given points. An end
@@ -391,7 +461,18 @@ export function relayoutSld(graph, parent) {
             const h = size ? size.h : model.getGeometry(d.cell).height;
             const top = barBottom(b) + DROP + (d.term.sw ? 50 : 0);
             moveVertex(d.cell, x, top + h / 2, size);
-            routeTerm(d.term, x, barBottom(b) + SWITCH_DROP, d.cell, { fx: 0.5, fy: 0 });
+            const pin = PINNED.has(d.shape) && d.term.pin ? d.term.pin : { fx: 0.5, fy: 0 };
+            routeTerm(d.term, x, barBottom(b) + SWITCH_DROP, d.cell, pin);
+            // What hangs on it alone - a PCS's battery - under it.
+            let below = top + h;
+            d.tails.forEach(({ cell: tail, edge }) => {
+                const th = model.getGeometry(tail).height;
+                moveVertex(tail, x, below + 28 + th / 2);
+                restyle(tail, { rotation: null });
+                const ends = new Map([[d.cell, pinOf(edge, d.cell)], [tail, pinOf(edge, tail)]].filter(([, p]) => p));
+                route(edge, ends, []);
+                below += 28 + th;
+            });
         });
         devicesOf.get(b).filter((d) => rootGrids.has(d)).forEach((d, i) => {
             const x = entryX(b) + 40 + i * SLOT;
@@ -457,6 +538,18 @@ export function relayoutSld(graph, parent) {
             lowerPin = hvUp ? lv : hv;
         } else if (br.kind === 'coupler') {
             placeSwitch(br.cell, x, midY, true);
+        } else if (PINNED.has(shapeOf(br.cell)) && termOf(u).pin) {
+            // A converter (or a DC cable's symbol): turned so the pin toward the
+            // bar above is on top, the other below. Its pins stay as wired.
+            const up = termOf(u).pin;
+            const rotation = up.fx < 0.25 ? 90 : up.fx > 0.75 ? 270 : up.fy > 0.75 ? 180 : null;
+            restyle(br.cell, { rotation });
+            moveVertex(br.cell, x, midY);
+            const p = pinAt(model.getGeometry(br.cell), up.fx, up.fy, rotation || 0);
+            moveVertex(br.cell, x + (x - p.x), midY);
+            if (rotation === 90 || rotation === 270) named.set(br.cell, 'right');
+            elementPin = up;
+            lowerPin = termOf(kid).pin;
         } else {
             // A line (or other branch) drawn as a short vertex on the drop;
             // its legs meet at its centre.
@@ -472,7 +565,57 @@ export function relayoutSld(graph, parent) {
 
     // Branches that close a ring: down from one bar, along a channel, onto the other.
     const lanes = new Map();
+    const pinned = (br, t) => (PINNED.has(shapeOf(br.cell)) ? t.pin : null);
+    // Across from the right end of one bar to the left end of the next, at
+    // their height; an element on it in the middle, its switches beside the bars.
+    const routeTie = (br) => {
+        const { left: L, right: R } = br.barLevel;
+        const y = barMidY(L);
+        const x0 = pos.get(L).right;
+        const x1 = pos.get(R).x;
+        const midX = (x0 + x1) / 2;
+        const tl = br.terms.find((t) => t.bus === L);
+        const tr = br.terms.find((t) => t.bus === R);
+        if (br.kind === 'edge') {
+            route(br.cell, new Map([[L, barPin(L, x0)], [R, barPin(R, x1)]]), []);
+            return;
+        }
+        if (br.kind === 'coupler') {
+            placeSwitch(br.cell, midX, y, false);
+            legRoute(tl.legs[0], L, x0, br.cell, null, []);
+            legRoute(tr.legs[0], R, x1, br.cell, null, []);
+            return;
+        }
+        // Its pin toward the left bar on its left.
+        const pl = pinned(br, tl);
+        const pr = pinned(br, tr);
+        const rotation = (pl && pl.fx > 0.5) || (!pl && pr && pr.fx < 0.5) ? 180 : null;
+        if (shapeOf(br.cell) === 'Line') restyle(br.cell, { direction: null });
+        restyle(br.cell, { rotation });
+        moveVertex(br.cell, midX, y);
+        named.set(br.cell, 'above');
+        const pin = pl || pr;
+        if (pin) {
+            const p = pinAt(model.getGeometry(br.cell), pin.fx, pin.fy, rotation || 0);
+            moveVertex(br.cell, midX, y + (y - p.y));
+        }
+        const leg = (t, bus, barX, elementPin) => {
+            if (t.sw) {
+                placeSwitch(t.sw, barX + (barX < midX ? 45 : -45), y, false);
+                legRoute(t.legs[1], bus, barX, t.sw, null, []);
+                route(t.legs[0], elementPin ? new Map([[br.cell, elementPin]]) : new Map(), []);
+            } else {
+                legRoute(t.legs[0], bus, barX, br.cell, elementPin, []);
+            }
+        };
+        leg(tl, L, x0, pl);
+        leg(tr, R, x1, pr);
+    };
     closures.forEach((br) => {
+        if (br.barLevel) {
+            routeTie(br);
+            return;
+        }
         const [ta, tb] = br.terms;
         let upper = ta;
         let lower = tb;
@@ -526,11 +669,12 @@ export function relayoutSld(graph, parent) {
                 restyle(t.legs[0], jumps);
             }
         };
-        leg(upper, ux, barBottom(upper.bus), null);
-        leg(lower, lx, lowerY, null);
+        leg(upper, ux, barBottom(upper.bus), pinned(br, upper));
+        leg(lower, lx, lowerY, pinned(br, lower));
     });
 
     labelWithNames(graph, [...devices.map((d) => d.cell), ...branches.filter((b) => b.kind !== 'edge').map((b) => b.cell)]);
+    named.forEach((where, cell) => placeName(graph, cell, where));
     placeResultBoxesBeside(graph, parent);
     // Marks the page as laid out (saved with it), so result boxes the studies
     // add later are kept clear of the drawing too.
@@ -686,6 +830,35 @@ function placeResultBoxesBeside(graph, parent) {
             model.setGeometry(box, geo);
         });
     });
+}
+
+/**
+ * An element's name to the right of its symbol, or above it. The name is a
+ * child cell, and a child's place turns with a turned symbol while its text
+ * does not: anchored at the centre, it is pushed out by spacing, in the page's
+ * own directions. Under a symbol turned onto a drop it ran across it.
+ */
+function placeName(graph, cell, where) {
+    const model = graph.getModel();
+    const name = attr(cell, 'name');
+    const label = (graph.getChildCells(cell, true, false) || []).find((k) => typeof k.value === 'string' && k.value === name);
+    const g = model.getGeometry(cell);
+    if (!label || !label.geometry || !g) return;
+    const geo = label.geometry.clone();
+    geo.relative = true;
+    geo.x = 0.5;
+    geo.y = 0.5;
+    geo.width = 0;
+    geo.height = 0;
+    geo.offset = point(0, 0);
+    // A symbol turned onto a drop is as wide, across the page, as it was high;
+    // one on a tie lies as drawn.
+    const right = Math.round(g.height / 2 + 8);
+    const above = Math.round(g.height / 2 + 6);
+    model.setStyle(label, where === 'right'
+        ? `text;html=1;align=left;verticalAlign=middle;spacingLeft=${right};fontSize=11;resizable=0;movable=0;`
+        : `text;html=1;align=center;verticalAlign=bottom;spacingBottom=${above};fontSize=11;resizable=0;movable=0;`);
+    model.setGeometry(label, geo);
 }
 
 /**
