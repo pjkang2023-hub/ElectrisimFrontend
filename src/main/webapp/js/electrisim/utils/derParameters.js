@@ -177,6 +177,6 @@ export const DER_DESCRIPTIONS = {
     Flywheel: 'Its rotor\'s energy, 1/2 J w^2, its machine converter holding its DC link: on its own bus behind a DC/DC converter (smoothing or dispatch), or directly on a bus at a set power.',
     SOFC: 'Its stacks\' polarisation curve (Padulles), scaled to its rating and voltage. On its own bus behind a DC/DC converter in follower mode, or directly on a bus at the current its curve gives there.',
     'PV Array': 'Its module\'s single-diode model, fitted to its datasheet, at its irradiance and temperature. On its own bus behind a DC/DC converter in MPPT mode, or directly on a bus on its I-V curve.',
-    PCS: 'A bidirectional inverter joining a battery, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it.',
+    PCS: 'A bidirectional inverter joining a battery, supercapacitor, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it. Grid-forming with a supercapacitor and no set power, it is an eSTATCOM.',
     'Grounding Transformer': 'A zigzag grounding transformer: the ground of a three-wire network, on the grid and islanded. It carries no balanced current; a ground fault sees its zero-sequence impedance plus three times its neutral resistor. Its pin (top) on its bus, directly or through its breaker (a Switch).'
 };
