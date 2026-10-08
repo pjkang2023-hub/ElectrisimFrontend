@@ -178,6 +178,13 @@ export class TransientStabilityDialog extends Dialog {
                 step: '0.01'
             },
             {
+                id: 'grid_voltage_section', label: 'A grid voltage profile', type: 'section',
+                subtitle: 'The external grids\u2019 voltage stepping through a profile from its start, each point a share of the grid\u2019s own voltage held until the next: IEEE 2800\u2019s low-voltage ride-through envelope (under 0.25 pu for 0.32 s, then 0.25 pu to 1.2 s, 0.5 pu to 3 s, 0.7 pu to 6 s, then 0.9 pu), or a table of points \u201ctime (s), voltage (pu)\u201d separated by semicolons. ANDES takes voltages below 0.05 pu as 0.05 pu.'
+            },
+            { id: 'grid_voltage_profile', label: 'Profile', type: 'select', options: [{ value: 'none', label: 'None', default: true }, { value: 'ieee2800', label: 'IEEE 2800 low-voltage ride-through' }, { value: 'custom', label: 'Custom table' }] },
+            { id: 'grid_voltage_table', label: 'Custom table: t (s), v (pu); ...', type: 'text', value: '0, 0.5; 0.15, 1.0' },
+            { id: 'grid_voltage_start_s', label: 'Start (s)', type: 'number', value: '1.0', min: '0', step: '0.1' },
+            {
                 id: 'poi_bus',
                 label: 'POI bus (voltage / ride-through check)',
                 type: 'select',

@@ -113,6 +113,9 @@ window.transientStabilityAndes = function (a, b, c) {
             toggle_gen: values.toggle_gen || '',
             toggle_gen_t: String(values.toggle_gen_t ?? '2.0'),
             poi_bus: values.poi_bus || '',
+            grid_voltage_profile: values.grid_voltage_profile || 'none',
+            grid_voltage_table: String(values.grid_voltage_table ?? ''),
+            grid_voltage_start_s: String(values.grid_voltage_start_s ?? '1.0'),
             // The library profiles some load follows through the run.
             load_profiles: referencedLoadProfiles(b),
             user_email: getUserEmail()

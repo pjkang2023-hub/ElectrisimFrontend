@@ -71,6 +71,13 @@ export class DcFaultDialog extends Dialog {
                 subtitle: 'The step holds until 10 ms, then is ten times longer (20 µs at most). With converters feeding the fault the run lasts three AC periods at least: Ik is the mean over the last one.'
             },
             {
+                // The AC side's: a VSC's diodes feed the fault at six times it.
+                id: 'frequency',
+                label: 'Frequency',
+                type: 'select',
+                options: [{ value: '50', label: '50 Hz', default: true }, { value: '60', label: '60 Hz' }]
+            },
+            {
                 id: 'time_step_us',
                 label: 'Time step (µs)',
                 type: 'number', value: '1', min: '0.01', step: '0.5'

@@ -47,6 +47,10 @@ export class EmtDialog extends Dialog {
         this.graph = this.ui?.editor?.graph;
 
         this.parameters = [
+            { id: 'grid_voltage_section', label: 'A grid voltage profile', type: 'section', subtitle: 'The external grids\u2019 voltage stepping through a profile from its start, each point a share of the grid\u2019s own voltage held until the next: IEEE 2800\u2019s low-voltage ride-through envelope (under 0.25 pu for 0.32 s, then 0.25 pu to 1.2 s, 0.5 pu to 3 s, 0.7 pu to 6 s, then 0.9 pu), or a table of points \u201ctime (s), voltage (pu)\u201d separated by semicolons.' },
+            { id: 'grid_voltage_profile', label: 'Profile', type: 'select', options: [{ value: 'none', label: 'None', default: true }, { value: 'ieee2800', label: 'IEEE 2800 low-voltage ride-through' }, { value: 'custom', label: 'Custom table' }] },
+            { id: 'grid_voltage_table', label: 'Custom table: t (s), v (pu); ...', type: 'text', value: '0, 0.5; 0.15, 1.0' },
+            { id: 'grid_voltage_start_ms', label: 'Start (ms)', type: 'number', value: '20', min: '0', step: '5' },
             { id: 'ac_fault_section', label: 'An AC fault', type: 'section', subtitle: 'Through a resistance from each faulted phase to a star point, grounded through the same resistance for a ground fault.' },
             {
                 id: 'ac_fault_bus',
@@ -121,6 +125,10 @@ export class EmtDialog extends Dialog {
             { id: 'max_section_km', label: 'Longest pi section of a DC cable (km)', type: 'number', value: '1', min: '0.001', step: '0.1' },
             { id: 'ac_max_section_km', label: 'Longest pi section of an AC line (km)', type: 'number', value: '50', min: '0.001', step: '5' },
             { id: 'run_section', label: 'Simulation', type: 'section', subtitle: 'The step holds until 10 ms after the last event, then is ten times longer (20 µs at most, and a fiftieth of the switching period of a switching VSC at most).' },
+            {
+                id: 'frequency', label: 'Frequency', type: 'select',
+                options: [{ value: '50', label: '50 Hz', default: true }, { value: '60', label: '60 Hz' }]
+            },
             { id: 'time_step_us', label: 'Time step (µs)', type: 'number', value: '1', min: '0.01', step: '0.5' },
             { id: 'duration_ms', label: 'Duration (ms)', type: 'number', value: '50', min: '1', step: '10' }
         ];
