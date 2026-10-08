@@ -282,6 +282,9 @@ window.motorStartingPandaPower = function (a, b, c) {
                 t_end: values.t_end || '5',
                 frequency: values.frequency || '50',
                 sn_mva: values.sn_mva || '100',
+                thermal_check: values.thermal_check || 'short_time',
+                trafo_tau_min: values.trafo_tau_min || '0',
+                line_tau_min: values.line_tau_min || '10',
                 user_email: getUserEmail()
             };
 

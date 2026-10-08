@@ -94,7 +94,9 @@
             sum.innerHTML = `
                 <span><strong>Worst dip:</strong> ${fmt(summary.worst_dip_percent, 2)}%</span>
                 <span><strong>Voltage fails:</strong> ${summary.n_fail_voltage ?? 0}</span>
-                <span><strong>Thermal fails:</strong> ${summary.n_fail_thermal ?? 0}${summary.start_duration_s != null ? ` (for the ${fmt(summary.start_duration_s, 2)} s start)` : ''}</span>
+                <span><strong>Thermal fails:</strong> ${summary.n_fail_thermal ?? 0}${summary.thermal_check === 'short_time'
+                    ? ` (short-time, for the ${fmt(summary.start_duration_s, 2)} s start; ${summary.n_over_continuous ?? 0} over the continuous rating)`
+                    : (summary.start_duration_s != null ? ` (continuous rating; the start ${fmt(summary.start_duration_s, 2)} s)` : '')}</span>
                 <span><strong>Method:</strong> ${summary.starting_method || '—'}</span>
                 <span><strong>Motors:</strong> ${summary.n_motors_started ?? 0}</span>
                 <span><strong>Dip limit:</strong> ${fmt(summary.voltage_limit_percent, 1)}%</span>
@@ -138,15 +140,19 @@
 
             // Branches
             const branches = Array.isArray(r.branches) ? r.branches : [];
+            const shortTime = summary.thermal_check === 'short_time';
             if (branches.length) {
                 body.insertAdjacentHTML('beforeend', '<h3 style="margin:12px 0 4px;font-size:15px;">Branch Loading During Start</h3>');
                 body.insertAdjacentHTML('beforeend', tableHtml(
-                    ['Element', 'Type', 'Before [%]', 'During [%]', 'Check'],
+                    shortTime
+                        ? ['Element', 'Type', 'Before [%]', 'During [%]', 'Short-time limit [%]', 'Check']
+                        : ['Element', 'Type', 'Before [%]', 'During [%]', 'Check'],
                     branches.map((b) => [
                         b.name || b.id,
                         b.element || '—',
                         fmt(b.loading_before_percent, 1),
                         fmt(b.loading_during_percent, 1),
+                        ...(shortTime ? [fmt(b.short_time_limit_percent, 1)] : []),
                         passBadge(b.pass)
                     ])
                 ));
@@ -216,8 +222,10 @@
                 parts.push('');
                 parts.push('BRANCH RESULTS');
                 parts.push(toCsv(
-                    ['id', 'name', 'element', 'loading_before_percent', 'loading_during_percent', 'pass'],
-                    r.branches.map((b) => [b.id, b.name, b.element, b.loading_before_percent, b.loading_during_percent, b.pass])
+                    ['id', 'name', 'element', 'loading_before_percent', 'loading_during_percent',
+                        'short_time_limit_percent', 'pass_continuous', 'pass'],
+                    r.branches.map((b) => [b.id, b.name, b.element, b.loading_before_percent, b.loading_during_percent,
+                        b.short_time_limit_percent, b.pass_continuous, b.pass])
                 ));
             }
             const blob = new Blob([parts.join('\n')], { type: 'text/csv;charset=utf-8' });

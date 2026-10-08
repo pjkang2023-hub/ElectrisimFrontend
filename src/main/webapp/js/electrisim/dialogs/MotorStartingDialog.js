@@ -153,6 +153,33 @@ export class MotorStartingDialog extends Dialog {
                 value: '100',
                 min: '1',
                 step: '1'
+            },
+            {
+                // A start lasts seconds: judged against what a branch may carry
+                // for that long (IEC 60076-7), not its continuous rating.
+                id: 'thermal_check',
+                label: 'Dynamic: Branch Thermal Check',
+                type: 'select',
+                options: [
+                    { value: 'short_time', label: 'Short-time, for the start\u2019s duration', default: true },
+                    { value: 'continuous', label: 'Continuous rating' }
+                ]
+            },
+            {
+                id: 'trafo_tau_min',
+                label: 'Dynamic: Transformer Winding Time Constant (min, 0 = by rating: 4 to 2.5 MVA, else 7)',
+                type: 'number',
+                value: '0',
+                min: '0',
+                step: '0.5'
+            },
+            {
+                id: 'line_tau_min',
+                label: 'Dynamic: Line Conductor Time Constant (min)',
+                type: 'number',
+                value: '10',
+                min: '0.1',
+                step: '1'
             }
         ];
     }
@@ -161,7 +188,8 @@ export class MotorStartingDialog extends Dialog {
         return '<strong>Motor starting / voltage dip study</strong><br>' +
             'Steady-state mode runs three load flows (before, locked-rotor during start, after) ' +
             'for DOL, soft-start, star-delta, autotransformer, or reactor starting. ' +
-            'Dynamic mode uses ANDES Motor3 with a connect Toggle (DOL / approx. soft-start). ' +
+            'Dynamic mode uses ANDES Motor3 with a connect Toggle (DOL / approx. soft-start), and judges ' +
+            'branch loading against a short-time limit for the start\u2019s duration by default. ' +
             'Motors need <code>lrc_pu</code>, <code>rx</code>, and <code>vn_kv</code>. ' +
             'See the <a href="https://electrisim.com/documentation.html#motor-starting" target="_blank" rel="noopener noreferrer">documentation</a>.';
     }
@@ -195,7 +223,10 @@ export class MotorStartingDialog extends Dialog {
                         t_start: values[8],
                         t_end: values[9],
                         frequency: values[10],
-                        sn_mva: values[11]
+                        sn_mva: values[11],
+                        thermal_check: values[12],
+                        trafo_tau_min: values[13],
+                        line_tau_min: values[14]
                     };
                 } else {
                     params = values || {};
