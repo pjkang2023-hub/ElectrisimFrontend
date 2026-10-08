@@ -10,12 +10,12 @@
 
 import { DER_TYPES, derFields } from './derParameters.js';
 
-export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES, 'PCS', 'Grounding Transformer'];
+export const DC_COMPONENT_TYPES = ['DC Bus', 'Load DC', 'Source DC', 'VSC', 'B2B VSC', 'DC Line', 'DC Capacitor', 'DC Breaker', 'DC Diode', 'DC/DC Converter', 'Solid-State Transformer', ...DER_TYPES, 'PCS', 'Grounding Transformer'];
 
 // What a DC breaker can switch, by the shape at its other side.
 const DC_BREAKER_TARGETS = {
     'DC Bus': 'bus_dc', 'DC Line': 'line_dc', 'VSC': 'vsc', 'B2B VSC': 'b2b_vsc',
-    'Load DC': 'load_dc', 'Source DC': 'source_dc', 'DC/DC Converter': 'dc_dc_converter'
+    'Load DC': 'load_dc', 'Source DC': 'source_dc', 'DC/DC Converter': 'dc_dc_converter', 'DC Diode': 'line_dc'
 };
 
 function shapeOf(cell) {
@@ -185,6 +185,20 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'current_loop_hz', 'rect_dc_link_esr_mohm', 'rect_dc_link_esl_uh', 'dcdc_c_in_esr_mohm',
                 'dcdc_c_in_esl_uh', 'dcdc_c_out_esr_mohm', 'dcdc_c_out_esl_uh',
                 'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'in_service', 'cost_per_unit_by_currency'])
+        };
+    }
+    case 'DC Diode': {
+        // Its anode on the left pin, its cathode on the right: it conducts from busFrom to busTo.
+        const { dc } = connectedBuses(cell, model);
+        const row = {
+            ...common(cell, `DC Diode${next('dcDiode')}`),
+            busFrom: dc[0]?.key || null,
+            busTo: dc[1]?.key || null,
+        };
+        return {
+            arrayKey: 'dcDiode',
+            row: withOptional(row, cell, ['v_f_v', 'r_on_mohm', 'rated_current_ka', 'in_service',
+                'cost_per_unit_by_currency'])
         };
     }
     case 'DC/DC Converter': {

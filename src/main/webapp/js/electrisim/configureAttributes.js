@@ -1567,6 +1567,24 @@ export function configureDcBreakerAttributes(grafka, vertex, options = {}) {
     updateDcBreakerCellStyle(grafka, vertex, closed);
 }
 
+export function configureDcDiodeAttributes(grafka, vertex, options = {}) {
+    options = importedOptions(options);
+    var g = mxUtils.createXmlDocument().createElement("object");
+    g.setAttribute("name", options.name || "DC Diode");
+
+    // Between two DC buses: conducts from its left pin (anode) to its right (cathode) only
+    g.setAttribute("Load_flow_parameters", "");
+    g.setAttribute("v_f_v", String(options.v_f_v ?? "1.6"));
+    g.setAttribute("r_on_mohm", String(options.r_on_mohm ?? "0.1"));
+    g.setAttribute("rated_current_ka", String(options.rated_current_ka ?? "1.5"));
+    g.setAttribute("in_service", String(options.in_service ?? "true"));
+
+    g.setAttribute("Economic_parameters", "");
+    g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
+
+    grafka.getModel().setValue(vertex, g);
+}
+
 export function configureSourceDcAttributes(grafka, vertex, options = {}) {
     options = importedOptions(options);
     var g = mxUtils.createXmlDocument().createElement("object");
@@ -1775,6 +1793,7 @@ if (typeof window !== 'undefined') {
     window.configureSourceDcAttributes = configureSourceDcAttributes;
     window.configureDcCapacitorAttributes = configureDcCapacitorAttributes;
     window.configureDcBreakerAttributes = configureDcBreakerAttributes;
+    window.configureDcDiodeAttributes = configureDcDiodeAttributes;
     window.configureDcDcConverterAttributes = configureDcDcConverterAttributes;
     window.configureDerAttributes = configureDerAttributes;
     window.configureBatteryAttributes = configureBatteryAttributes;

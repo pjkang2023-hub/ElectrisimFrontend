@@ -19,7 +19,7 @@
 
 import {
     configureDcBusAttributes, configureLoadDcAttributes, configureSourceDcAttributes, configureDcCapacitorAttributes,
-    configureDcBreakerAttributes, configureDcDcConverterAttributes, configureSstAttributes, configureVscAttributes,
+    configureDcBreakerAttributes, configureDcDiodeAttributes, configureDcDcConverterAttributes, configureSstAttributes, configureVscAttributes,
     configureDerAttributes, configureSwitchAttributes, configureDCLineAttributes,
 } from './configureAttributes.js';
 import { vertexStyleImportedBusbar } from './electricalSymbols.js';
@@ -39,6 +39,7 @@ const SYMBOLS = {
     'Source DC': { img: 'sym-source-dc.svg', w: 56, h: 56, top: [0.5, 0.05] },
     'DC Capacitor': { img: 'sym-dc-capacitor.svg', w: 43, h: 56 },
     'DC Breaker': { img: 'sym-dc-breaker-closed.svg', w: 56, h: 29 },
+    'DC Diode': { img: 'sym-dc-diode.svg', w: 56, h: 29 },
     'DC/DC Converter': { img: 'sym-dc-dc.svg', w: 56, h: 33 },
     'Solid-State Transformer': { img: 'sym-sst.svg', w: 56, h: 41 },
     VSC: { img: 'sym-vsc.svg', w: 56, h: 36 },
@@ -57,6 +58,7 @@ const SIDE_Y = { 'DC Breaker': 22 / 40, Switch: 22 / 40, 'Solid-State Transforme
 const CONFIGURE = {
     'DC Bus': configureDcBusAttributes, 'Load DC': configureLoadDcAttributes, 'Source DC': configureSourceDcAttributes,
     'DC Capacitor': configureDcCapacitorAttributes, 'DC Breaker': configureDcBreakerAttributes,
+    'DC Diode': configureDcDiodeAttributes,
     'DC/DC Converter': configureDcDcConverterAttributes, 'Solid-State Transformer': configureSstAttributes,
     VSC: configureVscAttributes, Switch: configureSwitchAttributes, 'DC Line': configureDCLineAttributes,
 };
@@ -73,6 +75,7 @@ function pinsOf(kind, role) {
     case 'Solid-State Transformer': return role === 'bus_mv' ? [0, side] : role === 'bus_lv_dc' ? [1, side] : [0.5, 1];
     case 'DC/DC Converter': return role === 'bus_in' ? [0, side] : [1, side];
     case 'DC Breaker': case 'Switch': return role === 'bus' ? [0, side] : [1, side];
+    case 'DC Diode': return role === 'from_bus' ? [0, side] : [1, side];   // anode left, cathode right
     case 'DC Line': return role === 'from_bus' ? [2 / 70, 12 / 48] : [68 / 70, 12 / 48];   // the symbol's two leads
     case 'PCS': return role === 'bus' ? [0.5, 0] : [0.5, 1];
     default: return SYMBOLS[kind]?.top || TOP;
@@ -134,6 +137,10 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
         if (e.kind === 'DC/DC Converter') {
             adopt(e.id, link(e, 'bus_in'));
             adopt(link(e, 'bus_out'), e.id);
+        } else if (e.kind === 'DC Diode') {
+            // Below its anode's bus, its cathode's below it; a second diode into a shelf closes a ring.
+            adopt(e.id, link(e, 'from_bus'));
+            adopt(link(e, 'to_bus'), e.id);
         } else if (e.kind === 'DC Breaker') {
             adopt(e.id, link(e, 'bus'));
         } else if (['Load DC', 'Source DC', 'DC Capacitor', ...SOURCES].includes(e.kind) && link(e, 'bus')) {
@@ -243,7 +250,8 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
             // Behind a breaker, it reaches its bus through the breaker alone.
             if (role === 'bus' && (behind === 'DC Breaker' || behind === 'Switch')) return;
             // A cable behind a breaker: its end at the breaker's bus is the breaker's.
-            if (e.kind === 'DC Line' && behind === 'DC Breaker' && c.id === link(byId.get(parentOf.get(e.id)), 'bus')) return;
+            if ((e.kind === 'DC Line' || e.kind === 'DC Diode') && behind === 'DC Breaker'
+                && c.id === link(byId.get(parentOf.get(e.id)), 'bus')) return;
             const pin = pinsOf(e.kind, role);
             let target = c.ac_bus_name ? findAcBus(c.ac_bus_name) : cell.get(c.id);
             if (!target) return;
@@ -253,7 +261,7 @@ export function drawElectrisimLayer(graph, parent, layer, findAcBus) {
             } else if (role === 'source' || role === 'element') {
                 // An element behind it (a PCS's source, a breaker's load): its own lead -
                 // a cable's the end that faces the breaker's bus.
-                const lead = targetKind === 'DC Line'
+                const lead = targetKind === 'DC Line' || targetKind === 'DC Diode'
                     ? (link(byId.get(c.id), 'from_bus') === link(e, 'bus') ? 'from_bus' : 'to_bus') : 'bus';
                 wire(v, pin, target, pinsOf(targetKind, lead));
             }

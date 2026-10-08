@@ -91,7 +91,7 @@ function pinAt(geo, fx, fy, rotation) {
 // The DC and microgrid layer's elements (importElectrisimLayer.js). Their ends
 // keep the pins they were wired on: the payload reads a DC/DC converter's input
 // as its left pin's bus, its output as its right's (dcPayload.js).
-const PINNED = new Set(['VSC', 'B2B VSC', 'Solid-State Transformer', 'DC/DC Converter', 'DC Line', 'PCS',
+const PINNED = new Set(['VSC', 'B2B VSC', 'Solid-State Transformer', 'DC/DC Converter', 'DC Line', 'DC Diode', 'PCS',
     'Load DC', 'Source DC', 'DC Capacitor', 'Battery', 'Supercapacitor', 'Flywheel', 'SOFC', 'PV Array',
     'Grounding Transformer']);
 const BUS_SHAPES = new Set(['Bus', 'DC Bus']);
@@ -654,6 +654,11 @@ export function relayoutSld(graph, parent) {
         } else if (br.kind === 'coupler') {
             placeSwitch(br.cell, midX, chY, false);
         } else {
+            // A pinned element (a diode closing a shelf's second feed) turned so each
+            // pin faces the leg that reaches it: drawn as built, the catcher's leg
+            // crossed the diode to its far pin and the diode pointed the wrong way.
+            const pu = pinned(br, upper);
+            if (pu) restyle(br.cell, { rotation: (pu.fx < 0.5) !== (ux < lx) ? 180 : null });
             moveVertex(br.cell, midX, chY);
         }
         const leg = (t, x, barY, pin) => {

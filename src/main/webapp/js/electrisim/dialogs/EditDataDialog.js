@@ -23,6 +23,7 @@ import { DcBusDialog } from '../dcBusDialog.js';
 import { LoadDcDialog } from '../loadDcDialog.js';
 import { DcCapacitorDialog } from '../dcCapacitorDialog.js';
 import { DcBreakerDialog } from '../dcBreakerDialog.js';
+import { DcDiodeDialog } from '../dcDiodeDialog.js';
 import { DcDcConverterDialog } from '../dcDcConverterDialog.js';
 import { DER_DIALOGS } from '../derDialog.js';
 import { SstDialog } from '../sstDialog.js';
@@ -335,6 +336,10 @@ export class EditDataDialog {
             // A DC breaker: the same layout, its own fields and symbol
             if (this.elementType === "DC Breaker") {
                 this.handleLoadDc(DcBreakerDialog);
+                return;
+            }
+            if (this.elementType === "DC Diode") {
+                this.handleLoadDc(DcDiodeDialog);
                 return;
             }
 
@@ -3343,6 +3348,11 @@ export class EditDataDialog {
                 rowDefs: null,
                 helpUrl: 'https://electrisim.com/documentation.html#load-dc'
             })])),
+            'DC Diode': () => ({
+                gridOptions: null,
+                rowDefs: null,
+                helpUrl: 'https://electrisim.com/documentation.html#switch'
+            }),
             'DC Breaker': () => ({
                 gridOptions: null, // Modern dialog handles this
                 rowDefs: null,
