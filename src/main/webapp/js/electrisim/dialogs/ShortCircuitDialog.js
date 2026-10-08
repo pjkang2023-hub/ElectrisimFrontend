@@ -66,6 +66,17 @@ export class ShortCircuitDialog extends Dialog {
                 ]
             },
             {
+                // The network's: an earth fault's thermal current (IEC 60909's m)
+                // depends on it; without it a 60 Hz network's ran at 50 Hz.
+                id: 'frequency',
+                label: 'Frequency',
+                type: 'radio',
+                options: [
+                    { value: '50', label: '50 Hz', default: true },
+                    { value: '60', label: '60 Hz' }
+                ]
+            },
+            {
                 id: 'topology',
                 label: 'Define option for meshing',
                 type: 'radio',

@@ -14,7 +14,9 @@
  *   - its name above the left end, and the connection from above right of it;
  *   - its result box under the left end, then one slot per device below;
  *   - one drop per branch to a lower bus, to the right of its devices.
- * A branch that closes a ring runs in a channel between the rows.
+ * A branch that closes a ring runs in a channel between the rows; a converter
+ * on one hangs under one of its bars, as a device does, its wire in the channel.
+ * Converters in parallel between the same two bars drop side by side.
  *
  * The layout this replaces put every bus at the same distance from the grid on
  * one row, end to end, so three bars at three voltages read as one, and hung
@@ -183,6 +185,12 @@ const vnOf = (bus) => {
     return Number.isFinite(v) ? v : 0;
 };
 const labelWidth = (bus) => String(attr(bus, 'name') || '').length * LABEL_CHAR_W;
+const nameWidth = (cell) => String(attr(cell, 'name') || '').length * LABEL_CHAR_W;
+/** A converter or diode closing a ring: it hangs under a bar, not on the channel. */
+const hangs = (br) => br.kind === 'vertex' && br.terms.length === 2 && PINNED.has(shapeOf(br.cell))
+    && shapeOf(br.cell) !== 'DC Line';
+/** From one drop of a parallel group to the next: clear of its name, beside it. */
+const parallelStep = (br) => Math.max(100, nameWidth(br.cell) + 50);
 /** Where the connection from above meets a bar: right of its name. */
 const entryOffset = (bus) => Math.max(44, labelWidth(bus) + 24);
 
@@ -218,6 +226,7 @@ export function relayoutSld(graph, parent) {
     const order = [...buses].sort((a, b) => vnOf(b) - vnOf(a));
     if (grid) order.unshift(grid.term.bus);
     const visited = new Set();
+    const reached = new Map();              // bus -> [depth, order reached]
     const children = new Map(buses.map((b) => [b, []]));
     const closures = [];
     const roots = [];
@@ -231,18 +240,33 @@ export function relayoutSld(graph, parent) {
         const others = [...new Set(br.terms.map((t) => t.bus).filter((b) => b !== u))];
         const fresh = isOpen(br) ? [] : others.filter((b) => !visited.has(b));
         if (!fresh.length) {
-            if (others.length === 1) closures.push(br);
+            if (others.length !== 1) return;
+            // A converter in parallel with a drop between the same two bars - a
+            // lineup's rectifiers sharing its 800 V bus - drops beside it: as a
+            // ring each ran in the channel over the next.
+            const twin = br.kind === 'vertex' && br.terms.length === 2 && children.get(u).find((t) => !t.parallelOf
+                && t.kind === 'vertex' && t.kids.length === 1 && t.kids[0] === others[0] && shapeOf(t.cell) === shapeOf(br.cell));
+            if (twin) {
+                br.parallelOf = twin;
+                br.parentBus = u;
+                br.kids = [others[0]];
+                (twin.parallels = twin.parallels || []).push(br);
+                children.get(u).push(br);
+                return;
+            }
+            closures.push(br);
             return;
         }
         br.parentBus = u;
         br.kids = fresh.sort((a, b) => vnOf(b) - vnOf(a));
         children.get(u).push(br);
-        fresh.forEach((b) => { visited.add(b); next.push(b); });
+        fresh.forEach((b) => { visited.add(b); next.push(b); reached.set(b, [reached.get(u)[0] + 1, reached.size]); });
     };
     order.forEach((start) => {
         if (visited.has(start)) return;
         roots.push(start);
         visited.add(start);
+        reached.set(start, [0, reached.size]);
         let frontier = [start];
         while (frontier.length) {
             const next = [];
@@ -253,6 +277,29 @@ export function relayoutSld(graph, parent) {
     });
     // Open couplers whose buses the tree reached some other way.
     branches.filter((br) => !br.used && br.terms.length === 2).forEach((br) => { br.used = true; closures.push(br); });
+    // A converter closing a ring hangs under the bar nearer the grid; between two
+    // on one row, under the one with fewer such (a shelf rather than the catcher
+    // group that feeds six), so their names have room.
+    const hangCount = new Map(buses.map((b) => [b, 0]));
+    closures.filter(hangs).forEach((br) => br.terms.forEach((t) => hangCount.set(t.bus, hangCount.get(t.bus) + 1)));
+    closures.filter(hangs).forEach((br) => {
+        const [a, b] = br.terms;
+        const ra = reached.get(a.bus) || [0, 0];
+        const rb = reached.get(b.bus) || [0, 0];
+        let pick = ra[0] !== rb[0] ? (ra[0] < rb[0] ? a : b)
+            : hangCount.get(a.bus) !== hangCount.get(b.bus) ? (hangCount.get(a.bus) < hangCount.get(b.bus) ? a : b)
+                : (ra[1] <= rb[1] ? a : b);
+        br.hangTerm = pick;
+    });
+    // Each parallel drop's offset from its twin's, and how far right of its entry the bar below must run.
+    const parallelSpan = new Map();
+    children.forEach((list) => list.filter((br) => br.parallels).forEach((twin) => {
+        let off = 0;
+        let prev = twin;
+        twin.parallels.forEach((br) => { off += parallelStep(prev); br.parallelOffset = off; prev = br; });
+        const kid = twin.kids[0];
+        parallelSpan.set(kid, Math.max(parallelSpan.get(kid) || 0, off));
+    }));
     const rootGrids = new Set(devices.filter((d) => d.shape === 'External Grid' && roots.includes(d.term.bus)));
     const hanging = (bus) => devicesOf.get(bus).filter((d) => !rootGrids.has(d));
 
@@ -264,12 +311,13 @@ export function relayoutSld(graph, parent) {
     // Ports at the right end of a bar for the ring branches that end there. A
     // tie drawn across between two neighbouring bars needs none, but room
     // between them, right of the first.
+    // Each end is as wide as what hangs there: a converter and its name, or a wire.
     const ringEnds = new Map();
     const tieRoom = new Map();
     const countRingEnds = () => {
-        buses.forEach((b) => ringEnds.set(b, 0));
-        closures.filter((br) => !br.barLevel)
-            .forEach((br) => br.terms.forEach((t) => ringEnds.set(t.bus, ringEnds.get(t.bus) + 1)));
+        buses.forEach((b) => ringEnds.set(b, []));
+        closures.filter((br) => !br.barLevel).forEach((br) => br.terms.forEach((t) => ringEnds.get(t.bus).push(
+            br.hangTerm === t ? Math.max(60, nameWidth(br.cell) + 40) : 40)));
     };
     countRingEnds();
     const layoutOf = new Map();
@@ -280,32 +328,47 @@ export function relayoutSld(graph, parent) {
         // two read as one line through the bar.
         const firstKid = children.get(u).length ? children.get(u)[0].kids[0] : null;
         let x = firstKid ? Math.max(60, entryOffset(u) + 60 - entryOffset(firstKid)) : 60;
-        children.get(u).forEach((br) => br.kids.forEach((k) => {
+        children.get(u).filter((br) => !br.parallelOf).forEach((br) => br.kids.forEach((k) => {
             kidOffset.set(k, x);
             x += measure(k).width + SUBTREE_GAP;
         }));
         const kidsRight = kidOffset.size ? x - SUBTREE_GAP : 0;
+        const twinX = new Map();
         const drops = children.get(u).map((br) => {
             const entry = kidOffset.get(br.kids[0]) + entryOffset(br.kids[0]);
-            return { br, x: br.kind === 'trafo3' ? entry + 12 * (SYMBOLS.trafo3V.w / 96) : entry, clear: DROP_CLEAR[br.kind] || 60 };
+            const dx = br.parallelOf ? twinX.get(br.parallelOf) + br.parallelOffset
+                : br.kind === 'trafo3' ? entry + 12 * (SYMBOLS.trafo3V.w / 96) : entry;
+            twinX.set(br, dx);
+            // A transformer or turned converter carries its name to its right: a
+            // ring's wire down the bar's end ran through a transformer's.
+            const named = br.kind === 'trafo' ? nameWidth(br.cell) + 60
+                : br.kind === 'vertex' && PINNED.has(shapeOf(br.cell)) ? nameWidth(br.cell) + 30 : 0;
+            return { br, x: dx, clear: Math.max(DROP_CLEAR[br.kind] || 60, named) };
         });
+        // Devices a slot apart, or their names' half widths apart: a back-up
+        // genset's name ran into its lineup's AC load's.
         const deviceX = [];
+        const halfName = (d) => Math.max(40, nameWidth(d.cell)) / 2;
         let c = BAR_PAD_L + SLOT / 2;
-        hanging(u).forEach(() => {
-            const blocked = (cx) => drops.some((d) => Math.abs(cx - d.x) < d.clear)
-                || (deviceX.length && cx - deviceX[deviceX.length - 1] < SLOT);
+        let prev = null;
+        hanging(u).forEach((d) => {
+            const gap = prev ? Math.max(SLOT, halfName(prev) + halfName(d) + 30) : 0;
+            const blocked = (cx) => drops.some((dr) => cx > dr.x - (DROP_CLEAR[dr.br.kind] || 60) && cx < dr.x + dr.clear)
+                || (deviceX.length && cx - deviceX[deviceX.length - 1] < gap);
             while (blocked(c)) c += 10;
             deviceX.push(c);
+            prev = d;
             c += SLOT;
         });
-        let used = Math.max(entryOffset(u) + 36,
-            deviceX.length ? deviceX[deviceX.length - 1] + SLOT / 2 - 20 : 0,
+        let used = Math.max(entryOffset(u) + 36 + (parallelSpan.get(u) || 0),
+            deviceX.length ? deviceX[deviceX.length - 1] + Math.max(SLOT / 2, halfName(prev)) - 20 : 0,
             ...drops.map((d) => d.x + d.clear - 20));
         const portX = [];
-        for (let i = 0; i < ringEnds.get(u); i++) {
+        ringEnds.get(u).forEach((w) => {
             used += 40;
             portX.push(used);
-        }
+            used += w - 40;                     // a hanging converter's name, right of its port
+        });
         const barRight = Math.max(BAR_MIN_W, entryOffset(u) + 80, used + BAR_PAD_R);
         const m = { kidOffset, drops, deviceX, portX, ports: 0, barRight,
             width: Math.max(barRight + (tieRoom.get(u) || 0), kidsRight) };
@@ -611,9 +674,63 @@ export function relayoutSld(graph, parent) {
         leg(tl, L, x0, pl);
         leg(tr, R, x1, pr);
     };
+    // A converter closing a ring: under its bar at its port, turned so its pin
+    // toward that bar is on top, its other leg down to the channel and across.
+    const routeHanging = (br) => {
+        const e = br.hangTerm;
+        const o = br.terms.find((t) => t !== e);
+        const sameRow = barTop(e.bus) === barTop(o.bus);
+        const port = (bus) => {
+            const m = measure(bus);
+            return pos.get(bus).x + m.portX[Math.min(m.ports++, m.portX.length - 1)];
+        };
+        const ex = port(e.bus);
+        const ox = port(o.bus);
+        const key = sameRow ? `b${barTop(e.bus)}` : `t${barTop(o.bus)}`;
+        const lane = lanes.get(key) || 0;
+        lanes.set(key, lane + 1);
+        const chY = sameRow
+            ? Math.max(barBottom(e.bus), barBottom(o.bus)) + DEVICE_ZONE + lane * CHANNEL_STEP
+            : barTop(o.bus) - 70 - lane * CHANNEL_STEP;
+        const jumps = { jumpStyle: 'arc', jumpSize: 10 };
+        const up = e.pin;
+        const down = o.pin;
+        const rotation = up ? (up.fx < 0.25 ? 90 : up.fx > 0.75 ? 270 : up.fy > 0.75 ? 180 : null) : null;
+        restyle(br.cell, { rotation });
+        const h = model.getGeometry(br.cell).height;
+        const w = model.getGeometry(br.cell).width;
+        const turned = rotation === 90 || rotation === 270;
+        const cy = barBottom(e.bus) + DROP + (e.sw ? 50 : 0) + (turned ? w : h) / 2;
+        moveVertex(br.cell, ex, cy);
+        if (up) {
+            const p = pinAt(model.getGeometry(br.cell), up.fx, up.fy, rotation || 0);
+            moveVertex(br.cell, ex + (ex - p.x), cy);
+        }
+        if (turned) named.set(br.cell, 'right');
+        routeTerm(e, ex, barBottom(e.bus) + SWITCH_DROP, br.cell, up);
+        // Its pin toward the other bar, where the wire leaves it.
+        const g = model.getGeometry(br.cell);
+        const exit = down ? pinAt(g, down.fx, down.fy, rotation || 0) : { x: ex, y: g.y + g.height };
+        const otherY = sameRow ? barBottom(o.bus) : barTop(o.bus);
+        const pts = [{ x: ox, y: chY }, { x: exit.x, y: chY }];        // from the other bar's end
+        if (o.sw) {
+            placeSwitch(o.sw, ox, otherY + (chY > otherY ? SWITCH_DROP : -SWITCH_DROP), true);
+            legRoute(o.legs[1], o.bus, ox, o.sw, null, []);
+            const ends = down ? new Map([[br.cell, down]]) : new Map();
+            const fromSw = o.legs[0].source === o.sw;
+            route(o.legs[0], ends, fromSw ? pts : [...pts].reverse(), jumps);
+        } else {
+            legRoute(o.legs[0], o.bus, ox, br.cell, down, pts);
+            restyle(o.legs[0], jumps);
+        }
+    };
     closures.forEach((br) => {
         if (br.barLevel) {
             routeTie(br);
+            return;
+        }
+        if (br.hangTerm) {
+            routeHanging(br);
             return;
         }
         const [ta, tb] = br.terms;

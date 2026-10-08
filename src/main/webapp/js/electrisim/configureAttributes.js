@@ -111,6 +111,11 @@ export function configureGeneratorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("scaling", defaultScaling(options.scaling));
     g.setAttribute("slack", (options.slack === true || options.slack === 'true') ? "true" : "false");
     // g.setAttribute("in_service", true);                
+    // A machine imported out of service - a back-up genset, normally off - stays
+    // out: without the attribute its payload said in service and it ran.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     //short-circuit
     g.setAttribute("Short_circuit_parameters", "");

@@ -1324,6 +1324,7 @@ I int[kA]: ${formatNumber(row.i_interrupting_ka)}`;
             fault_bus_ids: a.fault_bus_ids || [],
             fault_bus_names: a.fault_bus_names || [],
             fault_impedance: a.lv_tol_percent || a[2] || '6',
+            frequency: a.frequency || '50',
             topology: a.topology || 'auto',
             tk_s: a.tk_s || '1',
             r_fault_ohm: a.r_fault_ohm || '0',
