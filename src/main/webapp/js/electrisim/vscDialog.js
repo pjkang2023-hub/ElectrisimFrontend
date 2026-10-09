@@ -20,6 +20,7 @@ export const defaultVscData = {
     emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
     current_loop_hz: 500,       // EMT study: its current loop's bandwidth
+    spectrum: 'afe',            // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -177,6 +178,19 @@ export class VscDialog extends Dialog {
                 type: 'select',
                 options: ['average', 'switching'],
                 value: this.data.emt_model
+            },
+            {
+                id: 'spectrum',
+                label: 'Harmonic spectrum',
+                symbol: 'spectrum',
+                description: "For the harmonic study: the harmonic currents its AC side draws - an active front end's (a two-level bridge behind its filter: 2 % fifth, 1.5 % seventh, falling after), a six-pulse diode bridge's (17.5 % fifth, 11 % seventh), or none. Generic values until a vendor's.",
+                type: 'select',
+                options: [
+                    { value: 'afe', label: 'Active front end (two-level, filtered)' },
+                    { value: 'six_pulse', label: 'Six-pulse diode bridge' },
+                    { value: 'none', label: 'None' }
+                ],
+                value: this.data.spectrum
             },
             {
                 id: 'switching_khz',

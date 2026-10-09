@@ -57,6 +57,10 @@ export function configureExternalGridAttributes(grafka, vertex, options = {}) {
     g.setAttribute("vm_pu", options.vm_pu || "1");
     g.setAttribute("va_degree", options.va_degree || "0");
     //g.setAttribute("in_service", true);
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     //Short-circuit 
     g.setAttribute("Short_circuit_parameters", "");
@@ -209,6 +213,10 @@ export function configureStaticGeneratorAttributes(grafka, vertex, options = {})
     g.setAttribute("scaling", defaultScaling(options.scaling));
     g.setAttribute("type",  options.type || "Wye");
     //g.setAttribute("in_service", true);
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     //short-circuit
     g.setAttribute("Short_circuit_parameters", "");
@@ -368,6 +376,10 @@ export function configureAsymmetricStaticGeneratorAttributes(grafka, vertex, opt
     g.setAttribute("scaling", defaultScaling(options.scaling));
     g.setAttribute("type", options.type || "Wye");
     // g.setAttribute("in_service", true); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -447,6 +459,10 @@ export function configureTransformerAttributes(grafka, vertex, options = {}) {
 
     //Optional
     //g.setAttribute("in_service", true); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
     g.setAttribute("Optional_parameters", "");
     g.setAttribute("parallel", options.parallel || "1");
     g.setAttribute("shift_degree", options.shift_degree || "0");
@@ -554,6 +570,10 @@ export function configureThreeWindingTransformerAttributes(grafka, vertex, optio
     g.setAttribute("tap_at_star_point", given(options.tap_at_star_point, "true"));
     g.setAttribute("tap_changer_type", "Ratio"); // pandapower 3.0+: "Ratio", "Symmetrical", or "Ideal"
     // g.setAttribute("in_service", true); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -593,6 +613,10 @@ export function configureShuntReactorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("line_flow_p_use_abs", options.line_flow_p_use_abs != null ? String(options.line_flow_p_use_abs) : "true");
     g.setAttribute("line_flow_p_reference", options.line_flow_p_reference || "p_from_mw");
     // g.setAttribute("in_service", "True"); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -620,6 +644,10 @@ export function configureCapacitorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("step", options.step || "1");
     g.setAttribute("max_step", options.max_step || "1");
     // g.setAttribute("in_service", "True"); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -646,6 +674,10 @@ export function configureLoadAttributes(grafka, vertex, options = {}) {
     g.setAttribute("scaling", defaultScaling(options.scaling));
     g.setAttribute("type", options.type || "Wye");
     //g.setAttribute("in_service", "True"); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Harmonic analysis parameters (OpenDSS)
     // Reference: https://opendss.epri.com/HarmonicsLoadModeling.html
@@ -713,6 +745,10 @@ export function configureAsymmetricLoadAttributes(grafka, vertex, options = {}) 
     g.setAttribute("scaling", defaultScaling(options.scaling));
     g.setAttribute("type", options.type || "Wye");
     // g.setAttribute("in_service", "True"); //in_service nie działa
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -828,6 +864,10 @@ export function configureMotorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("loading_percent", options.loading_percent || "0");
     g.setAttribute("scaling", defaultScaling(options.scaling));
     // g.setAttribute("in_service", "True");  //in_service nie działa                
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");
@@ -858,6 +898,10 @@ export function configureStorageAttributes(grafka, vertex, options = {}) {
     g.setAttribute("conn", options.conn || "wye");
     g.setAttribute("phases", String(options.phases ?? 3));
     // g.setAttribute("in_service", "True");
+    // Imported out of service, it stays out: without the attribute its payload said in service.
+    if (options.in_service === false || String(options.in_service).toLowerCase() === 'false') {
+        g.setAttribute("in_service", "false");
+    }
 
     // Optimal Power Flow parameters (pandapower OPF)
     g.setAttribute("OPF_parameters", "");
@@ -1457,7 +1501,7 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         p_ac_mw: "0.1", q_ac_mvar: "0", vm_lv_ac_pu: "1.0", in_service: "true",
         // For the EMT study
         emt_model: "average", switching_khz: "5", dcdc_switching_khz: "20", current_limit_pu: "1.2",
-        current_loop_hz: "500",
+        current_loop_hz: "500", spectrum: "afe",                      // spectrum: the harmonic study's
         // For the EMT and DC fault studies: its stages' capacitors' ESR and ESL (0: none)
         rect_dc_link_esr_mohm: "0", rect_dc_link_esl_uh: "0", dcdc_c_in_esr_mohm: "0", dcdc_c_in_esl_uh: "0",
         dcdc_c_out_esr_mohm: "0", dcdc_c_out_esl_uh: "0", inv_dc_link_esr_mohm: "0", inv_dc_link_esl_uh: "0"
@@ -1722,6 +1766,7 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("dc_link_esl_uh", String(options.dc_link_esl_uh ?? "0"));
     g.setAttribute("current_limit_pu", String(options.current_limit_pu ?? "1.2"));
     g.setAttribute("emt_model", options.emt_model || "average");       // 'average' or 'switching'
+    g.setAttribute("spectrum", options.spectrum || "afe");             // harmonic study: 'afe', 'six_pulse' or 'none'
     g.setAttribute("switching_khz", String(options.switching_khz ?? "5"));
     g.setAttribute("current_loop_hz", String(options.current_loop_hz ?? "500"));   // EMT: its current loop's bandwidth
     

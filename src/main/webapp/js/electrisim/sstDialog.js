@@ -18,6 +18,8 @@ export const defaultSstData = {
     inv_rated_mw: 0.5, inv_efficiency_percent: 97.5, inv_no_load_kw: 1, p_ac_mw: 0.1, q_ac_mvar: 0, vm_lv_ac_pu: 1.0,
     // EMT study: its stages' model, switching frequencies and current limit
     emt_model: 'average', switching_khz: 5, dcdc_switching_khz: 20, current_limit_pu: 1.2, current_loop_hz: 500,
+    // Harmonic study: its rectifier's harmonic currents at the MV bus
+    spectrum: 'afe',
     // EMT and DC fault studies: its stages' capacitors' series resistance and inductance; 0 = none
     rect_dc_link_esr_mohm: 0, rect_dc_link_esl_uh: 0, dcdc_c_in_esr_mohm: 0, dcdc_c_in_esl_uh: 0,
     dcdc_c_out_esr_mohm: 0, dcdc_c_out_esl_uh: 0, inv_dc_link_esr_mohm: 0, inv_dc_link_esl_uh: 0,
@@ -76,6 +78,19 @@ export class SstDialog extends LoadDcDialog {
                     { value: 'switching', label: 'Switching' }
                 ],
                 value: this.data.emt_model
+            },
+            {
+                id: 'spectrum',
+                label: 'Harmonic spectrum (MV)',
+                symbol: 'spectrum',
+                description: "For the harmonic study: the harmonic currents its rectifier draws at the MV bus - an active front end's (2 % fifth, 1.5 % seventh, falling after), a six-pulse diode bridge's, or none. Generic values until a vendor's.",
+                type: 'select',
+                options: [
+                    { value: 'afe', label: 'Active front end (two-level, filtered)' },
+                    { value: 'six_pulse', label: 'Six-pulse diode bridge' },
+                    { value: 'none', label: 'None' }
+                ],
+                value: this.data.spectrum
             },
             num('switching_khz', 'Rectifier and inverter: switching frequency (EMT)', 'kHz', 'For the EMT study: their PWM carrier.', '0.5'),
             num('dcdc_switching_khz', 'DC/DC stage: switching frequency (EMT)', 'kHz', 'For the EMT study: its bridges\' square waves.', '1'),

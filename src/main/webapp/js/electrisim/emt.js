@@ -79,6 +79,18 @@ ${opened ? `Interrupted[kA]: ${fmt(brk.i_open_ka)}` : `Peak[kA]: ${fmt(brk.i_pea
 Arrester[kJ]: ${fmt(brk.arrester_energy_kj)}
 ${brk.exceeds_capacity || brk.exceeds_energy ? 'EXCEEDS' : 'OK'}`, { width: 72, height: 60, positionX: 0.5, positionY: 1.2 });
             });
+            // Each diode with its peak current and its current at the end: conducting or blocking.
+            (emt.branches || []).filter((br) => br.kind === 'DC diode').forEach((br) => {
+                const cell = br.id != null ? model.getCell(br.id) : null;
+                if (!cell) return;
+                const end = Array.isArray(br.waveform?.i_ka) && br.waveform.i_ka.length
+                    ? br.waveform.i_ka[br.waveform.i_ka.length - 1] : null;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, br.label, 'DC Diode')}
+EMT
+I peak[kA]: ${fmt(br.i_peak_ka)} at ${fmt(br.t_peak_ms, 2)} ms
+I end[kA]: ${fmt(end)}${end != null ? (end > 1e-3 ? ' (conducting)' : ' (blocking)') : ''}`,
+                { width: 76, height: 50, positionX: 0.5, positionY: 1.2 });
+            });
         } finally {
             model.endUpdate();
             graph.getView?.().refresh?.();

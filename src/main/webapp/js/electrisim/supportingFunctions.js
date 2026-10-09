@@ -8,6 +8,8 @@ import { layoutRadialSld as elLayoutRadial, suggestImportSystem as elSuggestSyst
 import { relayoutSld as elRelayoutSld } from './sldAutoLayout.js';
 import { drawElectrisimLayer as elDrawElectrisimLayer } from './importElectrisimLayer.js';
 import './resultBoxVisibility.js';
+import './diodeTextUpright.js';
+import './drawingFrequency.js';
 
 /**
  * Are the geo coordinates worth using as a layout?

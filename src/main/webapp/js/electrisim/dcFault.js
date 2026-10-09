@@ -69,6 +69,23 @@ At opening[kA]: ${fmt(brk.i_open_ka)}
 Capacity[kA]: ${fmt(brk.breaking_capacity_ka, 1)}
 ${brk.exceeds ? 'EXCEEDS' : 'OK'}`, { width: 70, height: 50, positionX: 0.5, positionY: 1.2 });
             });
+            // Each diode with its current before the fault, its peak and at the end: whether it
+            // blocked backfeed into the fault or turned on as its shelf's other supply failed.
+            // Each fault lists its diodes: a diode's worst over the faults studied.
+            const worst = new Map();
+            (dc.faults || []).forEach((f) => (f.diodes || []).forEach((d) => {
+                const seen = worst.get(d.id);
+                if (!seen || Math.abs(d.ip_ka || 0) > Math.abs(seen.ip_ka || 0)) worst.set(d.id, d);
+            }));
+            worst.forEach((d) => {
+                const cell = d.id != null ? model.getCell(d.id) : null;
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, d.label, 'DC Diode')}
+Before[kA]: ${fmt(d.i_prefault_ka)}
+ip[kA]: ${fmt(d.ip_ka)} at ${fmt(d.tp_ms, 2)} ms
+End[kA]: ${fmt(d.i_end_ka)} (${d.conducting_end ? 'conducting' : 'blocking'})`,
+                { width: 76, height: 56, positionX: 0.5, positionY: 1.2 });
+            });
         } finally {
             model.endUpdate();
             graph.getView?.().refresh?.();

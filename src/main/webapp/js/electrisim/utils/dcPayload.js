@@ -181,7 +181,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'rect_rated_mw', 'rect_efficiency_percent', 'rect_no_load_kw',
                 'dcdc_rated_mw', 'dcdc_efficiency_percent', 'dcdc_no_load_kw', 'vm_lv_dc_pu',
                 'inverter_mode', 'inv_rated_mw', 'inv_efficiency_percent', 'inv_no_load_kw', 'p_ac_mw', 'q_ac_mvar',
-                'vm_lv_ac_pu', 'emt_model', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
+                'vm_lv_ac_pu', 'emt_model', 'spectrum', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
                 'current_loop_hz', 'rect_dc_link_esr_mohm', 'rect_dc_link_esl_uh', 'dcdc_c_in_esr_mohm',
                 'dcdc_c_in_esl_uh', 'dcdc_c_out_esr_mohm', 'dcdc_c_out_esl_uh',
                 'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'in_service', 'cost_per_unit_by_currency'])
@@ -256,7 +256,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         // Its rating, DC link and current limit: for the EMT study.
         const optional = isB2b ? ['cost_per_unit_by_currency']
             : ['rated_mva', 'dc_link_mf', 'dc_link_esr_mohm', 'dc_link_esl_uh', 'current_limit_pu', 'emt_model',
-                'switching_khz', 'current_loop_hz', 'cost_per_unit_by_currency'];
+                'spectrum', 'switching_khz', 'current_loop_hz', 'cost_per_unit_by_currency'];
         return { arrayKey: isB2b ? 'B2BVSC' : 'VSC', row: withOptional(row, cell, optional) };
     }
     case 'DC Line': {
