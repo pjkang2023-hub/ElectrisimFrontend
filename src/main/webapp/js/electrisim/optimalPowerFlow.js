@@ -576,6 +576,9 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                         min_q_mvar: { name: 'min_q_mvar', optional: true },
                                         max_q_mvar: { name: 'max_q_mvar', optional: true },
                                         controllable: { name: 'controllable', optional: true },
+                                        // Out of service, as the load flow's request says: without it the
+                                        // optimal power flow dispatched a back-up genset left off.
+                                        in_service: { name: 'in_service', optional: true },
                                     });
                                     const genMinP = parseFloat(genOpfAttr.min_p_mw);
                                     const genMaxP = parseFloat(genOpfAttr.max_p_mw);
