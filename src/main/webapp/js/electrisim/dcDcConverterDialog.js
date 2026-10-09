@@ -21,7 +21,7 @@ export const defaultDcDcConverterData = {
     efficiency_percent: 98,
     no_load_loss_kw: 1,
     bidirectional: false,
-    droop_percent: 5,           // droop: its output voltage falls this much at its rated power
+    droop_percent: 5,           // droop: its output voltage falls this much at its rated current
     smoothing_tau_s: 10,        // smoothing: its store takes the load's changes faster than this
     soc_ref_percent: 50,        // smoothing: the state of charge its store is brought back to
     soc_gain: 0.1,              // smoothing: how strongly, in p.u. of its rating per unit of state of charge
@@ -55,7 +55,7 @@ export class DcDcConverterDialog extends LoadDcDialog {
                 type: 'select',
                 options: [
                     { value: 'voltage', label: 'Hold output voltage' },
-                    { value: 'droop', label: 'Droop (voltage falls with power)' },
+                    { value: 'droop', label: 'Droop (voltage falls with current)' },
                     { value: 'power', label: 'Deliver a set power' },
                     { value: 'dispatch', label: 'Dispatch its store or source' },
                     { value: 'mppt', label: 'MPPT (PV array)' },
@@ -67,7 +67,7 @@ export class DcDcConverterDialog extends LoadDcDialog {
             num('vm_out_pu', 'Output voltage set point', 'p.u.', 'Voltage mode: the output bus voltage it holds.', '0.01'),
             { ...num('p_set_mw', 'Set power', 'MW', 'Power and dispatch modes: what it delivers at its output. Negative sends power from the output to the input (charging a store on its input).', '0.01'), min: undefined },
             num('rated_mw', 'Rated power', 'MW', 'Its loading is reported against it.', '0.1'),
-            num('droop_percent', 'Droop', '%', 'Droop: its output voltage falls by this at its rated power.', '0.5'),
+            num('droop_percent', 'Droop', '%', 'Droop: its output voltage falls by this at its rated current - its set voltage behind a virtual resistance, droop x V0^2 / P_rated.', '0.5'),
             num('smoothing_tau_s', 'Smoothing time constant', 's', "Smoothing: its store takes its output network's load changes faster than this; slower ones pass to the network (time-series and EMT studies).", '1'),
             num('soc_ref_percent', 'Smoothing: state of charge to return to', '%', "Smoothing: its store's state of charge is brought back toward this.", '1'),
             num('soc_gain', 'Smoothing: state-of-charge gain', 'p.u.', 'Smoothing: how strongly - its rating per unit of state of charge away from the reference.', '0.01'),
