@@ -26,13 +26,33 @@ export function setDrawingFrequency(graph, hz) {
     model.setStyle(cell, mxUtils.setStyle(model.getStyle(cell) || '', KEY, String(hz)));
 }
 
+// A frequency field: a select or input with id "frequency" (or "frequency_hz", the short-circuit
+// dialog's ANSI and POI modes), or radio buttons of that name - the short-circuit dialog's IEC
+// 50 Hz / 60 Hz pair, which opened at 50 Hz on a 60 Hz drawing.
+const SELECTOR = ['frequency', 'frequency_hz'].map(n =>
+    `select#${n}, input#${n}:not([type=radio]), input[type=radio][name=${n}]`).join(', ');
+
 function frequencyFields(root) {
     if (!root || !root.querySelectorAll) return [];
-    const own = root.matches && root.matches('select#frequency, input#frequency') ? [root] : [];
-    return own.concat(Array.from(root.querySelectorAll('select#frequency, input#frequency')));
+    const own = root.matches && root.matches(SELECTOR) ? [root] : [];
+    return own.concat(Array.from(root.querySelectorAll(SELECTOR)));
+}
+
+function adoptRadio(graph, radio) {
+    if (radio.dataset.elDrawingFrequency) return;
+    radio.dataset.elDrawingFrequency = '1';
+    const hz = drawingFrequency(graph);
+    if (hz && radio.value === hz && !radio.checked) {
+        radio.checked = true;
+        radio.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    radio.addEventListener('change', () => {
+        if (radio.checked && (radio.value === '50' || radio.value === '60')) setDrawingFrequency(graph, radio.value);
+    });
 }
 
 function adopt(graph, field) {
+    if (field.type === 'radio') return adoptRadio(graph, field);
     if (field.dataset.elDrawingFrequency) return;
     field.dataset.elDrawingFrequency = '1';
     const hz = drawingFrequency(graph);
