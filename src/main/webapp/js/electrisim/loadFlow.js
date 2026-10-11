@@ -2477,15 +2477,12 @@ function loadFlowPandaPower(a, b, c) {
     };
 
     /** A DC element's result box: updated in place when it exists, inserted beside the element otherwise. */
+    // A DC element's placeholder hangs on its connecting line (connectedTo=<its id>), not under
+    // it: looking only among its children, the results went into a new box beside it and its own
+    // "Click Simulate to generate results" stayed empty next to every DC element.
     const placeDcResult = (b, resultCell, text, options) => {
-        const existing = findResultPlaceholder(resultCell);
-        if (existing) {
-            b.getModel().setValue(existing, text);
-            processCellStyles(b, existing);
-        } else {
-            const labelka = insertResultPlaceholder(resultCell, text, options);
-            if (labelka) processCellStyles(b, labelka);
-        }
+        const kept = updateOrCreateSinglePlaceholder(resultCell, text, null, options);
+        if (kept) processCellStyles(b, kept);
     };
 
     const elementProcessors = {

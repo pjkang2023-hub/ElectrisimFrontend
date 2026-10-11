@@ -175,6 +175,11 @@
         const capacitors   = arr('capacitors');
         const impedances   = arr('impedances');
         const dclines      = arr('dclines', 'dcline');
+        // The DC network: its loads, and its sources and stores on the DC side (one behind a PCS
+        // is counted at the PCS). Left out, a data hall's racks - fed through rectifiers and SSTs -
+        // showed as losses, not load: 5.8 of the AI factory's 27.8 MW.
+        const dcLoads      = arr('loadsdc');
+        const dcDers       = arr('ders').filter(r => r && r.coupling !== 'pcs');
 
         // Generation accounting — gross output of every injecting element.
         // pandapower / OpenDSS sign conventions:
@@ -187,6 +192,8 @@
         const stoSplit  = splitBySign(storages);
         // A PCS: +p_mw delivers into its AC bus (a source discharging), -p_mw takes from it (charging).
         const pcsSplit  = splitBySign(pcs);
+        // A DC source or store: +p_mw delivers into its DC bus, -p_mw takes from it.
+        const derSplit  = splitBySign(dcDers);
 
         const genInjectMw  = sumBusInject(generators);
         const sgenInjectMw = sumBusInject(sgens);
@@ -217,6 +224,7 @@
             { label: 'PV systems',                 value: pvInjectMw,    count: pvSystems.length },
             { label: 'Storage (discharge)',        value: stoSplit.neg,  count: storages.length },
             { label: 'PCS (delivering)',           value: pcsSplit.pos,  count: pcs.length },
+            { label: 'DC sources and stores (delivering)', value: derSplit.pos, count: dcDers.length },
             { label: 'Asymmetric loads (gen)',     value: asymLoadGen,   count: asymLoads.length },
         ].filter(x => x.count > 0 || x.value > 0.0001);
 
@@ -224,6 +232,8 @@
             { label: 'Loads',                      value: sumOf(loads,  'p_mw'), count: loads.length },
             { label: 'Asymmetric loads',           value: asymLoadLoad,          count: asymLoads.length },
             { label: 'Motors',                     value: sumOf(motors, 'p_mw'), count: motors.length },
+            { label: 'DC loads',                   value: sumOf(dcLoads, 'p_mw'), count: dcLoads.length },
+            { label: 'DC stores (charging)',       value: derSplit.neg,          count: dcDers.length },
             { label: 'Storage (charge)',           value: stoSplit.pos,          count: storages.length },
             { label: 'PCS (charging)',             value: pcsSplit.neg,          count: pcs.length },
             { label: 'Shunt reactors',             value: shuntLoadMw,           count: shunts.length },
@@ -244,7 +254,7 @@
         // System losses from active-power balance (injections − withdrawals incl. grid export).
         const totalInjections =
             extSplit.pos + genInjectMw + sgenInjectMw + pvInjectMw +
-            asymSgenGen + asymLoadGen + stoSplit.neg + pcsSplit.pos;
+            asymSgenGen + asymLoadGen + stoSplit.neg + pcsSplit.pos + derSplit.pos;
         const totalWithdrawals = totalLoad + extSplit.neg;
 
         let totalLosses = 0;
@@ -410,7 +420,7 @@
                 generators:
                     generators.length + sgens.length + asymSgens.length +
                     extGrids.length + pvSystems.length + pcs.length,
-                loads: loads.length + asymLoads.length + motors.length + storages.length,
+                loads: loads.length + asymLoads.length + motors.length + storages.length + dcLoads.length,
             },
         };
     }
@@ -1089,7 +1099,7 @@
             {
                 label: 'Total Load ⓘ', cls: 'info',
                 value: fmt(m.totalLoad, 2), unit: 'MW',
-                sub: `${m.counts.loads} loads/motors · hover for breakdown`,
+                sub: `${m.counts.loads} loads/motors (AC and DC) · hover for breakdown`,
                 tooltip: loadTooltip,
             },
             {
