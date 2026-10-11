@@ -22,6 +22,9 @@ export class ContingencyDialog extends Dialog {
                     { value: 'line', label: 'Transmission Lines', default: true },
                     { value: 'transformer', label: 'Transformers' },
                     { value: 'generator', label: 'Generators' },
+                    // Each rectifier (VSC), solid-state transformer and DC/DC converter: on a DC site
+                    // most of what can fail. They ran only under "All Elements".
+                    { value: 'converter', label: 'Converters (VSC, SST, DC/DC)' },
                     { value: 'all', label: 'All Elements' }
                 ]
             },
