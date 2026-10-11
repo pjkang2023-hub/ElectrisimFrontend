@@ -36,7 +36,14 @@ window.emtStudy = function (a, b, c) {
 
     function placeLabel(graph, cell, text, size) {
         const model = graph.getModel();
-        const existing = window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null;
+        // An element's placeholder hangs on its connecting line (connectedTo=<its id>), not under
+        // it: looking only among its children, each result went into a new box and the element's
+        // own "Click Simulate to generate results" stayed beside it. Fill that one; drop duplicates.
+        const all = window.findAllResultPlaceholdersForComponent
+            ? window.findAllResultPlaceholdersForComponent(graph, cell) : [];
+        const existing = all.length ? all[0].placeholder
+            : (window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null);
+        all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
         if (existing) {
             model.setValue(existing, text);
         } else if (window.insertResultBox) {
