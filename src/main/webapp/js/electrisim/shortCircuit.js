@@ -644,6 +644,31 @@ I int[kA]: ${formatNumber(row.i_interrupting_ka)}`;
         return graph.insertVertex(parentCell, null, resultString, 0, 1.0, (opts && opts.width) || 48, (opts && opts.height) || 78, fallbackStyle, true);
     };
 
+    // The AC short-circuit study leaves the DC network out: its components' boxes kept the last
+    // load flow's numbers, which read as short-circuit results. Each says so now, and where its
+    // faults are studied. A PCS's fault current is in its bus's result.
+    const DC_KINDS = new Set(['DC Bus', 'Load DC', 'Source DC', 'DC Line', 'DC Breaker', 'DC Diode', 'DC Capacitor',
+        'VSC', 'B2B VSC', 'DC/DC Converter', 'Solid-State Transformer', 'Battery', 'Supercapacitor', 'Flywheel',
+        'SOFC', 'PV Array']);
+    const markDcBoxesNotStudied = (graph) => {
+        const findAll = typeof window !== 'undefined' && window.findAllResultPlaceholdersForComponent;
+        if (!graph || !findAll) return;
+        const model = graph.getModel();
+        Object.values(model.cells || {}).forEach((cell) => {
+            const kind = (/(?:^|;)shapeELXXX=([^;]+)/.exec(cell?.style || '') || [])[1];
+            if (!kind || !(DC_KINDS.has(kind) || kind === 'PCS')) return;
+            const found = findAll(graph, cell);
+            if (!found.length) return;
+            const name = cell.value?.getAttribute?.('userFriendlyName') || cell.value?.getAttribute?.('name') || kind;
+            const note = kind === 'PCS'
+                ? `${name}\nSC: in its bus's result`
+                : `${name}\nNot in AC SC (see DC Fault)`;
+            // One box per element, as the load flow leaves it: a converter has one on each line.
+            model.setValue(found[0].placeholder, note);
+            found.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+        });
+    };
+
     // Network element processors (FROM BACKEND TO FRONTEND)
     // Same approach as pandapower load flow: find existing placeholder, update in place; else insert
     const elementProcessors = {
@@ -887,6 +912,7 @@ I int[kA]: ${formatNumber(row.i_interrupting_ka)}`;
                 placeFaultMarkersForScRows(graph, dataJson.busbars, (row) =>
                     resolveRowCell(row, graph, cellIdMap, lookupMap)
                 );
+                markDcBoxesNotStudied(graph);
             } finally {
                 model.endUpdate();
                 if (graph.getView && graph.getView().refresh) graph.getView().refresh();
