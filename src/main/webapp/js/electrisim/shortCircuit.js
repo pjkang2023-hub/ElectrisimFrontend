@@ -10,6 +10,7 @@ import {
 } from './utils/attributeUtils.js';
 import { ShortCircuitDialog } from './dialogs/ShortCircuitDialog.js';
 import { AnsiShortCircuitResultsDialog } from './dialogs/AnsiShortCircuitResultsDialog.js';
+import { showResultWarnings } from './utils/resultWarnings.js';
 import { PoiFaultStudyResultsDialog } from './dialogs/PoiFaultStudyResultsDialog.js';
 import ENV from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
@@ -917,6 +918,11 @@ I int[kA]: ${formatNumber(row.i_interrupting_ka)}`;
                 model.endUpdate();
                 if (graph.getView && graph.getView().refresh) graph.getView().refresh();
                 else if (b.getView && b.getView().refresh) b.getView().refresh();
+            }
+
+            // The backend's notes - the DC network set aside, a bus with no earth path - were dropped.
+            if (Array.isArray(dataJson.warnings) && dataJson.warnings.length) {
+                try { showResultWarnings(dataJson.warnings, 'Short circuit notes'); } catch (_) { /* never block results */ }
             }
 
             if (dataJson.study === 'poi_fault_study') {
