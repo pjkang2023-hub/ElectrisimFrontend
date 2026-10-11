@@ -516,9 +516,19 @@
             };
         });
 
+        // An earth fault at a bus with no earth return path (behind an ungrounded delta) is 0 kA
+        // by design: the backend says so in its warnings. It is a result, not a missing one.
+        const earthFault = String(d.study_params?.fault_type || '') === '1ph';
         const issues = [];
         for (const r of busRows) {
-            if (r.ikss_ka === null || r.ikss_ka <= 0) {
+            if (earthFault && r.ikss_ka === 0) {
+                issues.push({
+                    severity: 'note',
+                    title: `No earth path — ${r.dialogName || r.name || r.id}`,
+                    detail: 'Behind an ungrounded winding: an earth fault here draws next to nothing (0 kA).',
+                    cellId: r.id, cellName: r.name,
+                });
+            } else if (r.ikss_ka === null || r.ikss_ka <= 0) {
                 issues.push({
                     severity: 'warn',
                     title: `Missing Ikss — ${r.dialogName || r.name || r.id}`,
@@ -588,6 +598,9 @@
         }
         healthScore = Math.max(0, Math.min(100, healthScore));
 
+        const rank = { danger: 0, warn: 1, note: 2 };
+        issues.sort((a, b) => (rank[a.severity] ?? 1) - (rank[b.severity] ?? 1));
+
         return {
             studyMode: 'shortcircuit',
             isAnsi,
@@ -613,7 +626,8 @@
             totalGen: null, totalLoad: null, totalLosses: null, lossPct: null,
             breakdownGen: [], breakdownLoad: [],
             minV: null, maxV: null, minBus: null, maxBus: maxBus,
-            busBuckets: { good: validIk.length, warn: 0, danger: 0, total: busRows.length },
+            busBuckets: { good: validIk.length + (earthFault ? busRows.filter(r => r.ikss_ka === 0).length : 0),
+                          warn: 0, danger: 0, total: busRows.length },
             maxL: null, maxLEntity: null,
             loadingGood: 0, loadingWarn: 0, loadingDanger: 0,
             loadingHeadroomPct: 0,
@@ -780,11 +794,13 @@
             #${PANEL_ID} .ehd-issue:hover { background: #f1f5f9; transform: translateX(2px); }
             #${PANEL_ID} .ehd-issue.danger { border-left-color: ${COLOR_DANGER}; }
             #${PANEL_ID} .ehd-issue.warn   { border-left-color: ${COLOR_WARN}; }
+            #${PANEL_ID} .ehd-issue.note   { border-left-color: #94A3B8; }
             #${PANEL_ID} .ehd-issue-dot {
                 width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
             }
             #${PANEL_ID} .ehd-issue.danger .ehd-issue-dot { background: ${COLOR_DANGER}; }
             #${PANEL_ID} .ehd-issue.warn   .ehd-issue-dot { background: ${COLOR_WARN}; }
+            #${PANEL_ID} .ehd-issue.note   .ehd-issue-dot { background: #94A3B8; }
             #${PANEL_ID} .ehd-issue-text { font-size: 11px; line-height: 1.35; flex: 1; }
             #${PANEL_ID} .ehd-issue-title { font-weight: 600; color: ${COLOR_TEXT}; }
             #${PANEL_ID} .ehd-issue-detail { color: ${COLOR_MUTED}; }
@@ -1362,7 +1378,7 @@
                     <div class="ehd-section">
                         <div class="ehd-section-title">
                             <span>Critical Issues</span>
-                            <span class="ehd-count">${metrics.issues.length}</span>
+                            <span class="ehd-count">${metrics.issues.filter(i => i.severity !== 'note').length}</span>
                         </div>
                         <div class="ehd-issues">${buildIssues(metrics, targets)}</div>
                     </div>
@@ -1476,7 +1492,7 @@
 Status: ${status.text} (Score ${metrics.healthScore}/100)
 Max Ikss: ${fmt(metrics.maxIk, 2)} kA | Min Ikss: ${fmt(metrics.minIk, 2)} kA
 Max Ip: ${fmt(metrics.maxIp, 2)} kA | Max Ith: ${fmt(metrics.maxIth, 2)} kA
-Buses: ${metrics.counts.buses} | Issues: ${metrics.issues.length}`
+Buses: ${metrics.counts.buses} | Issues: ${metrics.issues.filter(i => i.severity !== 'note').length}`
                     : `Electrisim — Network Health Summary
 Status: ${status.text} (Score ${metrics.healthScore}/100)
 Generation:  ${fmt(metrics.totalGen, 2)} MW
