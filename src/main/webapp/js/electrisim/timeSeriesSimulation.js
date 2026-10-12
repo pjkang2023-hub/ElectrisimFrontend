@@ -53,7 +53,8 @@ function placeTsLabel(graph, cell, text) {
  * The day on the drawing, not only in the results dialog: each element's range over the run
  * (and a source's or load's energy), each store's state of charge from start to end. The AC
  * rows name their element by its model name (mxCell_<n>), the stores and PCS by its cell id.
- * A box the run has nothing for - the DC buses and loads, in its totals alone - says so.
+ * The DC network, the AC breakers and motors from each element's range over the run
+ * (data.dc.summary). A box the run has nothing for says so.
  */
 function labelTimeSeriesCells(graph, data, request) {
     const model = graph.getModel();
@@ -132,6 +133,46 @@ Q[MVar]: ${range(rs, 'q_mvar')}`);
 Time series (${steps})
 P[MW]: ${range(rs, 'p_mw')}${state}`;
         });
+        // The DC network (and the AC breakers and motors), from each element's range over the run.
+        const dcSummary = data.dc?.summary || {};
+        const stat = (e, k) => e.stats?.[k];
+        const sRange = (e, k, d = 3) => {
+            const s = stat(e, k);
+            if (!s) return 'N/A';
+            return Math.abs(s.max - s.min) < 0.5 * 10 ** -d ? tsFmt(s.min, d) : `${tsFmt(s.min, d)} - ${tsFmt(s.max, d)}`;
+        };
+        const sMax = (e, k, d = 3) => (stat(e, k) ? tsFmt(stat(e, k).max, d) : 'N/A');
+        const sAbsMax = (e, ...ks) => {
+            const v = ks.map((k) => stat(e, k)).filter(Boolean).flatMap((s) => [Math.abs(s.min), Math.abs(s.max)]);
+            return v.length ? tsFmt(Math.max(...v)) : 'N/A';
+        };
+        const sEnergy = (e, k) => (stat(e, k) ? tsFmt(stat(e, k).mean * (e.steps || 0) * hours, 2) : 'N/A');
+        const dcEach = (kind, typeName, body) => (dcSummary[kind] || []).forEach((e) => {
+            const c = e.id != null ? model.getCell(e.id) : null;
+            if (c) placeTsLabel(graph, c, `${formatResultNameHeader(c, e.name, typeName)}
+Time series (${steps})
+${body(e)}`);
+        });
+        dcEach('dcbuses', 'DC Bus', (e) => `U[pu]: ${sRange(e, 'vm_pu')}`);
+        dcEach('loadsdc', 'Load DC', (e) => `P[MW]: ${sRange(e, 'p_mw')}\nE[MWh]: ${sEnergy(e, 'p_mw')}`);
+        dcEach('sourcesdc', 'Source DC', (e) => `P[MW]: ${sRange(e, 'p_mw')}\nE[MWh]: ${sEnergy(e, 'p_mw')}`);
+        dcEach('vscs', 'VSC', (e) => `P[MW]: ${sRange(e, 'p_mw')}\nLoading max[%]: ${sMax(e, 'loading_percent', 1)}`);
+        dcEach('ssts', 'SST', (e) => `P MV[MW]: ${sRange(e, 'p_mv_mw')}\nLoss[MWh]: ${sEnergy(e, 'loss_mw')}\nLoading max[%]: ${sMax(e, 'loading_percent', 1)}`);
+        dcEach('dcdcconverters', 'DC/DC Converter', (e) => `P in[MW]: ${sRange(e, 'p_in_mw')}\nLoss[MWh]: ${sEnergy(e, 'loss_mw')}\nLoading max[%]: ${sMax(e, 'loading_percent', 1)}`);
+        dcEach('dcdiodes', 'DC Diode', (e) => {
+            const on = e.flags_true_steps?.conducting ?? 0;
+            const state = on === e.steps ? 'conducting all run' : on === 0 ? 'blocking all run' : `conducting ${on} of ${e.steps} steps`;
+            return `I[kA]: ${sRange(e, 'i_ka')}\n${state}`;
+        });
+        dcEach('dcbreakers', 'DC Breaker', (e) => `I max[kA]: ${sAbsMax(e, 'i_ka')}\nLoading max[%]: ${sMax(e, 'loading_percent', 1)}`);
+        dcEach('linedcs', 'DC Cable', (e) => `I max[kA]: ${sAbsMax(e, 'i_from_ka', 'i_to_ka')}\nLoading max[%]: ${sMax(e, 'loading_percent', 1)}`);
+        dcEach('switches', 'Switch', (e) => `I max[kA]: ${sAbsMax(e, 'i_ka')}`);
+        dcEach('motors', 'Motor', (e) => `P[MW]: ${sRange(e, 'p_mw')}\nE[MWh]: ${sEnergy(e, 'p_mw')}`);
+        // Without the microgrid dispatch its stores and PCS come with the DC network.
+        if (!(mg.ders || []).length) {
+            dcEach('ders', 'Store', (e) => `P[MW]: ${sRange(e, 'p_mw')}${stat(e, 'soc_percent') ? `\nSoC[%]: ${sRange(e, 'soc_percent', 2)}` : ''}`);
+            dcEach('pcs', 'PCS', (e) => `P[MW]: ${sRange(e, 'p_mw')}\nQ[MVar]: ${sRange(e, 'q_mvar')}`);
+        }
         const isBox = (s) => s && s.includes('shapeELXXX=Result');
         const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
         Object.values(model.cells || {}).forEach((box) => {
