@@ -3,6 +3,7 @@ import ENV from './config/environment.js';
 import { DC_COMPONENT_TYPES, buildDcPayloadRow } from './utils/dcPayload.js';
 import { showResultWarnings } from './utils/resultWarnings.js';
 import { resolveStudyOpfCostCurrency } from './utils/opfCostCurrency.js';
+import { formatResultNameHeader } from './utils/attributeUtils.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import {
     getConnectedBusId,
@@ -1181,6 +1182,81 @@ function optimalPowerFlowPandaPower(a, b, c) {
 
 
 // Main processing function (FROM BACKEND TO FRONTEND)
+const opfFmt = (num, decimals = 3) => (num === null || num === undefined || !isFinite(num) ? 'N/A'
+    : (Math.abs(num) < 0.5 * 10 ** -decimals ? 0 : Number(num)).toFixed(decimals));
+// The OPF's rows are named "<name> (mxCell_<n>)" (a VSC's stand-in "(mxCell_<n> AC side)"): the name alone.
+const opfName = (name) => String(name || '').replace(/\s*\(mxCell_[^)]*\)\s*$/, '').replace(/ \(AC side\)$/, '');
+
+function placeOpfLabel(graph, cell, text) {
+    const model = graph.getModel();
+    // An element's placeholder hangs on its connecting line (connectedTo=<its id>): fill the
+    // first, drop duplicates, as the DC fault and EMT studies do.
+    const all = window.findAllResultPlaceholdersForComponent
+        ? window.findAllResultPlaceholdersForComponent(graph, cell) : [];
+    const existing = all.length ? all[0].placeholder
+        : (window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null);
+    all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+    if (existing) model.setValue(existing, text);
+    else if (window.insertResultBox) window.insertResultBox(graph, cell, text, { width: 76, height: 50, positionX: 0.5, positionY: 1.2 });
+}
+
+/**
+ * The OPF's answer on the drawing, not only in its dialog: each bus's voltage, each source's
+ * dispatch and price, each load's demand. A box the OPF has nothing for - a DC element, a
+ * branch - says so rather than "Click Simulate to generate results".
+ */
+function labelOpfCells(graph, data) {
+    const model = graph.getModel();
+    const cur = data.cost_currency || 'EUR';
+    const cell = (row) => (row && row.id != null && row.id !== '' ? model.getCell(row.id) : null);
+    const price = (row) => (row.marginal_cost != null ? `\nPrice[${cur}/MWh]: ${opfFmt(row.marginal_cost, 1)}` : '');
+    model.beginUpdate();
+    try {
+        (data.busbars || []).forEach((r) => {
+            const c = cell(r);
+            if (!c) return;
+            placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), 'Bus')}
+OPF
+U[pu]: ${opfFmt(r.vm_pu)}
+U[degree]: ${opfFmt(r.va_degree)}`);
+        });
+        const source = (kind) => (r) => {
+            const c = cell(r);
+            if (!c) return;
+            placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), kind)}
+OPF
+P[MW]: ${opfFmt(r.p_mw)}
+Q[MVar]: ${opfFmt(r.q_mvar)}${price(r)}`);
+        };
+        (data.externalgrids || []).forEach(source('External Grid'));
+        (data.generators || []).forEach(source('Generator'));
+        (data.staticgenerators || []).forEach(source('Static Generator'));
+        (data.storages || []).forEach(source('Storage'));
+        // A VSC's AC side stands in as a load (the OPF has no DC network): its own box, marked so.
+        (data.loads || []).forEach((r) => {
+            const c = cell(r);
+            if (!c) return;
+            const standIn = /AC side\)$/.test(r.name || '');
+            placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), 'Load')}
+OPF${standIn ? ' (AC side, as a load)' : ''}
+P[MW]: ${opfFmt(r.p_mw)}
+Q[MVar]: ${opfFmt(r.q_mvar)}`);
+        });
+        const isBox = (s) => s && s.includes('shapeELXXX=Result');
+        const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+        Object.values(model.cells || {}).forEach((box) => {
+            if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+            const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+            const c = (owner && model.getCell(owner)) || model.getParent(box);
+            const name = c?.value?.getAttribute?.('userFriendlyName') || c?.value?.getAttribute?.('name') || '';
+            model.setValue(box, `${name ? name + '\n' : ''}No OPF result`);
+        });
+    } finally {
+        model.endUpdate();
+        graph.getView?.().refresh?.();
+    }
+}
+
 async function processNetworkData(url, obj, b, grafka, simProgress) {
     const overlay = simProgress?.overlay;
     try {
@@ -1243,6 +1319,12 @@ async function processNetworkData(url, obj, b, grafka, simProgress) {
             showResultWarnings(dataJson.warnings, 'Optimal power flow notes');
         } catch (warnErr) {
             console.warn('OPF notes not shown:', warnErr);
+        }
+
+        try {
+            labelOpfCells(b, dataJson);
+        } catch (labelErr) {
+            console.warn('OPF results not placed on the diagram:', labelErr);
         }
 
         await ensureElectrisimModule('dialogs/OptimalPowerFlowResultsDialog');
