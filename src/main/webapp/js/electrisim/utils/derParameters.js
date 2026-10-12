@@ -27,7 +27,9 @@ export const DER_PARAMETERS = {
         ], 'Its voltage, capacity and resistance as ratings, or built from its cell: cells in series set its voltage, strings in parallel its capacity.'),
         num('vn_v', 'Ratings: nominal voltage', 'V', 800, 'Its nominal voltage: 800 V on a row bus, 51.2 V in a 48 V rack.', '1'),
         num('capacity_kwh', 'Ratings: energy', 'kWh', 224, 'Its capacity: energy over nominal voltage gives its ampere-hours.', '1'),
-        num('r0_mohm', 'Ratings: series resistance R0', 'mOhm', 62.5, 'Its ohmic resistance: what limits its current at a DC fault.', '0.1'),
+        // Blank: from its capacity (the cell below in series and parallel, 2.2 % of its voltage at
+        // 1 C). A fixed 62.5 mOhm - one 224 kWh string - gave a 5 MWh store 14 times its resistance.
+        num('r0_mohm', 'Ratings: series resistance R0', 'mOhm', '', 'Its ohmic resistance: what limits its current at a DC fault and sags its voltage under load. Leave blank to take it from its capacity: the cell below, in series to its voltage and in parallel to its capacity.', '0.1'),
         num('cells_series', 'Cells: in series', '', 250, 'By cells: its voltage is cells in series x the cell voltage.', '1', '1'),
         num('strings_parallel', 'Cells: strings in parallel', '', 1, 'By cells: its capacity is strings x the cell capacity.', '1', '1'),
         num('cell_v', 'Cells: cell nominal voltage', 'V', 3.2, 'LFP 3.2 V, NMC 3.6-3.7 V.', '0.01'),
