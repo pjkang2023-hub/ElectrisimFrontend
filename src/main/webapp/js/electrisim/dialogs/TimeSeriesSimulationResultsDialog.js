@@ -800,6 +800,11 @@
                 this.results.storages.forEach(s => rows.push([s.time_step, s.name, s.p_mw, s.q_mvar, s.soc_percent, s.energy_mwh]));
                 sheets.push({ name: 'res_storage', rows });
             }
+            this.buildDcExportSheets().forEach(s => sheets.push(s));
+            if (this.results.dc?.steps_omitted) {
+                sheets[0].rows.push(['DC per-step rows',
+                    `left out over ${this.results.dc.step_cap} steps: dc_summary gives each element's range`]);
+            }
             if (this.results.notes?.length) {
                 sheets[0].rows.push([], ['Notes'], ...this.results.notes.map(note => [note]));
             }
@@ -813,6 +818,54 @@
                     });
                 });
                 sheets.push({ name: 'profiles', rows });
+            }
+            return sheets;
+        }
+
+        /**
+         * The DC network's sheets: its per-step rows a sheet a kind (res_dc_<kind>, columns as
+         * the rows carry them), each element's range over the run (dc_summary, at any run
+         * length), and the microgrid's stores and PCS. The export had the AC tables alone.
+         */
+        buildDcExportSheets() {
+            const sheets = [];
+            const SHEET = {
+                dcbuses: 'res_dc_bus', loadsdc: 'res_dc_load', sourcesdc: 'res_dc_source', vscs: 'res_dc_vsc',
+                b2bvscs: 'res_dc_b2b_vsc', ssts: 'res_dc_sst', dcdcconverters: 'res_dc_dcdc', dcdiodes: 'res_dc_diode',
+                dcbreakers: 'res_dc_breaker', linedcs: 'res_dc_line', dccapacitors: 'res_dc_capacitor',
+                ders: 'res_dc_der', pcs: 'res_dc_pcs', switches: 'res_switch', motors: 'res_motor',
+            };
+            const perStep = (name, rows) => {
+                if (!rows?.length) return;
+                const fixed = ['time_step', 'name', 'id'];
+                const keys = [];
+                rows.forEach(r => Object.keys(r).forEach(k => {
+                    if (!fixed.includes(k) && !keys.includes(k) && (r[k] === null || typeof r[k] !== 'object')) keys.push(k);
+                }));
+                const cols = [...fixed, ...keys];
+                sheets.push({ name: name.slice(0, 31), rows: [cols, ...rows.map(r => cols.map(c => r[c] ?? null))] });
+            };
+            const dc = this.results.dc;
+            if (dc?.steps) {
+                Object.entries(dc.steps).forEach(([kind, rows]) => perStep(SHEET[kind] || `res_dc_${kind}`, rows));
+            }
+            if (dc?.summary) {
+                const rows = [['kind', 'name', 'id', 'value', 'min', 'max', 'mean', 'step_of_min', 'step_of_max', 'steps']];
+                Object.entries(dc.summary).forEach(([kind, elements]) => (elements || []).forEach((e) => {
+                    Object.entries(e.stats || {}).forEach(([k, s]) => {
+                        rows.push([kind, e.name, e.id, k, s.min, s.max, s.mean, s.t_min, s.t_max, e.steps]);
+                    });
+                    Object.entries(e.flags_true_steps || {}).forEach(([k, n]) => {
+                        rows.push([kind, e.name, e.id, `${k} (steps true)`, null, null, null, null, null, `${n} / ${e.steps}`]);
+                    });
+                }));
+                if (rows.length > 1) sheets.push({ name: 'dc_summary', rows });
+            }
+            const mg = this.results.microgrid;
+            if (mg) {
+                const labelled = rows => (rows || []).map(r => ({ ...r, name: r.label || r.name }));
+                perStep('res_mg_store', labelled(mg.ders));
+                perStep('res_mg_pcs', labelled(mg.pcs));
             }
             return sheets;
         }
