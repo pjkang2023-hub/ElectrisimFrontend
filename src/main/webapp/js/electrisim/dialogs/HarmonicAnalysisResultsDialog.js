@@ -359,7 +359,10 @@ export function showHarmonicAnalysisResultsDialog(dataJson, graph) {
 
     const thead = document.createElement('thead');
     const hr = document.createElement('tr');
-    const headers = ['Bus', 'VTHD [%]', ...orders.map(h => `V_h${h} [kV]`)];
+    // IEEE 519's verdict per bus: the backend judges each against its class's limits, and the
+    // table showed none of it.
+    const judged = buses.some(b => b.ieee519);
+    const headers = ['Bus', 'VTHD [%]', ...(judged ? ['IEEE 519 (THD / single limit)'] : []), ...orders.map(h => `V_h${h} [kV]`)];
     headers.forEach(text => {
         const th = document.createElement('th');
         th.textContent = text;
@@ -399,6 +402,16 @@ export function showHarmonicAnalysisResultsDialog(dataJson, graph) {
 
         tr.appendChild(tdBus);
         tr.appendChild(tdThd);
+        if (judged) {
+            const j = bus.ieee519;
+            const td519 = document.createElement('td');
+            td519.textContent = j
+                ? `${j.ok ? 'PASS' : 'FAIL'} (${fmtNum(j.thd_limit_percent, 1)} % / ${fmtNum(j.individual_limit_percent, 1)} %)`
+                : '—';
+            Object.assign(td519.style, { padding: '8px', whiteSpace: 'nowrap', fontWeight: '600',
+                color: j ? (j.ok ? '#198754' : '#c0392b') : '#6c757d' });
+            tr.appendChild(td519);
+        }
 
         const hv = bus.harmonic_voltages_kv || {};
         orders.forEach(h => {

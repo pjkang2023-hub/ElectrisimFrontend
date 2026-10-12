@@ -107,14 +107,22 @@ IE ${formatNumber(cell.incident_energy_cal_cm2, 2)}
 PPE Cat ${cell.ppe_category ?? 'N/A'}${methodTag}`;
 
                 const parent = resultCell;
-                const existing = findFn ? findFn(graph, parent) : null;
-                if (existing) {
-                    graph.getModel().setValue(existing, resultString);
+                const model = graph.getModel();
+                // A bus's placeholder hangs on its connecting line (connectedTo=<its id>), not under
+                // it: looking only among its children, the result went into a new box and the bus's
+                // own "Click Simulate to generate results" stayed beside it. Fill that one; drop duplicates.
+                const all = window.findAllResultPlaceholdersForComponent
+                    ? window.findAllResultPlaceholdersForComponent(graph, parent) : [];
+                let box = all.length ? all[0].placeholder : (findFn ? findFn(graph, parent) : null);
+                all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+                if (box) {
+                    model.setValue(box, resultString);
                 } else if (insertFn) {
-                    insertFn(graph, parent, resultString, { width: 48, height: 48, positionX: 0, positionY: 1.0 });
+                    box = insertFn(graph, parent, resultString, { width: 48, height: 48, positionX: 0, positionY: 1.0 });
                 } else {
-                    graph.insertVertex(parent, null, resultString, 0, 1.0, 48, 48, fallbackStyle, true);
+                    box = graph.insertVertex(parent, null, resultString, 0, 1.0, 48, 48, fallbackStyle, true);
                 }
+                window.fitResultBox?.(graph, box);
             });
         }
     };
@@ -180,6 +188,17 @@ PPE Cat ${cell.ppe_category ?? 'N/A'}${methodTag}`;
                     if (dataJson[type]) {
                         processor(dataJson[type], graph, _grafka, cellIdMap);
                     }
+                });
+                // Arc flash studies the buses alone: every other box says so rather than
+                // "Click Simulate to generate results".
+                const isBox = (s) => s && s.includes('shapeELXXX=Result');
+                const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+                Object.values(model.cells || {}).forEach((box) => {
+                    if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+                    const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+                    const c = (owner && model.getCell(owner)) || model.getParent(box);
+                    const name = c?.value?.getAttribute?.('userFriendlyName') || c?.value?.getAttribute?.('name') || '';
+                    model.setValue(box, `${name ? name + '\n' : ''}No arc-flash result (buses only)`);
                 });
             } finally {
                 model.endUpdate();

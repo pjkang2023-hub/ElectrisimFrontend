@@ -23,6 +23,7 @@ import {
 import { clearFaultLocationMarkers, placeFaultMarkersForScRows } from './utils/faultLocationMarkers.js';
 import { highlightCalculationErrorElements, calculationErrorHighlightSuffix } from './utils/calculationErrorHighlight.js';
 import ENV from './config/environment.js';
+import { prepareNetworkData } from './utils/networkDataPreparation.js';
 import { getConnectedBusId, getLineBusEndpointsForPayload, getSwitchConnections, getThreeWindingConnections, confirmTransformerVoltageMismatches, getTransformerConnections as getTransformerBusesPP } from './loadFlow.js';
 import { computeWindTurbinePMw, windTurbineHasWindData } from './windTurbineDialog.js';
 import { resolveStorageFixedPf } from './storageDialog.js';
@@ -770,21 +771,27 @@ const elementProcessors = {
                 
                 const cellName = formatResultNameHeader(resultCell, cell.name, 'Bus');
                 
+                // A harmonic run's answer on the bus too: its THD and IEEE 519's verdict for its class.
+                const j = cell.ieee519;
+                const thd = cell.vthd_percent != null
+                    ? `\nTHD[%]: ${fmtOpenDssFloat(cell.vthd_percent)}${j ? `\nIEEE 519: ${j.ok ? 'PASS' : 'FAIL'} (<= ${j.thd_limit_percent} %)` : ''}`
+                    : '';
                 const resultString = `${cellName}
 U[pu]: ${fmtOpenDssFloat(cell.vm_pu)}
 U[kV]: ${formatBusVmKvForCell(cell, resultCell)}
-U[deg]: ${fmtOpenDssFloat(cell.va_degree)}`;
+U[deg]: ${fmtOpenDssFloat(cell.va_degree)}${thd}`;
 
                 const findFn = typeof window !== 'undefined' && window.findResultPlaceholder;
                 const insertFn = typeof window !== 'undefined' && window.insertResultBox;
                 const fallbackStyle = (typeof window !== 'undefined' && window.RESULT_BOX_STYLE) || 'shapeELXXX=Result';
                 const parent = resultCell;
-                const existing = findFn ? findFn(b, parent) : null;
-                if (existing) {
-                    b.getModel().setValue(existing, resultString);
+                let box = findFn ? findFn(b, parent) : null;
+                if (box) {
+                    b.getModel().setValue(box, resultString);
                 } else {
-                    const labelka = insertFn ? insertFn(b, parent, resultString, { width: 74, height: 64, positionX: 0, positionY: 1.0 }) : b.insertVertex(parent, null, resultString, 0, 2.7, 74, 64, fallbackStyle, true);
+                    box = insertFn ? insertFn(b, parent, resultString, { width: 74, height: 64, positionX: 0, positionY: 1.0 }) : b.insertVertex(parent, null, resultString, 0, 2.7, 74, 64, fallbackStyle, true);
                 }
+                window.fitResultBox?.(b, box);
                 processVoltageColor(grafka, resultCell, cell.vm_pu);
             } catch (error) {
                 console.error(`Error processing busbar ${cell.id}:`, error);
@@ -1623,6 +1630,26 @@ async function processNetworkData(url, obj, b, grafka, app, exportCommands = fal
             harmonicResultsData = dataJson;
         }
 
+        // OpenDSS has no DC or converter model: every box still at "Click Simulate to generate
+        // results" after the run - the DC side, the converters - says so.
+        if (processedCount > 0) {
+            const model = b.getModel();
+            const isBox = (s) => s && s.includes('shapeELXXX=Result');
+            const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+            model.beginUpdate();
+            try {
+                Object.values(model.cells || {}).forEach((box) => {
+                    if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+                    const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+                    const c = (owner && model.getCell(owner)) || model.getParent(box);
+                    const name = c?.value?.getAttribute?.('userFriendlyName') || c?.value?.getAttribute?.('name') || '';
+                    model.setValue(box, `${name ? name + '\n' : ''}No OpenDSS result (no DC or converter model)`);
+                });
+            } finally {
+                model.endUpdate();
+            }
+        }
+
         // Handle OpenDSS commands export if requested
         if (exportCommands && dataJson.opendss_commands) {
             dssLog('Exporting OpenDSS commands to file...');
@@ -1897,12 +1924,22 @@ async function executeOpenDSSHarmonicAnalysis(parameters, app, graph) {
         user_email: userEmail
     };
 
-    let networkData = collectNetworkDataStructured(graph);
-    if (networkData.length === 0 && window.App && window.App.editor && window.App.editor.graph) {
-        networkData = collectNetworkDataStructured(window.App.editor.graph);
+    // A drawing with converters or a DC side: the full request every other study sends. The
+    // OpenDSS collector below knows the AC elements alone - it dropped every VSC, SST and PCS,
+    // the very sources of the harmonics, and every bus read 0 % THD.
+    const DC_SIDE = /shapeELXXX=(VSC|B2B VSC|Solid-State Transformer|DC\/DC Converter|PCS|DC Bus|Load DC|Source DC)(;|$)/;
+    const hasDcSide = Object.values(graph.getModel().cells || {}).some(c => DC_SIDE.test(String(graph.getModel().getStyle(c) || '')));
+    let completeData;
+    if (hasDcSide) {
+        const prepared = prepareNetworkData(graph, opendssData, { removeResultCells: false });
+        completeData = Object.keys(prepared).sort((x, y) => Number(x) - Number(y)).map(k => prepared[k]);
+    } else {
+        let networkData = collectNetworkDataStructured(graph);
+        if (networkData.length === 0 && window.App && window.App.editor && window.App.editor.graph) {
+            networkData = collectNetworkDataStructured(window.App.editor.graph);
+        }
+        completeData = [opendssData, ...networkData];
     }
-
-    const completeData = [opendssData, ...networkData];
     const exportCommands = opendssData.exportCommands || false;
     if (!(await confirmTransformerVoltageMismatches(graph))) {
         return;
