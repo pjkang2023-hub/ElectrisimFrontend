@@ -30,7 +30,99 @@ function getUserEmail() {
     return 'unknown@user.com';
 }
 
-async function processResults(url, obj, simProgress) {
+const tdsFmt = (num, decimals = 3) => (num === null || num === undefined || !isFinite(num) ? 'N/A'
+    : (Math.abs(num) < 0.5 * 10 ** -decimals ? 0 : Number(num)).toFixed(decimals));
+
+function placeTdsLabel(graph, cell, text) {
+    const model = graph.getModel();
+    // Fill the element's own placeholder (it hangs on its connecting line), drop duplicates.
+    const all = window.findAllResultPlaceholdersForComponent
+        ? window.findAllResultPlaceholdersForComponent(graph, cell) : [];
+    let box = all.length ? all[0].placeholder
+        : (window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null);
+    all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+    if (box) model.setValue(box, text);
+    else if (window.insertResultBox) box = window.insertResultBox(graph, cell, text, { width: 80, height: 56, positionX: 0.5, positionY: 1.2 });
+    window.fitResultBox?.(graph, box);
+}
+
+/**
+ * The run on the drawing, not only in its dialog: each bus its voltage range, the grid and each
+ * machine its mean power and swing (peak to peak, strongest line), each PCS its power and its
+ * store's state of charge, each converter following its racks its power range. ANDES names
+ * its buses and machines by its own ids (1, GENROU_1): they are found by their diagram names.
+ */
+function labelTdsCells(graph, data, request) {
+    const model = graph.getModel();
+    const byName = new Map();
+    Object.values(request || {}).forEach((el) => {
+        if (el && typeof el === 'object' && el.userFriendlyName && el.id != null && !byName.has(el.userFriendlyName)) {
+            const c = model.getCell(el.id);
+            if (c) byName.set(String(el.userFriendlyName), c);
+        }
+    });
+    const cellByName = (name) => byName.get(String(name || '').replace(/ \(DC network\)$/, '').replace(/ \(MV\)$/, '')) || null;
+    const range = (vals, d = 3) => {
+        const v = (vals || []).filter((x) => x != null && isFinite(x));
+        if (!v.length) return 'N/A';
+        const lo = Math.min(...v), hi = Math.max(...v);
+        return Math.abs(hi - lo) < 0.5 * 10 ** -d ? tdsFmt(lo, d) : `${tdsFmt(lo, d)} - ${tdsFmt(hi, d)}`;
+    };
+    const tf = data.tf != null ? `${data.tf} s` : '';
+    const head = `Transient stability${tf ? ` (${tf})` : ''}`;
+    model.beginUpdate();
+    try {
+        (data.bus_voltage || []).forEach((s) => {
+            const c = cellByName(s.name);
+            if (c) placeTdsLabel(graph, c, `${s.name}\n${head}\nU[pu]: ${range(s.values)}`);
+        });
+        const swing = data.swing || {};
+        const swingRow = (name) => [...(swing.grid || []), ...(swing.machines || [])].find((r) => r.name === name);
+        const sourceLabel = (name, pSeries) => {
+            const sw = swingRow(name);
+            const strongest = sw?.dominant?.[0];
+            return sw
+                ? `P mean[MW]: ${tdsFmt(sw.mean_mw)}\nSwing p-p[MW]: ${tdsFmt(sw.peak_to_peak_mw)}`
+                    + (strongest ? `\nStrongest: ${tdsFmt(strongest.f_hz, 2)} Hz, ${tdsFmt(strongest.amplitude_mw, 2)} MW` : '')
+                : `P[MW]: ${range(pSeries)}`;
+        };
+        (swing.grid || []).forEach((r) => {
+            const c = cellByName(r.name);
+            if (c) placeTdsLabel(graph, c, `${r.name}\n${head}\n${sourceLabel(r.name)}`);
+        });
+        (data.generator_p_mw || []).forEach((s) => {
+            const c = cellByName(s.name);
+            if (!c) return;
+            const omega = (data.omega || []).find((o) => o.name === s.name);
+            placeTdsLabel(graph, c, `${s.name}\n${head}\n${sourceLabel(s.name, s.values)}${omega ? `\nω[pu]: ${range(omega.values, 4)}` : ''}`);
+        });
+        (data.pcs || []).forEach((r) => {
+            const c = (r.id != null && model.getCell(r.id)) || cellByName(r.label);
+            if (!c) return;
+            const soc = Array.isArray(r.soc_percent) && r.soc_percent.length
+                ? `\nSoC[%]: ${tdsFmt(r.soc_percent[0], 2)} -> ${tdsFmt(r.soc_percent[r.soc_percent.length - 1], 2)}` : '';
+            placeTdsLabel(graph, c, `${r.label}\n${head}\nP[MW]: ${range(r.p_mw)}\nQ[MVar]: ${range(r.q_mvar)}${soc}`);
+        });
+        (data.load_profiles || []).forEach((lp) => {
+            const c = cellByName(lp.load);
+            if (c) placeTdsLabel(graph, c, `${String(lp.load).replace(/ \(DC network\)$/, '').replace(/ \(MV\)$/, '')}\n${head}\nP[MW]: ${range(lp.p_mw)}`);
+        });
+        const isBox = (s) => s && s.includes('shapeELXXX=Result');
+        const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+        Object.values(model.cells || {}).forEach((box) => {
+            if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+            const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+            const c = (owner && model.getCell(owner)) || model.getParent(box);
+            const name = c?.value?.getAttribute?.('userFriendlyName') || c?.value?.getAttribute?.('name') || '';
+            model.setValue(box, `${name ? name + '\n' : ''}No transient-stability result`);
+        });
+    } finally {
+        model.endUpdate();
+        graph.getView?.().refresh?.();
+    }
+}
+
+async function processResults(url, obj, simProgress, graph) {
     const overlay = simProgress?.overlay;
     try {
         overlay?.append('Sending request…', { time: true });
@@ -59,6 +151,13 @@ async function processResults(url, obj, simProgress) {
             const detail = dataJson.exception ? `\n\n${dataJson.exception}` : '';
             alert(msg + detail);
             return;
+        }
+        if (graph) {
+            try {
+                labelTdsCells(graph, dataJson, obj);
+            } catch (labelErr) {
+                console.warn('Transient stability results not placed on the diagram:', labelErr);
+            }
         }
         overlay?.append('Done.', { time: true });
         await settleSimulationProgress(overlay, null, simProgress?.abortController);
@@ -123,7 +222,7 @@ window.transientStabilityAndes = function (a, b, c) {
 
         try {
             const obj = prepareNetworkData(graph, simulationParameters, { removeResultCells: true });
-            await processResults(ENV.backendUrl + '/', obj, simProgress);
+            await processResults(ENV.backendUrl + '/', obj, simProgress, graph);
         } catch (error) {
             const settled = await settleSimulationProgress(simProgress.overlay, error, simProgress.abortController);
             if (settled.aborted) return;

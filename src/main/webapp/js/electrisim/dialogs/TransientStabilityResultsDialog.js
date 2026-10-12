@@ -55,6 +55,8 @@
 
             const body = document.createElement('div');
             body.style.cssText = 'flex: 1; overflow-y: auto; padding: 16px 24px;';
+            const swing = this.buildSwing();
+            if (swing) body.appendChild(swing);
             const chartsHost = document.createElement('div');
             chartsHost.id = 'tds-charts-host';
             body.appendChild(chartsHost);
@@ -154,6 +156,59 @@
             return card;
         }
 
+        /** The swing rows: the grid's and each machine's, then the PCS's when given. */
+        swingRows() {
+            const sw = this.results.swing;
+            if (!sw) return [];
+            return [...(sw.grid || []), ...(sw.machines || []), ...(sw.pcs || [])];
+        }
+
+        /**
+         * The power swing the grid and the machines see (from swing.from_s on): its mean, peak to
+         * peak, RMS, steepest ramp, strongest lines and the torsional band's RMS. The backend gave
+         * it and the dialog showed none of it - the swing study's whole answer.
+         */
+        buildSwing() {
+            const sw = this.results.swing;
+            const rows = this.swingRows();
+            if (!sw || !rows.length) return null;
+            const f = (x, d = 3) => (x == null || !isFinite(x) ? '—' : Number(x).toFixed(d));
+            const band = sw.band_hz || rows[0].band_hz || [];
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'margin-bottom:18px;';
+            const h = document.createElement('h3');
+            h.textContent = `Power swing (from ${f(sw.from_s, 1)} s)`;
+            h.style.cssText = 'margin:0 0 8px;font-size:14px;';
+            wrap.appendChild(h);
+            const table = document.createElement('table');
+            table.style.cssText = 'border-collapse:collapse;font-size:12px;width:100%;';
+            const head = ['Source', 'Mean (MW)', 'Peak to peak (MW)', 'RMS (MW)', 'Max ramp (MW/s)',
+                'Strongest lines (Hz: MW)', `${f(band[0], 0)}-${f(band[1], 0)} Hz RMS (MW)`];
+            const cell = (txt, th) => {
+                const c = document.createElement(th ? 'th' : 'td');
+                c.textContent = txt;
+                c.style.cssText = `border:1px solid #dee2e6;padding:4px 6px;text-align:${th ? 'left' : 'right'};${th ? 'background:#f1f3f5;' : ''}`;
+                return c;
+            };
+            const tr0 = document.createElement('tr');
+            head.forEach(x => tr0.appendChild(cell(x, true)));
+            table.appendChild(tr0);
+            rows.forEach((r) => {
+                const tr = document.createElement('tr');
+                const lines = (r.dominant || []).slice(0, 3).map(d => `${f(d.f_hz, 2)}: ${f(d.amplitude_mw, 2)}`).join(', ');
+                const bandRms = r.band_resolved ? f(r.band_rms_mw) : `not resolved (Nyquist ${f(r.nyquist_hz, 0)} Hz)`;
+                [r.name || r.label || r.id, f(r.mean_mw), f(r.peak_to_peak_mw), f(r.total_rms_mw), f(r.max_ramp_mw_per_s, 1), lines || '—', bandRms]
+                    .forEach((x, i) => {
+                        const c = cell(x, false);
+                        if (i === 0 || i === 5 || i === 6) c.style.textAlign = 'left';
+                        tr.appendChild(c);
+                    });
+                table.appendChild(tr);
+            });
+            wrap.appendChild(table);
+            return wrap;
+        }
+
         async renderCharts(host) {
             const t = this.results.time || [];
             if (!t.length) {
@@ -236,6 +291,38 @@
                     values: lp.p_mw
                 })), 'P [MW]');
             }
+            // The swing's spectrum: amplitude against frequency, each source on one frequency axis.
+            const spectra = this.swingRows().filter(r => r.spectrum?.f_hz?.length);
+            if (spectra.length) {
+                const wrap = document.createElement('div');
+                wrap.style.cssText = 'margin-bottom:20px;height:280px;position:relative;';
+                const h = document.createElement('h3');
+                h.textContent = 'Power swing spectrum (MW)';
+                h.style.cssText = 'margin:0 0 8px;font-size:14px;';
+                const canvas = document.createElement('canvas');
+                wrap.appendChild(h);
+                wrap.appendChild(canvas);
+                host.appendChild(wrap);
+                this.charts.push(new ChartCtor(canvas, {
+                    type: 'line',
+                    data: {
+                        datasets: spectra.map((r, i) => ({
+                            label: r.name || r.label || r.id,
+                            data: r.spectrum.f_hz.map((x, k) => ({ x, y: r.spectrum.amplitude_mw[k] })),
+                            borderColor: palette[i % palette.length], backgroundColor: 'transparent',
+                            borderWidth: 1.5, pointRadius: 0, tension: 0
+                        }))
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, parsing: false,
+                        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } },
+                        scales: {
+                            x: { type: 'linear', title: { display: true, text: 'Frequency [Hz]' } },
+                            y: { title: { display: true, text: 'Amplitude [MW]' } }
+                        }
+                    }
+                }));
+            }
         }
 
         exportCsv() {
@@ -289,6 +376,17 @@
                 if (rt?.enabled) {
                     lines.push(`ride_through_pass,${rt.pass ?? ''}`);
                 }
+            }
+            const swingRows = this.swingRows();
+            if (swingRows.length) {
+                lines.push('');
+                lines.push(`swing_from_s,${this.results.swing.from_s ?? ''}`);
+                lines.push('source,mean_mw,peak_to_peak_mw,total_rms_mw,max_ramp_mw_per_s,band_rms_mw,dominant_hz_mw');
+                swingRows.forEach((r) => {
+                    const dom = (r.dominant || []).map(d => `${d.f_hz}:${d.amplitude_mw}`).join(' ');
+                    lines.push([r.name || r.label || r.id, r.mean_mw, r.peak_to_peak_mw, r.total_rms_mw,
+                        r.max_ramp_mw_per_s, r.band_resolved ? r.band_rms_mw : '', dom].map(x => x ?? '').join(','));
+                });
             }
             const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
             const a = document.createElement('a');
