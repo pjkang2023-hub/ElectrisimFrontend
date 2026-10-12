@@ -55,6 +55,24 @@ window.emtStudy = function (a, b, c) {
         }
     }
 
+    /**
+     * Every result box still at its "Click Simulate to generate results" after the run - an
+     * element the study gives nothing for - says so: dozens of them read as if the study had
+     * yet to run.
+     */
+    function markUnstudied(graph, study) {
+        const model = graph.getModel();
+        const isBox = (s) => s && s.includes('shapeELXXX=Result');
+        const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+        Object.values(model.cells || {}).forEach((box) => {
+            if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+            const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+            const cell = (owner && model.getCell(owner)) || model.getParent(box);
+            const name = cell?.value?.getAttribute?.('userFriendlyName') || cell?.value?.getAttribute?.('name') || '';
+            model.setValue(box, `${name ? name + '\n' : ''}No ${study} result`);
+        });
+    }
+
     /** Each DC bus with its lowest voltage; each breaker with what it interrupted and its arrester's energy. */
     function labelCells(graph, emt) {
         const model = graph.getModel();
@@ -86,18 +104,84 @@ ${opened ? `Interrupted[kA]: ${fmt(brk.i_open_ka)}` : `Peak[kA]: ${fmt(brk.i_pea
 Arrester[kJ]: ${fmt(brk.arrester_energy_kj)}
 ${brk.exceeds_capacity || brk.exceeds_energy ? 'EXCEEDS' : 'OK'}`, { width: 72, height: 60, positionX: 0.5, positionY: 1.2 });
             });
+            // The AC network's grid, transformers and generators: their peak phase current. A VSC's
+            // AC-side peak goes into its converter box below.
+            const acPeak = new Map();
+            ((emt.ac && emt.ac.branches) || []).forEach((br) => {
+                if (br.id == null || br.id === '') return;
+                if (br.kind === 'VSC') { acPeak.set(br.id, br.i_peak_ka); return; }
+                const cell = model.getCell(br.id);
+                if (!cell) return;
+                const side = /\(([^)]*side)\)\s*$/.exec(br.label || '');
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, (br.label || '').replace(/\s*\([^)]*side\)\s*$/, ''), br.kind || 'Element')}
+EMT
+I peak[kA]: ${fmt(br.i_peak_ka)}${side ? ` (${side[1]})` : ''}`, { width: 72, height: 44, positionX: 0.5, positionY: 1.2 });
+            });
+            // Each converter (VSC, PCS, DC/DC, an SST's stages): its power at the start and the end,
+            // its lowest DC voltage, and whether it blocked. Stages sharing an element are listed together.
+            const convByCell = new Map();
+            (emt.converters || []).forEach((cv) => {
+                if (cv.id == null || cv.id === '') return;
+                if (!convByCell.has(cv.id)) convByCell.set(cv.id, []);
+                convByCell.get(cv.id).push(cv);
+            });
+            convByCell.forEach((rows, id) => {
+                const cell = model.getCell(id);
+                if (!cell) return;
+                const lines = rows.map((cv) => {
+                    const stage = rows.length > 1 ? `${cv.label}: ` : '';
+                    const vmin = cv.v_dc_min_kv != null ? `, Udc min ${fmt(cv.v_dc_min_kv)} kV` : '';
+                    return `${stage}P ${fmt(cv.p_start_mw)} -> ${fmt(cv.p_end_mw)} MW${vmin}`
+                        + (cv.blocked_ms != null ? `\nBLOCKED at ${fmt(cv.blocked_ms, 2)} ms` : '');
+                });
+                if (acPeak.has(id)) lines.push(`AC I peak ${fmt(acPeak.get(id))} kA`);
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, rows[0].label, 'Converter')}
+EMT
+${lines.join('\n')}`, { width: 80, height: 50, positionX: 0.5, positionY: 1.2 });
+            });
+            // Each DC load: its lowest voltage and, if it lost its supply, when.
+            (emt.loads || []).forEach((ld) => {
+                const cell = ld.id != null ? model.getCell(ld.id) : null;
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, ld.label, 'Load DC')}
+EMT
+U min[pu]: ${fmt(ld.v_min_pu)}
+${ld.t_lost_ms != null ? `Lost supply at ${fmt(ld.t_lost_ms, 2)} ms` : (ld.verdict || 'Supplied')}`, { width: 72, height: 50, positionX: -0.3, positionY: 0 });
+            });
+            // Each source or store: its power at the start and the end, and its state.
+            (emt.ders || []).forEach((der) => {
+                const cell = der.id != null ? model.getCell(der.id) : null;
+                if (!cell) return;
+                const state = ['soc_percent', 'v_cap_v', 'speed_percent'].find((k) => der[`${k}_end`] != null);
+                const stateLine = state ? `\n${{ soc_percent: 'SoC[%]', v_cap_v: 'U_cap[V]', speed_percent: 'Speed[%]' }[state]}: `
+                    + `${fmt(der[`${state}_start`], 2)} -> ${fmt(der[`${state}_end`], 2)}` : '';
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, der.label, der.kind || 'Store')}
+EMT
+P[MW]: ${fmt(der.p_start_mw)} -> ${fmt(der.p_end_mw)}${stateLine}`, { width: 76, height: 50, positionX: -0.3, positionY: 0 });
+            });
+            // Each DC cable or busway with its peak current.
+            (emt.branches || []).filter((br) => br.kind === 'DC cable').forEach((br) => {
+                const cell = br.id != null ? model.getCell(br.id) : null;
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, (br.label || '').replace(/\s*\((from|to) end\)\s*$/, ''), 'DC Cable')}
+EMT
+I peak[kA]: ${fmt(br.i_peak_ka)}${br.t_peak_ms != null && Math.abs(br.i_peak_ka || 0) >= 5e-4 ? ` at ${fmt(br.t_peak_ms, 2)} ms` : ''}`,
+                { width: 72, height: 44, positionX: 0.5, positionY: 1.2 });
+            });
             // Each diode with its peak current and its current at the end: conducting or blocking.
             (emt.branches || []).filter((br) => br.kind === 'DC diode').forEach((br) => {
                 const cell = br.id != null ? model.getCell(br.id) : null;
                 if (!cell) return;
-                const end = Array.isArray(br.waveform?.i_ka) && br.waveform.i_ka.length
+                const last = Array.isArray(br.waveform?.i_ka) && br.waveform.i_ka.length
                     ? br.waveform.i_ka[br.waveform.i_ka.length - 1] : null;
+                const end = last != null && Math.abs(last) < 5e-4 ? 0 : last;
                 placeLabel(graph, cell, `${formatResultNameHeader(cell, br.label, 'DC Diode')}
 EMT
 I peak[kA]: ${fmt(br.i_peak_ka)} at ${fmt(br.t_peak_ms, 2)} ms
 I end[kA]: ${fmt(end)}${end != null ? (end > 1e-3 ? ' (conducting)' : ' (blocking)') : ''}`,
                 { width: 76, height: 50, positionX: 0.5, positionY: 1.2 });
             });
+            markUnstudied(graph, 'EMT');
         } finally {
             model.endUpdate();
             graph.getView?.().refresh?.();

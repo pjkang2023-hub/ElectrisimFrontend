@@ -55,6 +55,24 @@ window.dcFaultStudy = function (a, b, c) {
         }
     }
 
+    /**
+     * Every result box still at its "Click Simulate to generate results" after the run - an
+     * element the study gives nothing for - says so: dozens of them read as if the study had
+     * yet to run.
+     */
+    function markUnstudied(graph, study) {
+        const model = graph.getModel();
+        const isBox = (s) => s && s.includes('shapeELXXX=Result');
+        const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
+        Object.values(model.cells || {}).forEach((box) => {
+            if (!isBox(model.getStyle(box)) || !/^\s*Click Simulate to generate results\s*$/.test(text(box))) return;
+            const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
+            const cell = (owner && model.getCell(owner)) || model.getParent(box);
+            const name = cell?.value?.getAttribute?.('userFriendlyName') || cell?.value?.getAttribute?.('name') || '';
+            model.setValue(box, `${name ? name + '\n' : ''}No ${study} result`);
+        });
+    }
+
     /** Each DC bus with its fault's ip, tp and Ik; each breaker with its worst current at opening. */
     function labelCells(graph, dc) {
         const model = graph.getModel();
@@ -93,6 +111,31 @@ ip[kA]: ${fmt(d.ip_ka)} at ${fmt(d.tp_ms, 2)} ms
 End[kA]: ${fmt(d.i_end_ka)} (${d.conducting_end ? 'conducting' : 'blocking'})`,
                 { width: 76, height: 56, positionX: 0.5, positionY: 1.2 });
             });
+            // Each element feeding the fault - a converter's capacitors and diode bridge, a store, a
+            // load's input filter: its peak contribution, the largest over the faults studied, by kind.
+            const faulted = new Set((dc.faults || []).map((f) => f.id));
+            const feeds = new Map();
+            (dc.faults || []).forEach((f) => (f.contributions || []).forEach((c) => {
+                if (c.id == null || c.id === '' || faulted.has(c.id)) return;
+                if (!feeds.has(c.id)) feeds.set(c.id, { name: c.name, kinds: new Map() });
+                const kinds = feeds.get(c.id).kinds;
+                const seen = kinds.get(c.kind);
+                if (!seen || Math.abs(c.ip_ka || 0) > Math.abs(seen.ip_ka || 0)) kinds.set(c.kind, c);
+            }));
+            feeds.forEach(({ name, kinds }, id) => {
+                const cell = model.getCell(id);
+                if (!cell) return;
+                // Behind a blocking diode or far from the fault an element gives a few amps or none:
+                // said so, not "0.0 kA", which reads as a missing result.
+                const ka = (x) => (Math.abs(x) < 5e-4 ? '0' : Math.abs(x) >= 10 ? fmt(x, 1) : Math.abs(x) >= 0.1 ? fmt(x, 2) : fmt(x, 3));
+                const lines = [...kinds.values()].map((c) => (Math.abs(c.ip_ka || 0) < 1e-3
+                    ? `${c.kind}: none (< 1 A)`
+                    : `${c.kind}: ip ${ka(c.ip_ka)} kA at ${fmt(c.tp_ms, 2)} ms, Ik ${ka(c.ik_ka)} kA`));
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, name, 'Element')}
+Into the DC fault:
+${lines.join('\n')}`, { width: 84, height: 50, positionX: 0.5, positionY: 1.2 });
+            });
+            markUnstudied(graph, 'DC fault');
         } finally {
             model.endUpdate();
             graph.getView?.().refresh?.();
