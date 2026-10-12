@@ -168,11 +168,16 @@
             const period = this.results.time_stamps?.length
                 ? `${this.results.time_stamps[0]} → ${this.results.time_stamps[this.results.time_stamps.length - 1]}`
                 : `${steps} ${this.isHourly() ? 'hour(s)' : 'step(s)'}`;
+            // The DC side counted too: "Loads: 4" read as the whole site, its 22 DC racks left out.
+            const dcCount = (kind) => {
+                const n = this.results.dc?.summary?.[kind]?.length || 0;
+                return n ? ` AC, ${n} DC` : '';
+            };
             meta.innerHTML = `
                 <div><strong>Duration:</strong> ${steps} time step(s) &nbsp;·&nbsp; <strong>Period:</strong> ${period}</div>
-                <div><strong>Loads:</strong> ${this.countUnique(this.results.loads, 'name')} &nbsp;·&nbsp;
+                <div><strong>Loads:</strong> ${this.countUnique(this.results.loads, 'name')}${dcCount('loadsdc')} &nbsp;·&nbsp;
                 <strong>Generators:</strong> ${this.countUnique(this.results.sgens, 'name') + this.countUnique(this.results.gens, 'name')} &nbsp;·&nbsp;
-                <strong>Buses:</strong> ${this.countUnique(this.results.busbars, 'name')}</div>
+                <strong>Buses:</strong> ${this.countUnique(this.results.busbars, 'name')}${dcCount('dcbuses')}</div>
             `;
             card.appendChild(meta);
 
@@ -307,6 +312,7 @@
                 container.appendChild(section);
             }
             this.renderMicrogridStatistics(container);
+            this.renderDcStatistics(container);
             if (!this.results.voltage_statistics && !this.results.loading_statistics && !this.results.microgrid) {
                 container.innerHTML += '<p style="color:#666;">No statistics available.</p>';
             }
@@ -430,6 +436,59 @@
             this.addSeriesChart(container, (this.results.storages || []).filter(s => s.soc_percent != null),
                 `Battery state of charge (end of ${this.isHourly() ? 'hour' : 'step'})`, 'SOC (%)', 'soc_percent', timeSteps, '#00838f');
             this.addMicrogridPlots(container, timeSteps);
+            this.addDcPlots(container, timeSteps);
+        }
+
+        /**
+         * The DC network over time (and the AC breakers and motors), from the reply's per-step
+         * rows (dc.steps). Over its step cap the rows are left out: said so, the Statistics tab
+         * keeping each element's range.
+         */
+        addDcPlots(container, timeSteps) {
+            const dc = this.results.dc;
+            if (!dc) return;
+            if (!dc.steps) {
+                const note = document.createElement('p');
+                note.style.cssText = 'margin:16px 0 8px;font-size:13px;color:#555;';
+                note.textContent = `DC network: per-step results are given up to ${dc.step_cap} steps; `
+                    + 'each DC element\'s range over the run is on the Statistics tab.';
+                container.appendChild(note);
+                return;
+            }
+            // Two elements of one name (two "Bus tie"s) would share a line: each its own.
+            const rowsOf = (kind) => {
+                const rows = dc.steps[kind] || [];
+                const ids = new Map();
+                rows.forEach((r) => {
+                    const key = r.id ?? r.name;
+                    if (!ids.has(key)) ids.set(key, r.name || String(key));
+                });
+                const seen = new Map();
+                const names = new Map();
+                ids.forEach((name, key) => {
+                    const n = (seen.get(name) || 0) + 1;
+                    seen.set(name, n);
+                    names.set(key, n > 1 ? `${name} (${n})` : name);
+                });
+                return rows.map((r) => ({ ...r, name: names.get(r.id ?? r.name) }));
+            };
+            const heading = document.createElement('h3');
+            heading.style.cssText = 'margin:22px 0 8px;font-size:15px;color:#333;';
+            heading.textContent = 'DC network';
+            container.appendChild(heading);
+            const vscs = rowsOf('vscs');
+            this.addSeriesChart(container, rowsOf('dcbuses'), 'DC bus voltage', 'V (pu)', 'vm_pu', timeSteps, '#1565c0');
+            this.addSeriesChart(container, rowsOf('loadsdc'), 'DC load power', 'P (MW)', 'p_mw', timeSteps, '#2e7d32');
+            this.addSeriesChart(container, vscs, 'Rectifier (VSC) AC power', 'P (MW)', 'p_mw', timeSteps, '#ad1457');
+            this.addSeriesChart(container, vscs.filter(r => r.loading_percent != null), 'Rectifier (VSC) loading', 'Loading (%)', 'loading_percent', timeSteps, '#ad1457');
+            this.addSeriesChart(container, rowsOf('ssts'), 'SST MV power', 'P (MW)', 'p_mv_mw', timeSteps, '#6d4c41');
+            this.addSeriesChart(container, rowsOf('ssts'), 'SST loading (most loaded stage)', 'Loading (%)', 'loading_percent', timeSteps, '#6d4c41');
+            this.addSeriesChart(container, rowsOf('dcdcconverters'), 'DC/DC converter input power', 'P (MW)', 'p_in_mw', timeSteps, '#00838f');
+            this.addSeriesChart(container, rowsOf('dcdiodes'), 'DC diode current', 'I (kA)', 'i_ka', timeSteps, '#f9a825');
+            this.addSeriesChart(container, rowsOf('dcbreakers'), 'DC breaker current', 'I (kA)', 'i_ka', timeSteps, '#5d4037');
+            this.addSeriesChart(container, rowsOf('linedcs'), 'DC cable current', 'I (kA)', 'i_from_ka', timeSteps, '#455a64');
+            this.addSeriesChart(container, rowsOf('switches'), 'AC breaker current', 'I (kA)', 'i_ka', timeSteps, '#37474f');
+            this.addSeriesChart(container, rowsOf('motors'), 'Motor active power', 'P (MW)', 'p_mw', timeSteps, '#558b2f');
         }
 
         /** The microgrid's sources and stores, their PCS and the smoothing converters. */
@@ -474,6 +533,43 @@
                 (mg.stores || []).map(s => [s.label, s.kind, f(s.delivered_mwh, 6), f(s.drawn_mwh, 6), f(s.soc_min_percent, 2), f(s.soc_max_percent, 2), f(s.stored_start_mwh, 6), f(s.stored_end_mwh, 6), f(s.equivalent_full_cycles, 3)]));
             add('Dispatch', ['Dispatch', 'Unserved load (MWh)', 'Curtailed PV (MWh)'],
                 [[mg.dispatch ? 'rule-based' : 'off (set points)', f(mg.unserved_mwh, 6), f(mg.curtailed_mwh, 6)]]);
+        }
+
+        /** Each DC element's range over the run (dc.summary): given at any run length. */
+        renderDcStatistics(container) {
+            const summary = this.results.dc?.summary;
+            if (!summary) return;
+            const f = (v, d = 4) => (v === null || v === undefined || !Number.isFinite(Number(v)) ? '-' : Number(v).toFixed(d));
+            const hours = (Number(this.results.time_step_s) || 3600) / 3600;
+            const add = (title, headers, rows) => {
+                if (!rows.length) return;
+                const section = document.createElement('div');
+                section.innerHTML = `<h3 style="margin:18px 0 8px;font-size:15px;color:#333;">${title}</h3>`;
+                section.appendChild(this.buildStatsTable(headers, rows));
+                container.appendChild(section);
+            };
+            const s = (e, k) => e.stats?.[k] || {};
+            const energy = (e, k) => (e.stats?.[k] ? e.stats[k].mean * e.steps * hours : null);
+            add('DC buses', ['Bus', 'V min (pu)', 'V max (pu)', 'V mean (pu)'],
+                (summary.dcbuses || []).map(e => [e.name, f(s(e, 'vm_pu').min), f(s(e, 'vm_pu').max), f(s(e, 'vm_pu').mean)]));
+            add('DC loads', ['Load', 'P min (MW)', 'P max (MW)', 'Energy (MWh)'],
+                (summary.loadsdc || []).map(e => [e.name, f(s(e, 'p_mw').min), f(s(e, 'p_mw').max), f(energy(e, 'p_mw'), 3)]));
+            add('Rectifiers (VSC)', ['VSC', 'P min (MW)', 'P max (MW)', 'Loading max (%)', 'Energy (MWh)'],
+                (summary.vscs || []).map(e => [e.name, f(s(e, 'p_mw').min), f(s(e, 'p_mw').max), f(s(e, 'loading_percent').max, 1), f(energy(e, 'p_mw'), 3)]));
+            add('Solid-state transformers', ['SST', 'P MV max (MW)', 'Loading max (%)', 'Loss (MWh)'],
+                (summary.ssts || []).map(e => [e.name, f(s(e, 'p_mv_mw').max), f(s(e, 'loading_percent').max, 1), f(energy(e, 'loss_mw'), 4)]));
+            add('DC/DC converters', ['Converter', 'P in min (MW)', 'P in max (MW)', 'Loading max (%)', 'Loss (MWh)'],
+                (summary.dcdcconverters || []).map(e => [e.name, f(s(e, 'p_in_mw').min), f(s(e, 'p_in_mw').max), f(s(e, 'loading_percent').max, 1), f(energy(e, 'loss_mw'), 4)]));
+            add('DC diodes', ['Diode', 'I max (kA)', 'Loading max (%)', 'Steps conducting'],
+                (summary.dcdiodes || []).map(e => [e.name, f(s(e, 'i_ka').max), f(s(e, 'loading_percent').max, 1), `${e.flags_true_steps?.conducting ?? 0} / ${e.steps}`]));
+            add('DC breakers', ['Breaker', 'I max (kA)', 'Loading max (%)'],
+                (summary.dcbreakers || []).map(e => [e.name, f(s(e, 'i_ka').max), f(s(e, 'loading_percent').max, 1)]));
+            add('DC cables', ['Cable', 'I max (kA)', 'Loading max (%)', 'Loss (MWh)'],
+                (summary.linedcs || []).map(e => [e.name, f(Math.max(Math.abs(s(e, 'i_from_ka').max ?? 0), Math.abs(s(e, 'i_from_ka').min ?? 0))), f(s(e, 'loading_percent').max, 1), f(energy(e, 'pl_mw'), 4)]));
+            add('AC breakers', ['Breaker', 'I max (kA)'],
+                (summary.switches || []).map(e => [e.name, f(s(e, 'i_ka').max)]));
+            add('Motors', ['Motor', 'P min (MW)', 'P max (MW)', 'Energy (MWh)'],
+                (summary.motors || []).map(e => [e.name, f(s(e, 'p_mw').min), f(s(e, 'p_mw').max), f(energy(e, 'p_mw'), 3)]));
         }
 
         addSeriesChart(container, rows, title, yLabel, key, timeSteps, color) {
