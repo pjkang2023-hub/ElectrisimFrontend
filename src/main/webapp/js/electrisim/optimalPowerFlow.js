@@ -1205,8 +1205,14 @@ function placeOpfLabel(graph, cell, text) {
  * dispatch and price, each load's demand. A box the OPF has nothing for - a DC element, a
  * branch - says so rather than "Click Simulate to generate results".
  */
-function labelOpfCells(graph, data) {
+function labelOpfCells(graph, data, dcOpf = false) {
     const model = graph.getModel();
+    // A DC OPF has active power alone: its voltages 1 pu by the method and no Q, so neither is shown.
+    const tag = dcOpf ? 'DC OPF' : 'OPF';
+    // The DC OPF carries the transformers' vector-group shifts into its angles: Lineup A
+    // 0.48 kV at -363 degrees, -3 as the AC OPF gives it. Shown within +-180.
+    const wrapDeg = (x) => (x == null || !isFinite(x) ? x : ((((Number(x) + 180) % 360) + 360) % 360) - 180);
+    const q = (r) => (dcOpf || r.q_mvar == null ? '' : `\nQ[MVar]: ${opfFmt(r.q_mvar)}`);
     const cur = data.cost_currency || 'EUR';
     const cell = (row) => (row && row.id != null && row.id !== '' ? model.getCell(row.id) : null);
     const price = (row) => (row.marginal_cost != null ? `\nPrice[${cur}/MWh]: ${opfFmt(row.marginal_cost, 1)}` : '');
@@ -1216,17 +1222,15 @@ function labelOpfCells(graph, data) {
             const c = cell(r);
             if (!c) return;
             placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), 'Bus')}
-OPF
-U[pu]: ${opfFmt(r.vm_pu)}
-U[degree]: ${opfFmt(r.va_degree)}`);
+${tag}${dcOpf ? '' : `\nU[pu]: ${opfFmt(r.vm_pu)}`}
+U[degree]: ${opfFmt(wrapDeg(r.va_degree))}`);
         });
         const source = (kind) => (r) => {
             const c = cell(r);
             if (!c) return;
             placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), kind)}
-OPF
-P[MW]: ${opfFmt(r.p_mw)}
-Q[MVar]: ${opfFmt(r.q_mvar)}${price(r)}`);
+${tag}
+P[MW]: ${opfFmt(r.p_mw)}${q(r)}${price(r)}`);
         };
         (data.externalgrids || []).forEach(source('External Grid'));
         (data.generators || []).forEach(source('Generator'));
@@ -1238,9 +1242,8 @@ Q[MVar]: ${opfFmt(r.q_mvar)}${price(r)}`);
             if (!c) return;
             const standIn = /AC side\)$/.test(r.name || '');
             placeOpfLabel(graph, c, `${formatResultNameHeader(c, opfName(r.name), 'Load')}
-OPF${standIn ? ' (AC side, as a load)' : ''}
-P[MW]: ${opfFmt(r.p_mw)}
-Q[MVar]: ${opfFmt(r.q_mvar)}`);
+${tag}${standIn ? ' (AC side, as a load)' : ''}
+P[MW]: ${opfFmt(r.p_mw)}${q(r)}`);
         });
         const isBox = (s) => s && s.includes('shapeELXXX=Result');
         const text = (c) => (typeof c.value === 'string' ? c.value : (c.value?.getAttribute?.('label') || ''));
@@ -1249,7 +1252,7 @@ Q[MVar]: ${opfFmt(r.q_mvar)}`);
             const owner = (/connectedTo=([^;]+)/.exec(model.getStyle(box) || '') || [])[1];
             const c = (owner && model.getCell(owner)) || model.getParent(box);
             const name = c?.value?.getAttribute?.('userFriendlyName') || c?.value?.getAttribute?.('name') || '';
-            model.setValue(box, `${name ? name + '\n' : ''}No OPF result`);
+            model.setValue(box, `${name ? name + '\n' : ''}No ${tag} result`);
         });
     } finally {
         model.endUpdate();
@@ -1322,7 +1325,7 @@ async function processNetworkData(url, obj, b, grafka, simProgress) {
         }
 
         try {
-            labelOpfCells(b, dataJson);
+            labelOpfCells(b, dataJson, String(obj?.['0']?.opf_type || '').toLowerCase() === 'dc');
         } catch (labelErr) {
             console.warn('OPF results not placed on the diagram:', labelErr);
         }
