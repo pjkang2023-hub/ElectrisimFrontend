@@ -1196,8 +1196,10 @@ function placeOpfLabel(graph, cell, text) {
     const existing = all.length ? all[0].placeholder
         : (window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null);
     all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+    let box = existing;
     if (existing) model.setValue(existing, text);
-    else if (window.insertResultBox) window.insertResultBox(graph, cell, text, { width: 76, height: 50, positionX: 0.5, positionY: 1.2 });
+    else if (window.insertResultBox) box = window.insertResultBox(graph, cell, text, { width: 76, height: 50, positionX: 0.5, positionY: 1.2 });
+    window.fitResultBox?.(graph, box);   // its last lines were cut off
 }
 
 /**

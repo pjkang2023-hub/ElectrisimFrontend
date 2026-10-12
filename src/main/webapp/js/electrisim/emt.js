@@ -44,15 +44,17 @@ window.emtStudy = function (a, b, c) {
         const existing = all.length ? all[0].placeholder
             : (window.findResultPlaceholder ? window.findResultPlaceholder(graph, cell) : null);
         all.slice(1).forEach(({ placeholder }) => { try { model.remove(placeholder); } catch (_) { /* gone */ } });
+        let box = existing;
         if (existing) {
             model.setValue(existing, text);
         } else if (window.insertResultBox) {
-            window.insertResultBox(graph, cell, text, size);
+            box = window.insertResultBox(graph, cell, text, size);
         } else {
             const style = window.RESULT_BOX_STYLE
                 || 'shapeELXXX=Result;shape=rounded;rounded=1;arcSize=6;fillColor=#F8F9FA;strokeColor=#6C757D;strokeWidth=1.5;dashed=1;dashPattern=5 5;opacity=70;whiteSpace=wrap;html=1;overflow=hidden;align=center;verticalAlign=middle;fontSize=7;fontColor=#6C757D;fontStyle=0;spacing=3';
-            graph.insertVertex(cell, null, text, size.positionX, size.positionY, size.width, size.height, style, true);
+            box = graph.insertVertex(cell, null, text, size.positionX, size.positionY, size.width, size.height, style, true);
         }
+        window.fitResultBox?.(graph, box);   // its last lines - a diode's end current - were cut off
     }
 
     /**

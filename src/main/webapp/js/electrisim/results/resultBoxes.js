@@ -401,6 +401,35 @@ function busCellForPlaceholder(model, placeholder) {
     return null;
 }
 
+/**
+ * Grow a result box to its text: a placeholder keeps the size it was drawn at (some 70 x 50,
+ * overflow hidden), so a study's fourth or fifth line - an OPF's price, a time series' loading -
+ * was cut off. Its width kept, its height to the wrapped text's; it never shrinks.
+ */
+function fitResultBox(graph, box) {
+    if (!graph || !box || typeof mxUtils === 'undefined' || !mxUtils.getSizeForString) return;
+    var model = graph.getModel();
+    var geo = model.getGeometry(box);
+    if (!geo) return;
+    try {
+        // Measured wrapped to the box's width, its line breaks kept: getPreferredSizeForCell
+        // gave one unwrapped line (90 x 40 for five lines in a 70-wide box).
+        var style = graph.getCellStyle(box) || {};
+        var fontSize = parseFloat(style.fontSize) || 7;
+        var spacing = parseFloat(style.spacing) || 3;
+        var label = String(graph.getLabel(box) || '');
+        var html = style.html == '1' ? label.replace(/\n/g, '<br>') : mxUtils.htmlEntities(label).replace(/\n/g, '<br>');
+        var size = mxUtils.getSizeForString(html, fontSize, style.fontFamily || 'Helvetica',
+            Math.max(geo.width - 2 * spacing - 2, 10));
+        if (size) size = { height: size.height + 2 * spacing + 4 };
+        if (size && isFinite(size.height) && size.height > geo.height + 0.5) {
+            var g2 = geo.clone();
+            g2.height = Math.ceil(size.height);
+            model.setGeometry(box, g2);
+        }
+    } catch (e) { /* its size kept */ }
+}
+
 function setResultPlaceholderValue(graph, placeholder, text) {
     if (!graph || !placeholder) return;
     var model = graph.model || (graph.getModel && graph.getModel());
@@ -497,6 +526,7 @@ if (typeof window !== 'undefined') {
     window.updateOrCreateSinglePlaceholder = updateOrCreateSinglePlaceholder;
     window.applyBusPlaceholderResults = applyBusPlaceholderResults;
     window.setResultPlaceholderValue = setResultPlaceholderValue;
+    window.fitResultBox = fitResultBox;
 }
 
 //=============================================================================
