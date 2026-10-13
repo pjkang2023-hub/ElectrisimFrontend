@@ -71,6 +71,8 @@ export function applyElectrisimImportSidecar(graph, modelData) {
             setAttr(cell, 'in_ka', s.in_ka);
             setAttr(cell, 'type', s.type);
             setAttr(cell, 'ansi_device_class', s.ansi_device_class);
+            // Its Protection tab, as a spec gives it: the drawing kept the defaults.
+            Object.entries(s.protection || {}).forEach(([k, v]) => setAttr(cell, k, v));
         }
         const gen = pick(sidecar.gen);
         if (gen && (objName === 'Generator' || style.includes('Generator'))) {
