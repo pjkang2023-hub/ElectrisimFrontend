@@ -26,7 +26,8 @@ export const defaultVscData = {
     derate_temp_curve: '',
     derate_altitude_curve: '',
     overload_curve: '',
-    spectrum: 'afe',           // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
+    follow_tau_s: 0,            // the time series: following its bus's load through a low-pass (0: at once)
+    spectrum: 'afe',          // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -221,6 +222,17 @@ export class VscDialog extends Dialog {
                 min: '10'
             },
             ...RATING_FIELDS.map(f => ({ ...f, value: String(this.data[f.id] ?? '') })),
+            {
+                id: 'follow_tau_s',
+                label: 'Load-following time constant (time series)',
+                symbol: 'follow_tau_s',
+                unit: 's',
+                description: 'Following its DC bus\'s load (follow_load), in the time series: it follows the load through a low-pass of this time constant - a UPS rectifier ramp-limited to the load\'s average, its batteries taking the swing. 0: at once.',
+                type: 'number',
+                value: String(this.data.follow_tau_s ?? 0),
+                step: '1',
+                min: '0'
+            },
             {
                 id: 'in_service',
                 label: 'In Service',
