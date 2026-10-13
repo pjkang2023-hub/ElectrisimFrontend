@@ -159,7 +159,10 @@ DER_PARAMETERS.PCS = [
         { value: 'false', label: 'Off' },
         { value: 'true', label: 'Hold negative sequence at zero' }
     ], 'Grid-forming, in the EMT study: it holds its bus\'s negative-sequence voltage at zero, carrying the negative-sequence current an unbalanced load draws - and the 2f ripple that puts on its DC side.'),
-    num('i2_limit_pu', 'Negative-sequence current limit', 'p.u.', 0.3, 'Of its current limit: what its unbalance control may carry; the rest is left to its positive sequence.', '0.05'),
+    num('i2_limit_pu', 'Negative-sequence current limit', 'p.u.', 0.3, 'Of its current limit: what its unbalance control may carry, within the headroom its positive sequence leaves.', '0.05'),
+    num('dc_link_mf', 'DC-link capacitance (on a DC network)', 'mF', 0, 'Its DC side on a DC network\'s bus, for the EMT and DC fault studies: its DC-link capacitor. 0: 4 ms of its rating stored.', '0.1'),
+    num('dc_link_esr_mohm', 'DC-link ESR (on a DC network)', 'mOhm', 0, 'Its DC-link capacitor\'s series resistance: what a DC bus fault meets. 0: none.', '0.01'),
+    num('dc_link_esl_uh', 'DC-link ESL (on a DC network)', 'uH', 0, 'Its DC-link capacitor\'s series inductance. 0: none.', '0.01'),
     { ...num('opf_marginal_cost_eur_per_mwh', 'OPF marginal cost', 'EUR/MWh', '', 'Optimal power flow: what each MWh it delivers costs (charging, what each MWh it takes earns). Blank: the study’s default. It is dispatched within its source’s window: a battery’s state of charge and C-rates, an SOFC system’s minimum load and rating, a PV array’s MPP.', '1'), min: undefined },
     inService
 ];
