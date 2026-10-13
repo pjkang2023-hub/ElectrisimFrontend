@@ -16,6 +16,15 @@ const num = (id, label, unit, value, description, step = '0.1', min = '0') =>
 const sel = (id, label, value, options, description) =>
     ({ id, label, symbol: id, description, type: 'select', value, options });
 const name = (value) => ({ id: 'name', label: 'Name', symbol: 'name', description: 'Name identifier', type: 'text', value });
+// A converter's rating where it runs (backend converter_rating.py): blank fields leave its nameplate.
+const text = (id, label, value, description) => ({ id, label, symbol: id, description, type: 'text', value });
+export const RATING_FIELDS = [
+    { ...num('inlet_c', 'Inlet air temperature', 'C', '', 'Its cooling air: derated by its temperature curve. Blank: not derated.', '1'), min: undefined },
+    num('altitude_m', 'Altitude', 'm', '', 'Derated by its altitude curve. Blank: not derated.', '10'),
+    text('derate_temp_curve', 'Temperature derating curve', '', 'Inlet C : rating multiplier pairs, linear between them, e.g. 35:1.10, 45:1.00, 50:0.95, 60:0 (the String PCS). Its rating is the lowest of its factors, not their product.'),
+    text('derate_altitude_curve', 'Altitude derating curve', '', 'Metres : rating multiplier pairs. Blank, with an altitude given: 2000:1.0, 4000:0.86.'),
+    text('overload_curve', 'Short-time overload', '', 'Seconds : multiple of its derated rating, e.g. 1:1.5, 10:1.2 - 150 % for 1 s, then 120 % to 10 s. Blank: none. A load flow over its rating is reported against it.')
+];
 const inService = { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it is left out of every study.', type: 'checkbox', value: true };
 
 export const DER_PARAMETERS = {
@@ -43,7 +52,7 @@ export const DER_PARAMETERS = {
         num('c_rate_discharge', 'Most discharging current', 'C', 1, 'Its discharging current over its capacity: above it is warned about.', '0.1'),
         num('c_rate_charge', 'Most charging current', 'C', 0.5, 'Its charging current over its capacity: above it is warned about.', '0.1'),
         num('coulombic_efficiency_percent', 'Coulombic efficiency', '%', 99, 'Of the charge it takes, the share it stores (time-series study).', '0.1'),
-        { id: 'ocv_table', label: 'OCV table (per cell)', symbol: 'ocv_table', description: 'State of charge : volts per cell pairs, e.g. 0:2.5, 10:3.19, 50:3.3, 100:3.6. Empty: an LFP cell\'s, scaled to its nominal voltage.', type: 'text', value: '' },
+        { id: 'ocv_table', label: 'OCV table (per cell)', symbol: 'ocv_table', description: 'State of charge : volts per cell pairs, e.g. 0:2.5, 10:3.19, 50:3.3, 100:3.6; or a chemistry: LFP (flat, 3.2 V) or NFPP (sodium-ion, sloping, 3.1 V - a generic curve, 750-1,500 V for a 1,200 V pack). Empty: an LFP cell\'s, scaled to its nominal voltage.', type: 'text', value: '' },
         num('l_uh', 'Series inductance (DC fault)', 'uH', 0, 'Its cells\' and busbars\' inductance: slows its current\'s rise at a DC fault.', '0.1'),
         inService
     ],
@@ -144,6 +153,13 @@ DER_PARAMETERS.PCS = [
     num('droop_qv_percent', 'Q-V droop', '%', 5, 'Grid-forming: its voltage falls by this at its rated Q. 0 holds its set point.', '0.5'),
     num('current_limit_pu', 'Current limit', 'p.u.', 1.2, 'Short circuit: it feeds this times its rated current (IEC and ANSI), grid-forming or grid-following.', '0.05'),
     num('current_loop_hz', 'Current loop bandwidth (EMT)', 'Hz', 500, 'Grid-following, for the EMT study: the bandwidth of its current control. 500 Hz is fast; against a weak network - an island no grid holds - a loop this fast can meet the resonance of the network: f_sw / 20 (250 Hz at 5 kHz) is usual for converters of some MW.', '10'),
+    ...RATING_FIELDS,
+    num('q_max_percent', 'Reactive power cap', '% of S', '', 'Q at most this share of its rating, inside its circle: Q = min(sqrt(S^2 - P^2), cap x S). Blank: its circle only. 60 for the String PCS.', '1'),
+    sel('unbalance_control', 'Unbalance control (EMT)', 'false', [
+        { value: 'false', label: 'Off' },
+        { value: 'true', label: 'Hold negative sequence at zero' }
+    ], 'Grid-forming, in the EMT study: it holds its bus\'s negative-sequence voltage at zero, carrying the negative-sequence current an unbalanced load draws - and the 2f ripple that puts on its DC side.'),
+    num('i2_limit_pu', 'Negative-sequence current limit', 'p.u.', 0.3, 'Of its current limit: what its unbalance control may carry; the rest is left to its positive sequence.', '0.05'),
     { ...num('opf_marginal_cost_eur_per_mwh', 'OPF marginal cost', 'EUR/MWh', '', 'Optimal power flow: what each MWh it delivers costs (charging, what each MWh it takes earns). Blank: the study’s default. It is dispatched within its source’s window: a battery’s state of charge and C-rates, an SOFC system’s minimum load and rating, a PV array’s MPP.', '1'), min: undefined },
     inService
 ];
@@ -179,6 +195,6 @@ export const DER_DESCRIPTIONS = {
     Flywheel: 'Its rotor\'s energy, 1/2 J w^2, its machine converter holding its DC link: on its own bus behind a DC/DC converter (smoothing or dispatch), or directly on a bus at a set power.',
     SOFC: 'Its stacks\' polarisation curve (Padulles), scaled to its rating and voltage. On its own bus behind a DC/DC converter in follower mode, or directly on a bus at the current its curve gives there.',
     'PV Array': 'Its module\'s single-diode model, fitted to its datasheet, at its irradiance and temperature. On its own bus behind a DC/DC converter in MPPT mode, or directly on a bus on its I-V curve.',
-    PCS: 'A bidirectional inverter joining a battery, supercapacitor, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it. Grid-forming with a supercapacitor and no set power, it is an eSTATCOM.',
+    PCS: 'A bidirectional inverter joining a battery, supercapacitor, flywheel, SOFC system or PV array to an AC bus: its AC pin (top) on the AC bus, its DC pin (bottom) wired to its source, or to a DC bus with only its source on it - or to a DC network\'s bus, a double-conversion UPS\'s DC link, where it draws from whatever holds that bus. Grid-forming with a supercapacitor and no set power, it is an eSTATCOM.',
     'Grounding Transformer': 'A zigzag grounding transformer: the ground of a three-wire network, on the grid and islanded. It carries no balanced current; a ground fault sees its zero-sequence impedance plus three times its neutral resistor. Its pin (top) on its bus, directly or through its breaker (a Switch).'
 };

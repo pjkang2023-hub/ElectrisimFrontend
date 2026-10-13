@@ -1755,9 +1755,13 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("r_dc_ohm", options.r_dc_ohm || "0.01");   // Internal DC resistance
     g.setAttribute("control_mode_ac", options.control_mode_ac || "vm_pu");  // 'vm_pu' or 'q_mvar'
     g.setAttribute("control_value_ac", options.control_value_ac || "1.0");  // AC control setpoint
-    g.setAttribute("control_mode_dc", options.control_mode_dc || "p_mw");   // 'vm_pu' or 'p_mw'
+    g.setAttribute("control_mode_dc", options.control_mode_dc || "p_mw");   // 'vm_pu', 'p_mw' or 'follow_load'
     g.setAttribute("control_value_dc", options.control_value_dc || "0.0");  // DC control setpoint
     g.setAttribute("in_service", options.in_service !== undefined ? options.in_service : true);
+    // Its rating where it runs: inlet air, altitude, their derating curves, its short-time overload (blank: nameplate)
+    for (const key of ["inlet_c", "altitude_m", "derate_temp_curve", "derate_altitude_curve", "overload_curve"]) {
+        g.setAttribute(key, String(options[key] ?? ""));
+    }
     // For the EMT study: its rating (0: 1.25 x its load-flow power), DC link (0: 4 ms of its rating) and current limit
     g.setAttribute("rated_mva", String(options.rated_mva ?? "0"));
     g.setAttribute("dc_link_mf", String(options.dc_link_mf ?? "0"));

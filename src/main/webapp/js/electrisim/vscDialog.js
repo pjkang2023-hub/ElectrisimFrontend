@@ -1,5 +1,6 @@
 import { Dialog } from './Dialog.js';
 import { createEconomicTabContent, buildCostPerUnitByCurrency } from './utils/economicTabHelper.js';
+import { RATING_FIELDS } from './utils/derParameters.js';
 
 // Default values for VSC parameters (based on pandapower documentation)
 // VSC connects an AC bus to a DC bus - bus connections are detected from diagram edges
@@ -10,7 +11,7 @@ export const defaultVscData = {
     r_dc_ohm: 0.01,        // Internal DC resistance
     control_mode_ac: "vm_pu",   // AC control mode: 'vm_pu' or 'q_mvar'
     control_value_ac: 1.0,      // AC control setpoint (voltage in pu or reactive power in MVar)
-    control_mode_dc: "p_mw",    // DC control mode: 'vm_pu' or 'p_mw'
+    control_mode_dc: "p_mw",    // DC control mode: 'vm_pu', 'p_mw' or 'follow_load' (its bus's load plus a charge)
     control_value_dc: 0.0,      // DC control setpoint (voltage in pu or active power in MW)
     rated_mva: 0,               // EMT study: its rating; 0 = 1.25 x its load-flow power
     dc_link_mf: 0,              // EMT and DC fault studies: its DC-link capacitance; 0 = 4 ms of its rating stored
@@ -20,7 +21,12 @@ export const defaultVscData = {
     emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
     current_loop_hz: 500,       // EMT study: its current loop's bandwidth
-    spectrum: 'afe',            // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
+    inlet_c: '',                // its rating where it runs (converter_rating): blank leaves its nameplate
+    altitude_m: '',
+    derate_temp_curve: '',
+    derate_altitude_curve: '',
+    overload_curve: '',
+    spectrum: 'afe',           // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -101,16 +107,16 @@ export class VscDialog extends Dialog {
                 id: 'control_mode_dc',
                 label: 'DC Control Mode',
                 symbol: 'control_mode_dc',
-                description: 'Control mode for DC side: vm_pu (voltage) or p_mw (active power)',
+                description: 'Control mode for DC side: vm_pu (voltage), p_mw (active power) or follow_load - a double-conversion UPS\'s rectifier: it delivers what its DC bus\'s loads draw, plus its DC control value (MW) to charge the batteries on that bus, which hold its voltage; beyond its rating they carry the rest.',
                 type: 'select',
-                options: ['p_mw', 'vm_pu'],
+                options: ['p_mw', 'vm_pu', 'follow_load'],
                 value: this.data.control_mode_dc
             },
             {
                 id: 'control_value_dc',
                 label: 'DC Control Value',
                 symbol: 'control_value_dc',
-                description: 'DC control setpoint (voltage in p.u. or active power in MW)',
+                description: 'DC control setpoint (voltage in p.u. or active power in MW; following the load, the charge it adds in MW)',
                 type: 'number',
                 value: this.data.control_value_dc.toString(),
                 step: '0.1'
@@ -214,6 +220,7 @@ export class VscDialog extends Dialog {
                 step: '10',
                 min: '10'
             },
+            ...RATING_FIELDS.map(f => ({ ...f, value: String(this.data[f.id] ?? '') })),
             {
                 id: 'in_service',
                 label: 'In Service',
@@ -645,7 +652,9 @@ export class VscDialog extends Dialog {
                 if (param.id === 'cost_per_unit_by_currency') {
                     values[param.id] = input.value || '0';
                 } else if (param.type === 'number') {
-                    values[param.id] = parseFloat(input.value) || 0;
+                    // Blank stays blank where blank means something (an inlet air not given: not derated).
+                    const blankable = RATING_FIELDS.some(f => f.id === param.id);
+                    values[param.id] = blankable && input.value.trim() === '' ? '' : (parseFloat(input.value) || 0);
                 } else if (param.type === 'checkbox') {
                     values[param.id] = input.checked;
                 } else {
