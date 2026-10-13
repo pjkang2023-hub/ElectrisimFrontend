@@ -36,6 +36,19 @@ function cellOptions(graph, shape) {
         .sort((a, b) => a.label.localeCompare(b.label));
 }
 
+// Lines: drawn as edges, or as vertices when imported.
+function lineOptions(graph) {
+    const model = graph?.getModel?.();
+    if (!model) return [];
+    return Object.values(model.cells || {})
+        .filter(c => (c.vertex || c.edge) && /shapeELXXX=Line(;|$)/.test(String(c.style || '')))
+        .map(c => ({
+            value: String(c.id),
+            label: (c.value && c.value.getAttribute ? c.value.getAttribute('name') : '') || String(c.id)
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+}
+
 export class EmtDialog extends Dialog {
     constructor(editorUi) {
         super('EMT Study', 'Calculate');
@@ -73,6 +86,15 @@ export class EmtDialog extends Dialog {
             { id: 'ac_fault_resistance_ohm', label: 'Fault resistance (Ω)', type: 'number', value: '0.001', min: '0', step: '0.001' },
             { id: 'ac_fault_time_ms', label: 'Fault time (ms)', type: 'number', value: '20', min: '0', step: '5' },
             { id: 'ac_fault_duration_ms', label: 'Fault duration (ms; 0 stays)', type: 'number', value: '60', min: '0', step: '10' },
+            {
+                id: 'ac_fault_line',
+                label: 'Or along a line (with no faulted bus)',
+                type: 'select',
+                options: [{ value: 'none', label: 'None', default: true }, ...lineOptions(this.graph)]
+            },
+            { id: 'ac_fault_fraction', label: 'Its point, from its from-bus (0-1)', type: 'number', value: '0.5', min: '0.01', max: '0.99', step: '0.05' },
+            { id: 'ac_trip_time_ms', label: 'Its breakers open at (ms; blank: never)', type: 'text', value: '' },
+            { id: 'ac_trip_lines', label: 'Lines whose breakers open (ids or names, comma-separated; blank: the faulted line)', type: 'text', value: '' },
             { id: 'fault_section', label: 'A DC fault', type: 'section', subtitle: 'Pole to pole, on a DC bus.' },
             {
                 id: 'fault_bus',

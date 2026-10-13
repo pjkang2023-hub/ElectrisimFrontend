@@ -118,7 +118,10 @@ export const defaultSwitchData = {
     z3_x_ohm: 3.0,
     t_z1: 0.0,
     t_z2: 0.3,
-    t_z3: 0.6
+    t_z3: 0.6,
+    U_pu: 0.5,
+    t_u: 0.5,
+    bf_time_s: 0.0
 };
 
 export class SwitchDialog extends Dialog {
@@ -287,7 +290,8 @@ export class SwitchDialog extends Dialog {
                     { value: 'earth_fault', label: 'Earth-fault OCR (50N/51N)' },
                     { value: 'directional', label: 'Directional OCR (67)' },
                     { value: 'differential', label: 'Differential (87)' },
-                    { value: 'distance', label: 'Distance (21)' }
+                    { value: 'distance', label: 'Distance (21)' },
+                    { value: 'undervoltage', label: 'Undervoltage (27)' }
                 ]
             },
             // ---- OCR fields (visible when protection_type == 'ocr') ----
@@ -379,7 +383,12 @@ export class SwitchDialog extends Dialog {
             { id: 't_z2', label: 'Zone 2 delay', symbol: 't2', unit: 's', type: 'number', value: String(this.data.t_z2), step: '0.01', min: '0', showWhen: { protection_type: ['distance'] } },
             { id: 'z3_r_ohm', label: 'Zone 3 resistance', symbol: 'R3', unit: 'Ω', type: 'number', value: String(this.data.z3_r_ohm), step: '0.01', min: '0', showWhen: { protection_type: ['distance'] } },
             { id: 'z3_x_ohm', label: 'Zone 3 reactance', symbol: 'X3', unit: 'Ω', type: 'number', value: String(this.data.z3_x_ohm), step: '0.01', min: '0', showWhen: { protection_type: ['distance'] } },
-            { id: 't_z3', label: 'Zone 3 delay', symbol: 't3', unit: 's', type: 'number', value: String(this.data.t_z3), step: '0.01', min: '0', showWhen: { protection_type: ['distance'] } }
+            { id: 't_z3', label: 'Zone 3 delay', symbol: 't3', unit: 's', type: 'number', value: String(this.data.t_z3), step: '0.01', min: '0', showWhen: { protection_type: ['distance'] } },
+            // ---- Undervoltage (27): an inverter's own undervoltage trip, or a relay on its breaker ----
+            { id: 'U_pu', label: 'Pickup voltage', symbol: 'U<', unit: 'pu', description: 'Trips when the voltage at its switch\'s bus, on its own side, falls below this in a three-phase fault (pandapower gives no branch voltages for an unbalanced one).', type: 'number', value: String(this.data.U_pu), step: '0.05', min: '0', showWhen: { protection_type: ['undervoltage'] } },
+            { id: 't_u', label: 'Delay', symbol: 't_u', unit: 's', type: 'number', value: String(this.data.t_u), step: '0.05', min: '0', showWhen: { protection_type: ['undervoltage'] } },
+            // ---- Breaker failure (50BF): the breaker's own, whatever relay trips it ----
+            { id: 'bf_time_s', label: 'Breaker failure delay (0: none)', symbol: 't_BF', unit: 's', description: 'If this breaker fails to open, every other breaker at its bus trips this long after its relay did. The study reports what clears each fault with each primary breaker failed.', type: 'number', value: String(this.data.bf_time_s), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } }
         ];
     }
     

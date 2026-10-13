@@ -57,7 +57,10 @@ const PROTECTION_ATTRS = [
     'z3_x_ohm',
     't_z1',
     't_z2',
-    't_z3'
+    't_z3',
+    'U_pu',
+    't_u',
+    'bf_time_s'
 ];
 
 function readSwitchProtectionAttrs(cell) {
@@ -176,6 +179,7 @@ function downloadProtectionResultsText(dataJson) {
             lines.push(`Tripped (total across scenarios): ${s.n_tripped}`);
             lines.push(`Miscoordination warnings: ${s.n_miscoordination}`);
             if (s.n_unwanted_trips != null) lines.push(`Unwanted trips: ${s.n_unwanted_trips}`);
+            if (s.n_breaker_failure_uncleared != null) lines.push(`Faults left on if a primary breaker fails: ${s.n_breaker_failure_uncleared}`);
             lines.push(`Fault type: ${s.fault_type}, case: ${s.case}, t_diff: ${s.t_diff_s}s`);
             if (s.fault_location_mode) {
                 lines.push(`Fault location mode: ${s.fault_location_mode}`);
@@ -210,6 +214,11 @@ function downloadProtectionResultsText(dataJson) {
                 lines.push(`  Cleared by: ${sc.primary_switches.join(', ') || '-'}` +
                     (sc.clearing_time_s != null ? ` in ${sc.clearing_time_s} s` : ' (not all of them trip)'));
             }
+            (sc.breaker_failure || []).forEach(r => {
+                lines.push(`  If ${r.failed_switch} fails to open: ` + (r.t_clear_s == null ? 'NOT CLEARED'
+                    : `cleared in ${r.t_clear_s} s` + (r.t_clear_50bf_s != null && r.t_clear_50bf_s === r.t_clear_s
+                        ? ` by breaker failure, opening ${(r.opened_by_50bf || []).join(', ')}` : ' by the other relays')));
+            });
             if (sc.unprotected_sources && sc.unprotected_sources.length) {
                 lines.push(`  WARNING: ${sc.unprotected_sources.join(', ')} feeds the fault with no relayed breaker in between`);
             }

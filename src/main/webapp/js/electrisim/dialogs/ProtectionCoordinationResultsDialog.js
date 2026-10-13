@@ -132,6 +132,7 @@ export class ProtectionCoordinationResultsDialog {
                 <div><b>Trips:</b> ${this._safe(s.n_tripped)}</div>
                 <div><b>Miscoordinations:</b> ${this._safe(s.n_miscoordination)}</div>
                 <div><b>Unwanted trips:</b> ${this._safe(s.n_unwanted_trips)}</div>
+                <div><b>Left on if a primary breaker fails:</b> ${this._safe(s.n_breaker_failure_uncleared)}</div>
                 <div><b>Fault type:</b> ${this._safe(s.fault_type)} (case ${this._safe(s.case)})</div>
                 <div><b>Fault location:</b> ${s.fault_location_mode === 'bus' ? 'Selected busbar' : 'Line fault'}</div>
                 <div><b>Grading margin t_diff:</b> ${this._safe(s.t_diff_s)} s</div>
@@ -196,6 +197,18 @@ export class ProtectionCoordinationResultsDialog {
                     : 'No relay lies between this fault and a source.';
                 section.appendChild(clear);
             }
+            // Each primary breaker failing to open: what clears the fault then.
+            (sc.breaker_failure || []).forEach((r) => {
+                const bf = document.createElement('div');
+                const left = r.t_clear_s == null;
+                bf.style.cssText = `font-size:12px;margin:0 0 4px 0;color:${left ? '#b02a37' : '#495057'};`;
+                const how = left ? 'nothing clears the fault'
+                    : r.t_clear_50bf_s != null && r.t_clear_50bf_s === r.t_clear_s
+                        ? `breaker failure clears it in ${this._fmt(r.t_clear_s)} s, opening ${(r.opened_by_50bf || []).join(', ')}`
+                        : `the other relays clear it in ${this._fmt(r.t_clear_s)} s`;
+                bf.textContent = `If ${r.failed_switch} fails to open: ${how}.`;
+                section.appendChild(bf);
+            });
             if (sc.unprotected_sources && sc.unprotected_sources.length) {
                 const unprot = document.createElement('div');
                 unprot.style.cssText = 'padding:6px 8px;border:1px solid #ffecb5;background:#fff3cd;color:#664d03;border-radius:4px;margin-bottom:6px;font-size:12px;';
