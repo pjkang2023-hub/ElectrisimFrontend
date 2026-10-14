@@ -33,6 +33,7 @@ export const defaultDcDcConverterData = {
     c_out_esl_uh: 0,            // ... and series inductance; 0 = none
     c_in_esr_mohm: 0,           // EMT and DC fault studies: its input capacitor's (2 ms of its rating) series resistance
     c_in_esl_uh: 0,             // ... and series inductance; 0 = none
+    hold_up_pu: 0,              // smoothing, EMT study: its output below this, its store holds it; 0 = none
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -95,6 +96,7 @@ export class DcDcConverterDialog extends LoadDcDialog {
             num('c_out_esl_uh', 'Output capacitor ESL (EMT, DC fault)', 'uH', 'Its output capacitor\'s series inductance, with its busbars. 0: none.', '0.01'),
             num('c_in_esr_mohm', 'Input capacitor ESR (EMT, DC fault)', 'mOhm', 'Its input capacitor (2 ms of its rating at its input voltage): its series resistance, which limits its discharge into a DC fault on its input bus. 0: none.', '0.1'),
             num('c_in_esl_uh', 'Input capacitor ESL (EMT, DC fault)', 'uH', 'Its input capacitor\'s series inductance, with its busbars. 0: none.', '0.01'),
+            num('hold_up_pu', 'Hold-up voltage (smoothing, EMT)', 'pu', 'Smoothing, in the EMT study: with its output bus below this, its store supplies what holds the bus there - all its rating 3 % below - as racks\' own storage does when their supply fails. 0: none - it only smooths.', '0.01'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];
     }

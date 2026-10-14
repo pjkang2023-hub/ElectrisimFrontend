@@ -23,6 +23,8 @@ export const defaultSstData = {
     // EMT and DC fault studies: its stages' capacitors' series resistance and inductance; 0 = none
     rect_dc_link_esr_mohm: 0, rect_dc_link_esl_uh: 0, dcdc_c_in_esr_mohm: 0, dcdc_c_in_esl_uh: 0,
     dcdc_c_out_esr_mohm: 0, dcdc_c_out_esl_uh: 0, inv_dc_link_esr_mohm: 0, inv_dc_link_esl_uh: 0,
+    // EMT study: its fault ride-through - below this link voltage its DC/DC stage pauses, not blocks; 0 = none
+    ride_through_pu: 0,
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -103,6 +105,7 @@ export class SstDialog extends LoadDcDialog {
             num('dcdc_c_out_esl_uh', 'DC/DC stage: output capacitor ESL (EMT, DC fault)', 'uH', 'For the EMT and DC fault studies: the series inductance of the DC/DC stage output capacitor, on the LV DC port, with its busbars. 0: none.', '0.01'),
             num('inv_dc_link_esr_mohm', 'Inverter: DC-link ESR (EMT, DC fault)', 'mOhm', 'For the EMT and DC fault studies: the series resistance of the inverter DC-link capacitor, on the LV DC port, with its busbars; it limits its discharge into a DC fault there. 0: none.', '0.1'),
             num('inv_dc_link_esl_uh', 'Inverter: DC-link ESL (EMT, DC fault)', 'uH', 'For the EMT and DC fault studies: the series inductance of the inverter DC-link capacitor, on the LV DC port, with its busbars. 0: none.', '0.01'),
+            num('ride_through_pu', 'Fault ride-through: link voltage to pause at (EMT)', 'pu', 'For the EMT study: with its internal DC link below this, its DC/DC stage passes no power - keeping the link charged through an MV fault, its LV DC bus left to the racks\' own storage - and resumes once the link is back 5 % above it; its stages block only below 30 %. 0: none - they block at 80 %.', '0.05'),
             num('current_loop_hz', 'Rectifier and inverter: current loop bandwidth (EMT)', 'Hz', 'For the EMT study: the bandwidth of their current control. 500 Hz is fast; in an island no grid holds, f_sw / 20 (250 Hz at 5 kHz) keeps it clear of the resonance of the network.', '10'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];

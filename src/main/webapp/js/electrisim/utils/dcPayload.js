@@ -184,7 +184,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'vm_lv_ac_pu', 'emt_model', 'spectrum', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
                 'current_loop_hz', 'rect_dc_link_esr_mohm', 'rect_dc_link_esl_uh', 'dcdc_c_in_esr_mohm',
                 'dcdc_c_in_esl_uh', 'dcdc_c_out_esr_mohm', 'dcdc_c_out_esl_uh',
-                'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'in_service', 'cost_per_unit_by_currency'])
+                'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'ride_through_pu', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC Diode': {
@@ -214,7 +214,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
             row: withOptional(row, cell, ['control_mode', 'vm_out_pu', 'p_set_mw', 'rated_mw', 'vn_in_kv', 'vn_out_kv',
                 'efficiency_percent', 'no_load_loss_kw', 'bidirectional', 'droop_percent', 'smoothing_tau_s',
                 'soc_ref_percent', 'soc_gain', 'emt_model', 'switching_khz', 'current_limit_pu',
-                'c_out_mf', 'c_out_esr_mohm', 'c_out_esl_uh', 'c_in_esr_mohm', 'c_in_esl_uh',
+                'c_out_mf', 'c_out_esr_mohm', 'c_out_esl_uh', 'c_in_esr_mohm', 'c_in_esl_uh', 'hold_up_pu',
                 'in_service', 'cost_per_unit_by_currency'])
         };
     }

@@ -1504,7 +1504,9 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         current_loop_hz: "500", spectrum: "afe",                      // spectrum: the harmonic study's
         // For the EMT and DC fault studies: its stages' capacitors' ESR and ESL (0: none)
         rect_dc_link_esr_mohm: "0", rect_dc_link_esl_uh: "0", dcdc_c_in_esr_mohm: "0", dcdc_c_in_esl_uh: "0",
-        dcdc_c_out_esr_mohm: "0", dcdc_c_out_esl_uh: "0", inv_dc_link_esr_mohm: "0", inv_dc_link_esl_uh: "0"
+        dcdc_c_out_esr_mohm: "0", dcdc_c_out_esl_uh: "0", inv_dc_link_esr_mohm: "0", inv_dc_link_esl_uh: "0",
+        // For the EMT study: its fault ride-through (0: none)
+        ride_through_pu: "0"
     };
     Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
 
@@ -1546,6 +1548,8 @@ export function configureDcDcConverterAttributes(grafka, vertex, options = {}) {
     g.setAttribute("c_out_esl_uh", String(options.c_out_esl_uh ?? "0"));
     g.setAttribute("c_in_esr_mohm", String(options.c_in_esr_mohm ?? "0"));
     g.setAttribute("c_in_esl_uh", String(options.c_in_esl_uh ?? "0"));
+    // Smoothing, for the EMT study: its hold-up voltage (0: none)
+    g.setAttribute("hold_up_pu", String(options.hold_up_pu ?? "0"));
 
     g.setAttribute("Economic_parameters", "");
     g.setAttribute("cost_per_unit_by_currency", options.cost_per_unit_by_currency || "{}");
