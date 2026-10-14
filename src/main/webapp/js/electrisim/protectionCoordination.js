@@ -342,10 +342,14 @@ async function buildPayloadFromGraph(graph, dialogValues) {
     };
 
     const payload = prepareNetworkData(graph, simulationParameters, { removeResultCells: false });
+    return addSwitchProtectionAttrs(graph, payload);
+}
 
-    // Augment Switch entries with their protection_* attributes by reading them
-    // directly from the cell - getAttributesAsObject only collects the keys it
-    // is explicitly given, and protection_* are not part of the default switch map.
+// Augment Switch entries with their protection_* attributes by reading them
+// directly from the cell - getAttributesAsObject only collects the keys it
+// is explicitly given, and protection_* are not part of the default switch map.
+// (The arc flash study's clearing by the relays reads them too.)
+function addSwitchProtectionAttrs(graph, payload) {
     const model = graph.getModel();
     Object.keys(payload).forEach(key => {
         const entry = payload[key];
@@ -355,7 +359,6 @@ async function buildPayloadFromGraph(graph, dialogValues) {
         const protAttrs = readSwitchProtectionAttrs(cell);
         Object.assign(entry, protAttrs);
     });
-
     return payload;
 }
 
@@ -430,5 +433,5 @@ function protectionCoordinationPandaPower(a, b, c) {
 // Expose both as a module export and on window for the legacy Action wiring in app.min.js.
 window.protectionCoordinationPandaPower = protectionCoordinationPandaPower;
 window.downloadProtectionCoordinationReport = downloadProtectionResultsText;
-export { protectionCoordinationPandaPower, downloadProtectionResultsText };
+export { protectionCoordinationPandaPower, downloadProtectionResultsText, addSwitchProtectionAttrs };
 export default protectionCoordinationPandaPower;

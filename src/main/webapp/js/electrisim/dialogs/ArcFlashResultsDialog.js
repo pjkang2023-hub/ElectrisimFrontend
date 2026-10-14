@@ -209,9 +209,12 @@ export class ArcFlashResultsDialog {
             ? `Working distance ${p.working_distance_mm ?? '—'} mm · Gap ${p.conductor_gap_mm ?? '—'} mm · ` +
               `Enclosure ${p.enclosure_height_mm ?? '—'}×${p.enclosure_width_mm ?? '—'}×${p.enclosure_depth_mm ?? '—'} mm`
             : 'Gap, enclosure and working distance typical for each bus voltage (IEEE 1584-2018 Table 8)';
+        const clearing = p.clearing_time_mode === 'relays'
+            ? `Clearing by the relays + ${p.breaker_opening_s ?? '—'} s breaker opening (at most ${p.max_clearing_time_s ?? 2} s)`
+            : `Clearing ${p.clearing_time_s ?? '—'} s / Iarc-min ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s`;
         box.appendChild(document.createTextNode(
             `Electrode ${p.electrode_config || 'VCB'} · ${equipment} · ` +
-            `Clearing ${p.clearing_time_s ?? '—'} s / Iarc-min ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s · Fault 3ph max` +
+            `${clearing} · Fault 3ph max` +
             (p.lv_tol_percent != null ? ` · LV tolerance ${p.lv_tol_percent} %` : '')
         ));
         container.appendChild(box);
@@ -317,6 +320,7 @@ export class ArcFlashResultsDialog {
             { key: 'conductor_gap_mm', label: 'Gap [mm]', align: 'right', dec: 0 },
             { key: 'ikss_ka', label: 'Ikss [kA]', align: 'right', dec: 3 },
             { key: 'ia_ka', label: 'Ia [kA]', align: 'right', dec: 3 },
+            { key: 'clearing_time_used_s', label: 't [s]', align: 'right', dec: 3 },
             { key: 'incident_energy_cal_cm2', label: 'IE [cal/cm²]', align: 'right', dec: 2 },
             { key: 'arc_flash_boundary_mm', label: 'AFB [mm]', align: 'right', dec: 0 },
             { key: 'ppe_category', label: 'PPE', align: 'center' },
@@ -378,6 +382,10 @@ export class ArcFlashResultsDialog {
                     }
                 } else if (col.dec != null) {
                     td.textContent = fmt(bus[col.key], col.dec);
+                    if (col.key === 'clearing_time_used_s' && Array.isArray(bus.clearing_relays)) {
+                        td.title = bus.clearing_relays.length
+                            ? `Cleared by: ${bus.clearing_relays.join(', ')}` : 'No relay clears it';
+                    }
                     if (col.key === 'incident_energy_cal_cm2' && Number(bus[col.key]) >= 40) {
                         td.style.color = '#dc3545';
                         td.style.fontWeight = '700';
@@ -448,7 +456,7 @@ export class ArcFlashResultsDialog {
         const headers = [
             'name', 'dialogName', 'id', 'object_id', 'vn_kv', 'equipment_class', 'working_distance_mm',
             'conductor_gap_mm', 'enclosure_height_mm', 'enclosure_width_mm', 'enclosure_depth_mm',
-            'ikss_ka', 'ia_ka', 'ia_full_ka', 'ia_min_ka',
+            'ikss_ka', 'ia_ka', 'ia_full_ka', 'ia_min_ka', 'clearing_time_used_s', 'clearing_relays',
             'incident_energy_cal_cm2', 'arc_flash_boundary_mm', 'ppe_category', 'method', 'note'
         ];
         const lines = [headers.join(',')];
@@ -488,13 +496,17 @@ export class ArcFlashResultsDialog {
         } else {
             t += `Equipment               : typical for each bus voltage (IEEE 1584-2018 Table 8)\n`;
         }
-        t += `Clearing time Iarc      : ${p.clearing_time_s ?? '—'} s\n`;
-        t += `Clearing time Iarc-min  : ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s\n`;
+        if (p.clearing_time_mode === 'relays') {
+            t += `Clearing time           : by the relays + ${p.breaker_opening_s ?? '—'} s breaker opening (at most ${p.max_clearing_time_s ?? 2} s)\n`;
+        } else {
+            t += `Clearing time Iarc      : ${p.clearing_time_s ?? '—'} s\n`;
+            t += `Clearing time Iarc-min  : ${p.clearing_time_min_s ?? p.clearing_time_s ?? '—'} s\n`;
+        }
         t += `Fault                   : 3-phase maximum\n\n`;
 
         t += '--- BUS RESULTS ---\n';
-        const widths = [22, 8, 17, 7, 7, 10, 10, 12, 10, 12, 14];
-        const headers = ['Bus', 'V[kV]', 'Equipment', 'D[mm]', 'Gap[mm]', 'Ikss[kA]', 'Ia[kA]', 'IE[cal/cm2]', 'AFB[mm]', 'PPE', 'Method'];
+        const widths = [22, 8, 17, 7, 7, 10, 10, 7, 12, 10, 12, 14];
+        const headers = ['Bus', 'V[kV]', 'Equipment', 'D[mm]', 'Gap[mm]', 'Ikss[kA]', 'Ia[kA]', 't[s]', 'IE[cal/cm2]', 'AFB[mm]', 'PPE', 'Method'];
         const pad = (s, w) => String(s).padEnd(w).slice(0, w);
         t += headers.map((h, i) => pad(h, widths[i])).join(' | ') + '\n';
         t += widths.map(w => '-'.repeat(w)).join('-+-') + '\n';
@@ -508,6 +520,7 @@ export class ArcFlashResultsDialog {
                 fmt(b.conductor_gap_mm, 0),
                 fmt(b.ikss_ka, 3),
                 fmt(b.ia_ka, 3),
+                fmt(b.clearing_time_used_s, 3),
                 fmt(b.incident_energy_cal_cm2, 2),
                 fmt(b.arc_flash_boundary_mm, 0),
                 b.ppe_category ?? 'N/A',

@@ -4,6 +4,7 @@ import { ArcFlashDialog } from './dialogs/ArcFlashDialog.js';
 import { ArcFlashResultsDialog } from './dialogs/ArcFlashResultsDialog.js';
 import ENV from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
+import { addSwitchProtectionAttrs } from './protectionCoordination.js';
 import {
     startSimulationProgress,
     settleSimulationProgress,
@@ -261,11 +262,15 @@ PPE Cat ${cell.ppe_category ?? 'N/A'}${methodTag}`;
                 clearing_time_s: values.clearing_time_s || '0.2',
                 clearing_time_min_s: values.clearing_time_min_s || values.clearing_time_s || '0.2',
                 lv_tol_percent: values.lv_tol_percent || '6',
+                clearing_time_mode: values.clearing_time_mode || 'fixed',
+                breaker_opening_s: values.breaker_opening_s || '0.05',
                 user_email: getUserEmail()
             };
 
             try {
                 const obj = prepareNetworkData(b, simulationParameters, { removeResultCells: false });
+                // Clearing by the relays: the switches' Protection tabs go with the network.
+                if (simulationParameters.clearing_time_mode === 'relays') addSwitchProtectionAttrs(b, obj);
                 console.log('Arc flash data prepared:', obj);
                 processNetworkData(ENV.backendUrl + '/', obj, b, grafka);
             } catch (error) {

@@ -75,6 +75,25 @@ export class ArcFlashDialog extends Dialog {
                 step: '1'
             },
             {
+                // The relays: each bus's arc cleared by the switches' Protection tabs, at its full and
+                // reduced arcing currents, plus the breaker's opening (at most IEEE 1584's 2 s).
+                id: 'clearing_time_mode',
+                label: 'Clearing time',
+                type: 'radio',
+                options: [
+                    { value: 'fixed', label: 'The times below at every bus', default: true },
+                    { value: 'relays', label: "By the switches' relays at each bus's arcing currents (at most 2 s)" }
+                ]
+            },
+            {
+                id: 'breaker_opening_s',
+                label: 'Breaker opening time after its relay trips (s) - clearing by the relays',
+                type: 'number',
+                value: '0.05',
+                min: '0',
+                step: '0.001'
+            },
+            {
                 id: 'clearing_time_s',
                 label: 'Clearing Time at Iarc (s)',
                 type: 'number',
