@@ -27,6 +27,7 @@ export const defaultVscData = {
     derate_altitude_curve: '',
     overload_curve: '',
     follow_tau_s: 0,            // the time series: following its bus's load through a low-pass (0: at once)
+    soc_balance_gain: 0,        // the time series: biased by its bus's batteries' charge against the others' (0: none)
     spectrum: 'afe',          // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
     in_service: true,
     cost_per_unit_by_currency: "0"
@@ -231,6 +232,17 @@ export class VscDialog extends Dialog {
                 type: 'number',
                 value: String(this.data.follow_tau_s ?? 0),
                 step: '1',
+                min: '0'
+            },
+            {
+                id: 'soc_balance_gain',
+                label: 'Charge balancing gain (time series)',
+                symbol: 'soc_balance_gain',
+                unit: 'pu',
+                description: 'Following its DC bus\'s load, in the time series: it adds this much of its rating per unit of its bus\'s batteries\' charge below the average of the other balancing rectifiers\' buses, and takes as much off above it - a UPS\'s quadrants brought back to an even charge, the grid\'s draw unchanged. 2: 20 % of its rating for 10 points of charge. 0: none.',
+                type: 'number',
+                value: String(this.data.soc_balance_gain ?? 0),
+                step: '0.5',
                 min: '0'
             },
             {

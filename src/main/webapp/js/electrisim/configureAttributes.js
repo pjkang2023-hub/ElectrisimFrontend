@@ -1766,7 +1766,8 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
     g.setAttribute("control_value_dc", options.control_value_dc || "0.0");  // DC control setpoint
     g.setAttribute("in_service", options.in_service !== undefined ? options.in_service : true);
     // Its rating where it runs: inlet air, altitude, their derating curves, its short-time overload (blank: nameplate)
-    for (const key of ["inlet_c", "altitude_m", "derate_temp_curve", "derate_altitude_curve", "overload_curve", "follow_tau_s"]) {
+    for (const key of ["inlet_c", "altitude_m", "derate_temp_curve", "derate_altitude_curve", "overload_curve", "follow_tau_s",
+                       "soc_balance_gain"]) {
         g.setAttribute(key, String(options[key] ?? ""));
     }
     // For the EMT study: its rating (0: 1.25 x its load-flow power), DC link (0: 4 ms of its rating) and current limit
