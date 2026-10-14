@@ -160,6 +160,7 @@ DER_PARAMETERS.PCS = [
         { value: 'true', label: 'Hold negative sequence at zero' }
     ], 'Grid-forming, in the EMT study: it holds its bus\'s negative-sequence voltage at zero, carrying the negative-sequence current an unbalanced load draws - and the 2f ripple that puts on its DC side.'),
     num('i2_limit_pu', 'Negative-sequence current limit', 'p.u.', 0.3, 'Of its current limit: what its unbalance control may carry, within the headroom its positive sequence leaves.', '0.05'),
+    num('soc_share_gain', 'Charge sharing gain (time series)', 'p.u.', 0, 'Grid-forming, on a DC network, in the time series: its share of its island raised by this times its rating per unit of its DC bus\'s batteries\' charge above the other sharing PCS\'s average, lowered below it - a quadrant short of charge, or without its rectifier, hands its load to the others before it empties. 5: half its rating for 10 points. 0: none.', '0.5'),
     num('dc_link_mf', 'DC-link capacitance (on a DC network)', 'mF', 0, 'Its DC side on a DC network\'s bus, for the EMT and DC fault studies: its DC-link capacitor. 0: 4 ms of its rating stored.', '0.1'),
     num('dc_link_esr_mohm', 'DC-link ESR (on a DC network)', 'mOhm', 0, 'Its DC-link capacitor\'s series resistance: what a DC bus fault meets. 0: none.', '0.01'),
     num('dc_link_esl_uh', 'DC-link ESL (on a DC network)', 'uH', 0, 'Its DC-link capacitor\'s series inductance. 0: none.', '0.01'),
