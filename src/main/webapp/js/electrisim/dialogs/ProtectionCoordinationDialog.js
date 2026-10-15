@@ -50,7 +50,9 @@ export class ProtectionCoordinationDialog extends Dialog {
                 value: 'all',
                 showWhen: 'line'
             },
-            { id: 'sc_fraction', label: 'Fault location along the line (0-1, mid-line = 0.5)', type: 'number', value: '0.5', showWhen: 'line' }
+            { id: 'sc_fraction', label: 'Fault location along the line (0-1, mid-line = 0.5)', type: 'number', value: '0.5', showWhen: 'line' },
+            // A high-resistance fault: what still sees it, and a grounding transformer's duty when nothing does.
+            { id: 'r_fault_ohm', label: 'Fault resistance (ohm, 0 = bolted)', type: 'number', value: '0' }
         ];
 
         // Tab 2 - Time grading parameters (defaults applied when the per-switch protection settings are empty).

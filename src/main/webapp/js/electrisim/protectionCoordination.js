@@ -187,6 +187,12 @@ function downloadProtectionResultsText(dataJson) {
             lines.push(`Miscoordination warnings: ${s.n_miscoordination}`);
             if (s.n_unwanted_trips != null) lines.push(`Unwanted trips: ${s.n_unwanted_trips}`);
             if (s.n_breaker_failure_uncleared != null) lines.push(`Faults left on if a primary breaker fails: ${s.n_breaker_failure_uncleared}`);
+            if (s.r_fault_ohm) lines.push(`Fault resistance: ${s.r_fault_ohm} ohm`);
+            if (s.max_grounding_duty_percent != null || s.n_grounding_continuous) {
+                lines.push(`Grounding transformers, worst short-time duty (I^2 t of rating): ${s.max_grounding_duty_percent != null ? s.max_grounding_duty_percent.toFixed(2) + ' %' : '-'}`
+                    + `, with a primary breaker failed: ${s.max_grounding_duty_backup_percent != null ? s.max_grounding_duty_backup_percent.toFixed(2) + ' %' : '-'}`
+                    + `; carrying a fault nothing clears (continuous): ${s.n_grounding_continuous || 0}`);
+            }
             lines.push(`Fault type: ${s.fault_type}, case: ${s.case}, t_diff: ${s.t_diff_s}s`);
             if (s.fault_location_mode) {
                 lines.push(`Fault location mode: ${s.fault_location_mode}`);
@@ -332,6 +338,7 @@ async function buildPayloadFromGraph(graph, dialogValues) {
             ? 'all'
             : String(dialogValues.sc_line_id).trim(),
         sc_fraction: parseFloat(dialogValues.sc_fraction) || 0.5,
+        r_fault_ohm: Math.max(parseFloat(dialogValues.r_fault_ohm) || 0, 0),
         grading_mode: dialogValues.grading_mode || 'auto',
         curve_type: dialogValues.curve_type || 'standard_inverse',
         t_diff: parseFloat(dialogValues.t_diff) || 0.3,
