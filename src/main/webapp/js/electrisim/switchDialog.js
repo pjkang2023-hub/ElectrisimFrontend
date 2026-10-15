@@ -121,7 +121,10 @@ export const defaultSwitchData = {
     t_z3: 0.6,
     U_pu: 0.5,
     t_u: 0.5,
-    bf_time_s: 0.0
+    bf_time_s: 0.0,
+    arc_t_s: 0.0,
+    arc_i_a: 0.0,
+    arc_block_pcs: 'false'
 };
 
 export class SwitchDialog extends Dialog {
@@ -388,7 +391,11 @@ export class SwitchDialog extends Dialog {
             { id: 'U_pu', label: 'Pickup voltage', symbol: 'U<', unit: 'pu', description: 'Trips when the voltage at its switch\'s bus, on its own side, falls below this in a three-phase fault (pandapower gives no branch voltages for an unbalanced one).', type: 'number', value: String(this.data.U_pu), step: '0.05', min: '0', showWhen: { protection_type: ['undervoltage'] } },
             { id: 't_u', label: 'Delay', symbol: 't_u', unit: 's', type: 'number', value: String(this.data.t_u), step: '0.05', min: '0', showWhen: { protection_type: ['undervoltage'] } },
             // ---- Breaker failure (50BF): the breaker's own, whatever relay trips it ----
-            { id: 'bf_time_s', label: 'Breaker failure delay (0: none)', symbol: 't_BF', unit: 's', description: 'If this breaker fails to open, every other breaker at its bus trips this long after its relay did. The study reports what clears each fault with each primary breaker failed.', type: 'number', value: String(this.data.bf_time_s), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } }
+            { id: 'bf_time_s', label: 'Breaker failure delay (0: none)', symbol: 't_BF', unit: 's', description: 'If this breaker fails to open, every other breaker at its bus trips this long after its relay did. The study reports what clears each fault with each primary breaker failed.', type: 'number', value: String(this.data.bf_time_s), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            // ---- Arc-flash detection (50ARC): light in the switchboard and current through the breaker ----
+            { id: 'arc_t_s', label: 'Arc-flash detection trip time (0: none)', symbol: 't_arc', unit: 's', description: "An arc in this switch's switchboard (a fault on its bus) lights its sensors; with the current through it at the pickup below it trips this fast, whatever the relay above does. The arc flash study's clearing by the relays counts it.", type: 'number', value: String(this.data.arc_t_s), step: '0.001', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'arc_i_a', label: 'Arc-flash detection current check (0: light alone)', symbol: 'I_arc', unit: 'A', type: 'number', value: String(this.data.arc_i_a), step: '1', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'arc_block_pcs', label: 'Arc-flash detection also blocks the grid-forming inverters on its bus', type: 'select', value: String(this.data.arc_block_pcs), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }
         ];
     }
     

@@ -60,7 +60,10 @@ const PROTECTION_ATTRS = [
     't_z3',
     'U_pu',
     't_u',
-    'bf_time_s'
+    'bf_time_s',
+    'arc_t_s',
+    'arc_i_a',
+    'arc_block_pcs'
 ];
 
 function readSwitchProtectionAttrs(cell) {
