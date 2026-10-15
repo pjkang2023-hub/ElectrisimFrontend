@@ -128,7 +128,9 @@ export const defaultSwitchData = {
     bdiff_i_a: 0.0,
     bdiff_slope: 0.3,
     bdiff_t_s: 0.05,
-    intertrip_bus: 'false'
+    intertrip_bus: 'false',
+    alarm_ie_a: 0.0,
+    alarm_t_s: 10.0
 };
 
 export class SwitchDialog extends Dialog {
@@ -404,7 +406,10 @@ export class SwitchDialog extends Dialog {
             { id: 'bdiff_i_a', label: 'Bus differential pickup (0: not in a bus zone)', symbol: 'I_87B', unit: 'A', description: "This breaker is a CT of its bus's differential zone: the currents of all the breakers at the bus with it set are summed, and over the pickup plus slope x half their magnitudes' sum they all trip.", type: 'number', value: String(this.data.bdiff_i_a), step: '1', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
             { id: 'bdiff_slope', label: 'Bus differential slope', symbol: 'slope_87B', type: 'number', value: String(this.data.bdiff_slope), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
             { id: 'bdiff_t_s', label: 'Bus differential trip time', symbol: 't_87B', unit: 's', type: 'number', value: String(this.data.bdiff_t_s), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
-            { id: 'intertrip_bus', label: 'Intertrip: when this relay trips, so does every other breaker at its bus', type: 'select', value: String(this.data.intertrip_bus), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }
+            { id: 'intertrip_bus', label: 'Intertrip: when this relay trips, so does every other breaker at its bus', type: 'select', value: String(this.data.intertrip_bus), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] },
+            // ---- Earth-fault alarm stage: a sensitive 51N's alarm, which trips nothing ----
+            { id: 'alarm_ie_a', label: 'Earth-fault alarm pickup (0: none)', symbol: 'I_e,alarm', unit: 'A', description: "Its residual current - a grounding transformer's neutral current - over this for the delay below raises an alarm and trips nothing: an earth fault under every relay's pickup, flagged.", type: 'number', value: String(this.data.alarm_ie_a), step: '1', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'alarm_t_s', label: 'Earth-fault alarm delay', symbol: 't_e,alarm', unit: 's', type: 'number', value: String(this.data.alarm_t_s), step: '0.5', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } }
         ];
     }
     

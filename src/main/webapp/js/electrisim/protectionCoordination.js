@@ -67,7 +67,9 @@ const PROTECTION_ATTRS = [
     'bdiff_i_a',
     'bdiff_slope',
     'bdiff_t_s',
-    'intertrip_bus'
+    'intertrip_bus',
+    'alarm_ie_a',
+    'alarm_t_s'
 ];
 
 function readSwitchProtectionAttrs(cell) {
@@ -191,7 +193,11 @@ function downloadProtectionResultsText(dataJson) {
             if (s.max_grounding_duty_percent != null || s.n_grounding_continuous) {
                 lines.push(`Grounding transformers, worst short-time duty (I^2 t of rating): ${s.max_grounding_duty_percent != null ? s.max_grounding_duty_percent.toFixed(2) + ' %' : '-'}`
                     + `, with a primary breaker failed: ${s.max_grounding_duty_backup_percent != null ? s.max_grounding_duty_backup_percent.toFixed(2) + ' %' : '-'}`
-                    + `; carrying a fault nothing clears (continuous): ${s.n_grounding_continuous || 0}`);
+                    + `; carrying a fault nothing clears (continuous): ${s.n_grounding_continuous || 0}`
+                    + (s.n_grounding_continuous ? `, of which no alarm flags: ${s.n_grounding_continuous_unalarmed || 0}` : ''));
+            }
+            if (s.n_alarms) {
+                lines.push(`Alarms raised: ${s.n_alarms} (${[...new Set((dataJson.scenarios || []).flatMap(sc => sc.alarms || []))].join(', ')})`);
             }
             lines.push(`Fault type: ${s.fault_type}, case: ${s.case}, t_diff: ${s.t_diff_s}s`);
             if (s.fault_location_mode) {
