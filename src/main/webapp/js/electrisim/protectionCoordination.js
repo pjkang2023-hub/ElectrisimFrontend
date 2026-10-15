@@ -63,7 +63,11 @@ const PROTECTION_ATTRS = [
     'bf_time_s',
     'arc_t_s',
     'arc_i_a',
-    'arc_block_pcs'
+    'arc_block_pcs',
+    'bdiff_i_a',
+    'bdiff_slope',
+    'bdiff_t_s',
+    'intertrip_bus'
 ];
 
 function readSwitchProtectionAttrs(cell) {

@@ -124,7 +124,11 @@ export const defaultSwitchData = {
     bf_time_s: 0.0,
     arc_t_s: 0.0,
     arc_i_a: 0.0,
-    arc_block_pcs: 'false'
+    arc_block_pcs: 'false',
+    bdiff_i_a: 0.0,
+    bdiff_slope: 0.3,
+    bdiff_t_s: 0.05,
+    intertrip_bus: 'false'
 };
 
 export class SwitchDialog extends Dialog {
@@ -395,7 +399,12 @@ export class SwitchDialog extends Dialog {
             // ---- Arc-flash detection (50ARC): light in the switchboard and current through the breaker ----
             { id: 'arc_t_s', label: 'Arc-flash detection trip time (0: none)', symbol: 't_arc', unit: 's', description: "An arc in this switch's switchboard (a fault on its bus) lights its sensors; with the current through it at the pickup below it trips this fast, whatever the relay above does. The arc flash study's clearing by the relays counts it.", type: 'number', value: String(this.data.arc_t_s), step: '0.001', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
             { id: 'arc_i_a', label: 'Arc-flash detection current check (0: light alone)', symbol: 'I_arc', unit: 'A', type: 'number', value: String(this.data.arc_i_a), step: '1', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
-            { id: 'arc_block_pcs', label: 'Arc-flash detection also blocks the grid-forming inverters on its bus', type: 'select', value: String(this.data.arc_block_pcs), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }
+            { id: 'arc_block_pcs', label: 'Arc-flash detection also blocks the grid-forming inverters on its bus', type: 'select', value: String(this.data.arc_block_pcs), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] },
+            // ---- Bus differential (87B): the breakers at a switchboard with it are its zone's CTs ----
+            { id: 'bdiff_i_a', label: 'Bus differential pickup (0: not in a bus zone)', symbol: 'I_87B', unit: 'A', description: "This breaker is a CT of its bus's differential zone: the currents of all the breakers at the bus with it set are summed, and over the pickup plus slope x half their magnitudes' sum they all trip.", type: 'number', value: String(this.data.bdiff_i_a), step: '1', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'bdiff_slope', label: 'Bus differential slope', symbol: 'slope_87B', type: 'number', value: String(this.data.bdiff_slope), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'bdiff_t_s', label: 'Bus differential trip time', symbol: 't_87B', unit: 's', type: 'number', value: String(this.data.bdiff_t_s), step: '0.01', min: '0', showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] } },
+            { id: 'intertrip_bus', label: 'Intertrip: when this relay trips, so does every other breaker at its bus', type: 'select', value: String(this.data.intertrip_bus), showWhen: { protection_type: ['ocr', 'fuse', 'earth_fault', 'directional', 'differential', 'distance', 'undervoltage'] }, options: [{ value: 'false', label: 'No' }, { value: 'true', label: 'Yes' }] }
         ];
     }
     

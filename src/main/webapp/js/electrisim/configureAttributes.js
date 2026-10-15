@@ -1740,6 +1740,10 @@ export function configureSwitchAttributes(grafka, vertex, options = {}) {
     g.setAttribute("arc_t_s", options.arc_t_s !== undefined ? String(options.arc_t_s) : "0");
     g.setAttribute("arc_i_a", options.arc_i_a !== undefined ? String(options.arc_i_a) : "0");
     g.setAttribute("arc_block_pcs", options.arc_block_pcs !== undefined ? String(options.arc_block_pcs) : "false");
+    g.setAttribute("bdiff_i_a", options.bdiff_i_a !== undefined ? String(options.bdiff_i_a) : "0");
+    g.setAttribute("bdiff_slope", options.bdiff_slope !== undefined ? String(options.bdiff_slope) : "0.3");
+    g.setAttribute("bdiff_t_s", options.bdiff_t_s !== undefined ? String(options.bdiff_t_s) : "0.05");
+    g.setAttribute("intertrip_bus", options.intertrip_bus !== undefined ? String(options.intertrip_bus) : "false");
 
     // Pandapower JSON import: branch refs when only one graph edge is drawn (Switch ↔ Bus).
     if (options.pp_import_bus) {
