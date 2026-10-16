@@ -638,6 +638,10 @@ export function configureCapacitorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("q_mvar", options.q_mvar || "0");
     g.setAttribute("loss_factor", options.loss_factor || "0");
     g.setAttribute("vn_kv", options.vn_kv || "0");
+    // A harmonic filter: its tuning reactor's order (0 = none), its damping and quality.
+    g.setAttribute("filter_order", options.filter_order || "0");
+    g.setAttribute("filter_type", options.filter_type || "high_pass");
+    g.setAttribute("filter_q", options.filter_q || "0");
 
     //OPTIONAL
     g.setAttribute("Optional_parameters", options.vm_pu || "");

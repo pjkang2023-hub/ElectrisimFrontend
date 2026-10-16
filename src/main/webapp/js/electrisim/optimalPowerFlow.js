@@ -978,6 +978,9 @@ function optimalPowerFlowPandaPower(a, b, c) {
                                             vn_kv: 'vn_kv',
                                             step: { name: 'step', optional: true },
                                             max_step: { name: 'max_step', optional: true },
+                                            filter_order: { name: 'filter_order', optional: true },
+                                            filter_type: { name: 'filter_type', optional: true },
+                                            filter_q: { name: 'filter_q', optional: true },
                                             in_service: { name: 'in_service', optional: true },
                                         }),
                                     });

@@ -140,6 +140,11 @@ export function applyElectrisimImportSidecar(graph, modelData) {
         if (t3Row && style.includes('shapeELXXX=Three Winding Transformer')) {
             Object.keys(t3Row).forEach((k) => setAttr(cell, k, t3Row[k]));
         }
+        // A harmonic filter: its rated Mvar and tuning (the import drew its fundamental draw).
+        const shRow = pick(sidecar.shunt);
+        if (shRow && style.includes('shapeELXXX=Capacitor')) {
+            Object.keys(shRow).forEach((k) => setAttr(cell, k, shRow[k]));
+        }
         const lineRow = pick(sidecar.line);
         if (lineRow && /shapeELXXX=Line(;|$)/.test(style)) {
             Object.keys(lineRow).forEach((k) => setAttr(cell, k, lineRow[k]));

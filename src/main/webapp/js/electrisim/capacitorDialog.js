@@ -9,6 +9,9 @@ export const defaultCapacitorData = {
     vn_kv: 0.0,
     step: 0.0,
     max_step: 0.0,
+    filter_order: 0.0,
+    filter_type: "high_pass",
+    filter_q: 0.0,
     in_service: true,
     cost_per_unit_by_currency: "0"
 };
@@ -68,6 +71,32 @@ export class CapacitorDialog extends Dialog {
                 type: 'number',
                 value: this.data.loss_factor.toString(),
                 step: '0.001',
+                min: '0'
+            },
+            {
+                id: 'filter_order',
+                label: 'Filter Tuning Order (filter_order)',
+                description: 'Harmonic its tuning reactor tunes the bank to (X_L = X_C / h^2); 0 = a plain capacitor. The reactive power is then the filter at the fundamental',
+                type: 'number',
+                value: this.data.filter_order.toString(),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'filter_type',
+                label: 'Filter Type (filter_type)',
+                description: 'high_pass: damping resistor across the reactor (second-order damped); single_tuned: resistor in series',
+                type: 'select',
+                options: ['high_pass', 'single_tuned'],
+                value: this.data.filter_type
+            },
+            {
+                id: 'filter_q',
+                label: 'Filter Quality (filter_q)',
+                description: 'high_pass: R = q X_n (some 0.5-5, default 2); single_tuned: R = X_n / q (some 30-100, default 50); X_n = X_C / h. 0 = default',
+                type: 'number',
+                value: this.data.filter_q.toString(),
+                step: '0.1',
                 min: '0'
             }
         ];
@@ -370,6 +399,25 @@ export class CapacitorDialog extends Dialog {
                     accentColor: '#007bff',
                     cursor: 'pointer',
                     margin: '0'
+                });
+            } else if (param.type === 'select') {
+                input = document.createElement('select');
+                param.options.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option;
+                    opt.textContent = option;
+                    if (option === param.value) opt.selected = true;
+                    input.appendChild(opt);
+                });
+                Object.assign(input.style, {
+                    width: '180px',
+                    padding: '10px 14px',
+                    border: '2px solid #ced4da',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    backgroundColor: '#ffffff',
+                    boxSizing: 'border-box'
                 });
             } else {
                 input = document.createElement('input');
