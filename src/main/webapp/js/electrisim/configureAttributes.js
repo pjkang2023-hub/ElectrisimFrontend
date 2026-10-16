@@ -1783,6 +1783,13 @@ export function configureVscAttributes(grafka, vertex, options = {}) {
                        "soc_balance_gain"]) {
         g.setAttribute(key, String(options[key] ?? ""));
     }
+    // For the EMT study, holding its DC bus: easing off as its AC frequency falls, from start to end (0: never)
+    g.setAttribute("ease_f_start_hz", String(options.ease_f_start_hz ?? "0"));
+    g.setAttribute("ease_f_end_hz", String(options.ease_f_end_hz ?? "0"));
+    // ...and backing off at once on an AC voltage dip (0: never), to its floor, back over its restore time
+    g.setAttribute("uv_ease_pu", String(options.uv_ease_pu ?? "0"));
+    g.setAttribute("uv_floor_pu", String(options.uv_floor_pu ?? "0.5"));
+    g.setAttribute("uv_restore_s", String(options.uv_restore_s ?? "5"));
     // For the EMT study: its rating (0: 1.25 x its load-flow power), DC link (0: 4 ms of its rating) and current limit
     g.setAttribute("rated_mva", String(options.rated_mva ?? "0"));
     g.setAttribute("dc_link_mf", String(options.dc_link_mf ?? "0"));

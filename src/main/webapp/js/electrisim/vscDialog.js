@@ -28,6 +28,11 @@ export const defaultVscData = {
     overload_curve: '',
     follow_tau_s: 0,            // the time series: following its bus's load through a low-pass (0: at once)
     soc_balance_gain: 0,        // the time series: biased by its bus's batteries' charge against the others' (0: none)
+    ease_f_start_hz: 0,         // EMT study, holding its DC bus: easing off as its AC frequency falls from this...
+    ease_f_end_hz: 0,           // ...to nothing at this (0: never)
+    uv_ease_pu: 0,              // EMT study, holding its DC bus: backing off at once below this AC voltage (0: never)...
+    uv_floor_pu: 0.5,           // ...to this share of its rating...
+    uv_restore_s: 5,            // ...back to its rating over this, its voltage restored
     spectrum: 'afe',          // harmonic study: its AC current's harmonics - 'afe', 'six_pulse' or 'none'
     in_service: true,
     cost_per_unit_by_currency: "0"
@@ -232,6 +237,61 @@ export class VscDialog extends Dialog {
                 type: 'number',
                 value: String(this.data.follow_tau_s ?? 0),
                 step: '1',
+                min: '0'
+            },
+            {
+                id: 'ease_f_start_hz',
+                label: 'Easing off from (EMT)',
+                symbol: 'ease_f_start_hz',
+                unit: 'Hz',
+                description: 'Holding its DC bus, in the EMT study: below this frequency at its AC side (its PLL\'s, over 20 ms) the power it draws is capped, falling from its rating here to nothing at the end frequency - its DC bus sags into its stores\' droop, so an island short of power hands its load to them before any is lost. 0: never.',
+                type: 'number',
+                value: String(this.data.ease_f_start_hz ?? 0),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'ease_f_end_hz',
+                label: 'Eased off fully at (EMT)',
+                symbol: 'ease_f_end_hz',
+                unit: 'Hz',
+                description: 'The frequency at which it draws nothing; below its start. 0: never.',
+                type: 'number',
+                value: String(this.data.ease_f_end_hz ?? 0),
+                step: '0.1',
+                min: '0'
+            },
+            {
+                id: 'uv_ease_pu',
+                label: 'Backing off below (EMT)',
+                symbol: 'uv_ease_pu',
+                unit: 'pu',
+                description: 'Holding its DC bus, in the EMT study: its AC voltage below this, the power it draws is cut at once to its floor, its stores taking the rest - an island formed at full load collapses its voltage within some 10 ms, long before its frequency falls. 0: never.',
+                type: 'number',
+                value: String(this.data.uv_ease_pu ?? 0),
+                step: '0.05',
+                min: '0'
+            },
+            {
+                id: 'uv_floor_pu',
+                label: 'Backed-off floor (EMT)',
+                symbol: 'uv_floor_pu',
+                unit: 'pu',
+                description: 'What it may still draw, per unit of its rating, once backed off: what its bus\'s stores cannot carry.',
+                type: 'number',
+                value: String(this.data.uv_floor_pu ?? 0.5),
+                step: '0.05',
+                min: '0'
+            },
+            {
+                id: 'uv_restore_s',
+                label: 'Back to its rating over (EMT)',
+                symbol: 'uv_restore_s',
+                unit: 's',
+                description: 'Its voltage restored, the time it takes to climb from its floor back to its rating; a further dip cuts it back.',
+                type: 'number',
+                value: String(this.data.uv_restore_s ?? 5),
+                step: '0.5',
                 min: '0'
             },
             {

@@ -257,7 +257,8 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         const optional = isB2b ? ['cost_per_unit_by_currency']
             : ['rated_mva', 'dc_link_mf', 'dc_link_esr_mohm', 'dc_link_esl_uh', 'current_limit_pu', 'emt_model',
                 'spectrum', 'switching_khz', 'current_loop_hz', 'inlet_c', 'altitude_m', 'derate_temp_curve',
-                'derate_altitude_curve', 'overload_curve', 'follow_tau_s', 'soc_balance_gain', 'cost_per_unit_by_currency'];
+                'derate_altitude_curve', 'overload_curve', 'follow_tau_s', 'soc_balance_gain', 'ease_f_start_hz',
+                'ease_f_end_hz', 'uv_ease_pu', 'uv_floor_pu', 'uv_restore_s', 'cost_per_unit_by_currency'];
         return { arrayKey: isB2b ? 'B2BVSC' : 'VSC', row: withOptional(row, cell, optional) };
     }
     case 'DC Line': {
