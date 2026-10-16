@@ -165,6 +165,7 @@ DER_PARAMETERS.PCS = [
     num('dc_link_esr_mohm', 'DC-link ESR (on a DC network)', 'mOhm', 0, 'Its DC-link capacitor\'s series resistance: what a DC bus fault meets. 0: none.', '0.01'),
     num('dc_link_esl_uh', 'DC-link ESL (on a DC network)', 'uH', 0, 'Its DC-link capacitor\'s series inductance. 0: none.', '0.01'),
     { ...num('opf_marginal_cost_eur_per_mwh', 'OPF marginal cost', 'EUR/MWh', '', 'Optimal power flow: what each MWh it delivers costs (charging, what each MWh it takes earns). Blank: the study’s default. It is dispatched within its source’s window: a battery’s state of charge and C-rates, an SOFC system’s minimum load and rating, a PV array’s MPP.', '1'), min: undefined },
+    num('harmonic_r_pu', 'Active damping resistance (harmonics)', 'p.u.', 0, 'Grid-forming, islanded, in the harmonic study: its control drawing harmonic current in phase with its terminals\' harmonic voltage - a virtual resistance across them at the harmonics, none at the fundamental. Lower damps more: 1 p.u. draws its rated current for a harmonic voltage of 1 p.u. 0: none, its reactor alone.', '0.1'),
     inService
 ];
 
