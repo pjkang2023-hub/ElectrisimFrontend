@@ -63,6 +63,7 @@ export class EmtResultsDialog {
             this._renderAc(body);
             this._renderFault(body);
             this._renderIsland(body);
+            this._renderEnergise(body);
             this._renderMachines(body);
             this._renderConverters(body);
             this._renderDers(body);
@@ -163,6 +164,27 @@ export class EmtResultsDialog {
         note.style.cssText = 'margin-top:12px;padding:8px 12px;background:#fff3cd;border-radius:6px;color:#664d03;';
         note.textContent = `Islanded from ${fmt(isl.t_ms, 1)} ms - the grid's breaker phases opened at their currents' zeros (${opened}).`;
         body.appendChild(note);
+    }
+
+    /** A capacitor bank energised during the run: its inrush and its bus's voltage. */
+    _renderEnergise(body) {
+        const en = this.emt.energise;
+        if (!en) return;
+        const closed = en.controlled
+            ? `controlled closing: poles a and b at ${fmt(en.closed_ms?.[0], 2)} ms, c at ${fmt(en.closed_ms?.[2], 2)} ms`
+            : `its three poles together at ${fmt(en.t_ms, 1)} ms`;
+        this._h(body, `Energising ${this._escape(en.shunt)} on ${this._escape(en.bus)}`);
+        const note = document.createElement('div');
+        note.style.cssText = 'margin:4px 0 8px;color:#495057;';
+        note.textContent = `Closed with ${closed}. Its bus after the closing: ${fmt(en.v_peak_pu, 3)} p.u. at its highest instant, `
+            + `its rms over a cycle ${fmt(en.v_rms_min_pu, 3)} to ${fmt(en.v_rms_max_pu, 3)} p.u.`;
+        body.appendChild(note);
+        body.appendChild(this._table([
+            { label: 'Phase', align: 'left', value: p => p.phase },
+            { label: 'Inrush peak (kA)', value: p => fmt(p.i_peak_ka, 4) },
+            { label: 'Highest rms over a cycle (kA)', value: p => fmt(p.i_rms_max_ka, 4) },
+            { label: 'Last cycle rms (kA)', value: p => fmt(p.i_rms_final_ka, 4) }
+        ], en.phases || []));
     }
 
     /** The sources and stores: power, voltage and state at the start and the end. */

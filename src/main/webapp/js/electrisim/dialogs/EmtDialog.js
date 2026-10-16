@@ -95,6 +95,21 @@ export class EmtDialog extends Dialog {
             { id: 'ac_fault_fraction', label: 'Its point, from its from-bus (0-1)', type: 'number', value: '0.5', min: '0.01', max: '0.99', step: '0.05' },
             { id: 'ac_trip_time_ms', label: 'Its breakers open at (ms; blank: never)', type: 'text', value: '' },
             { id: 'ac_trip_lines', label: 'Lines whose breakers open (ids or names, comma-separated; blank: the faulted line)', type: 'text', value: '' },
+            { id: 'energise_section', label: 'Energising a capacitor bank', type: 'section', subtitle: 'A capacitor bank or harmonic filter switched on during the run - out of the load flow it starts from - to see its inrush, its bus’s voltage and what the sources make of it.' },
+            {
+                id: 'ac_energise_shunt',
+                label: 'Capacitor bank',
+                type: 'select',
+                options: [{ value: 'none', label: 'None', default: true }, ...cellOptions(this.graph, 'Capacitor')]
+            },
+            { id: 'ac_energise_time_ms', label: 'Closing time (ms)', type: 'number', value: '40', min: '0', step: '1' },
+            {
+                id: 'ac_energise_controlled',
+                label: 'Its breaker',
+                type: 'select',
+                options: [{ value: 'false', label: 'Its three poles together', default: true },
+                          { value: 'true', label: 'Controlled closing (each pole at no voltage across it)' }]
+            },
             { id: 'fault_section', label: 'A DC fault', type: 'section', subtitle: 'Pole to pole, on a DC bus.' },
             {
                 id: 'fault_bus',
