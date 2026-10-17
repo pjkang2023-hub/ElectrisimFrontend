@@ -185,6 +185,16 @@ export class TransientStabilityDialog extends Dialog {
             { id: 'grid_voltage_table', label: 'Custom table: t (s), v (pu); ...', type: 'text', value: '0, 0.5; 0.15, 1.0' },
             { id: 'grid_voltage_start_s', label: 'Start (s)', type: 'number', value: '1.0', min: '0', step: '0.1' },
             {
+                id: 'shed_section', label: 'Load shedding', type: 'section',
+                subtitle: 'A scheme on a grid-forming island: when its trigger has been past its pickup for the delay, it sheds a step of the loads it may shed, and again after each further delay, up to its steps. Loading: the most loaded grid-forming PCS’s current in pu of its rating at its inlet temperature, above the pickup (1.0) - the overload a PCS can signal. Frequency: the island’s, below the pickup (0.5 Hz under rated) - seen at every load, but droop sets it by power, not rating. Loads: names separated by commas; empty, every load on a grid-forming island.'
+            },
+            { id: 'shed_trigger', label: 'Trigger', type: 'select', options: [{ value: 'none', label: 'None', default: true }, { value: 'loading', label: 'PCS loading' }, { value: 'frequency', label: 'Island frequency' }] },
+            { id: 'shed_pickup', label: 'Pickup (pu of rating, or Hz; empty for the default)', type: 'text', value: '' },
+            { id: 'shed_delay_s', label: 'Delay (s)', type: 'number', value: '2.0', min: '0', step: '0.1' },
+            { id: 'shed_step_percent', label: 'Step (% of the loads)', type: 'number', value: '5', min: '0', max: '100', step: '0.5' },
+            { id: 'shed_max_steps', label: 'Steps at most', type: 'number', value: '4', min: '0', step: '1' },
+            { id: 'shed_loads', label: 'Loads it may shed (optional)', type: 'text', value: '' },
+            {
                 id: 'poi_bus',
                 label: 'POI bus (voltage / ride-through check)',
                 type: 'select',

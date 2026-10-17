@@ -215,6 +215,12 @@ window.transientStabilityAndes = function (a, b, c) {
             grid_voltage_profile: values.grid_voltage_profile || 'none',
             grid_voltage_table: String(values.grid_voltage_table ?? ''),
             grid_voltage_start_s: String(values.grid_voltage_start_s ?? '1.0'),
+            shed_trigger: values.shed_trigger || 'none',
+            shed_pickup: String(values.shed_pickup ?? ''),
+            shed_delay_s: String(values.shed_delay_s ?? '2.0'),
+            shed_step_percent: String(values.shed_step_percent ?? '5'),
+            shed_max_steps: String(values.shed_max_steps ?? '4'),
+            shed_loads: String(values.shed_loads ?? ''),
             // The library profiles some load follows through the run.
             load_profiles: referencedLoadProfiles(b),
             user_email: getUserEmail()

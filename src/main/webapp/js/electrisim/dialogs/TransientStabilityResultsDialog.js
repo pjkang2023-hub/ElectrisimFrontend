@@ -82,6 +82,25 @@
                     this.results.warnings.map((w) => `<li>${w}</li>`).join('') + '</ul>';
                 body.appendChild(warn);
             }
+            const shed = this.results.load_shedding;
+            if (shed?.enabled) {
+                // Each step the scheme took: when, what it saw, how much it shed.
+                const box = document.createElement('div');
+                box.style.cssText = 'margin-top:10px;padding:10px;background:#e7f1ff;border-radius:4px;font-size:12px;';
+                const unit = shed.trigger === 'loading' ? 'pu of rating' : 'Hz';
+                const rows = (shed.steps || []).map((s) => `<tr><td>${Number(s.t_s).toFixed(3)}</td>`
+                    + `<td>${Number(s.trigger_value).toFixed(3)}</td>`
+                    + `<td>${Number(s.shed_mw).toFixed(3)}</td><td>${Number(s.kept_percent).toFixed(1)}</td></tr>`).join('');
+                box.innerHTML = `<strong>Load shedding</strong> (${shed.trigger}, pickup ${shed.pickup} ${unit}, `
+                    + `${shed.delay_s} s, steps of ${shed.step_percent} %, at most ${shed.max_steps}; `
+                    + `${(shed.loads || []).length} load(s)): `
+                    + (rows
+                        ? `${Number(shed.shed_mw).toFixed(3)} MW shed<table style="margin-top:6px;border-collapse:collapse;">`
+                          + `<tr><th style="text-align:left;padding-right:12px;">t (s)</th><th style="text-align:left;padding-right:12px;">Trigger (${unit})</th>`
+                          + `<th style="text-align:left;padding-right:12px;">Shed (MW)</th><th style="text-align:left;">Kept (%)</th></tr>${rows}</table>`
+                        : 'nothing shed.');
+                body.appendChild(box);
+            }
             const rt = this.results.ride_through;
             if (rt?.enabled && rt.pass === false) {
                 const fail = document.createElement('div');
@@ -146,6 +165,9 @@
             const rt = r.ride_through || {};
             if (rt.enabled) {
                 items.push(['Ride-through', rt.pass === true ? 'PASS' : rt.pass === false ? 'FAIL' : '—']);
+            }
+            if (r.load_shedding?.enabled) {
+                items.push(['Load shed (MW)', Number(r.load_shedding.shed_mw || 0).toFixed(3)]);
             }
             items.forEach(([k, v]) => {
                 const chip = document.createElement('div');
