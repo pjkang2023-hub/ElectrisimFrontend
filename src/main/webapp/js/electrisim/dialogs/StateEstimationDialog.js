@@ -1,6 +1,5 @@
 // StateEstimationDialog.js - Dialog for the state estimation study (pandapower WLS)
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 // The last settings and entered measurement table, kept in this browser.
 export const STATE_ESTIMATION_SETTINGS_KEY = 'electrisim.stateEstimation.settings';
@@ -215,41 +214,11 @@ export class StateEstimationDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the State Estimation feature.');
-                    }
-                    return;
-                }
-                const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
-                saveStateEstimationSettings(params);
-                if (callback) {
-                    callback(params);
-                }
-            } catch (error) {
-                console.error('StateEstimationDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+            const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
+            saveStateEstimationSettings(params);
+            if (callback) {
+                callback(params);
             }
         });
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('StateEstimationDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }

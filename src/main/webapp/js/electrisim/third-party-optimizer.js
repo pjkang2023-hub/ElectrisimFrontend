@@ -1,6 +1,6 @@
 /**
  * Third-Party Script Optimizer for Electrisim
- * Manages loading of external libraries (Stripe, XLSX, etc.) efficiently
+ * Manages loading of external libraries (XLSX, AG Grid) efficiently
  * Reduces Total Blocking Time by deferring non-critical scripts
  */
 
@@ -53,65 +53,11 @@
     }
     
     /**
-     * Load Stripe SDK on demand
-     * Used for payment and subscription functionality
-     * @returns {Promise<Object>} - Resolves with Stripe library
-     */
-    function loadStripe() {
-        if (window.Stripe) {
-            return Promise.resolve(window.Stripe);
-        }
-        
-        if (loadingPromises.has('stripe')) {
-            return loadingPromises.get('stripe');
-        }
-        
-        const promise = new Promise((resolve, reject) => {
-            console.log('📦 Loading Stripe SDK...');
-            
-            const script = document.createElement('script');
-            script.src = 'https://js.stripe.com/v3/';
-            script.async = true;
-            
-            script.onload = () => {
-                console.log('✅ Stripe SDK loaded');
-                loadedLibraries.set('stripe', window.Stripe);
-                
-                // Also load Stripe integration modules if lazy loader is available
-                if (window.ElectrisimLazyLoader) {
-                    Promise.all([
-                        window.ElectrisimLazyLoader.loadModule('loginsubscription/stripe'),
-                        window.ElectrisimLazyLoader.loadModule('loginsubscription/stripe-subscription')
-                    ]).then(() => {
-                        loadingPromises.delete('stripe');
-                        resolve(window.Stripe);
-                    }).catch(reject);
-                } else {
-                    loadingPromises.delete('stripe');
-                    resolve(window.Stripe);
-                }
-            };
-            
-            script.onerror = (error) => {
-                console.error('❌ Failed to load Stripe SDK:', error);
-                loadingPromises.delete('stripe');
-                reject(new Error('Failed to load Stripe SDK'));
-            };
-            
-            document.head.appendChild(script);
-        });
-        
-        loadingPromises.set('stripe', promise);
-        return promise;
-    }
-    
-    /**
      * Preload external resources using link preconnect
      * Establishes early connections to external domains
      */
     function preconnectExternalResources() {
         const externalDomains = [
-            'https://js.stripe.com',
             'https://unpkg.com',
             'https://fonts.googleapis.com',
             'https://fonts.gstatic.com'
@@ -186,7 +132,6 @@
             requestIdleCallback(() => {
                 // Prefetch commonly used external resources
                 prefetchResources([
-                    'https://js.stripe.com/v3/',
                     'https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.full.min.js'
                 ]);
             }, { timeout: 5000 });
@@ -202,7 +147,6 @@
             loading: Array.from(loadingPromises.keys()),
             available: {
                 xlsx: !!window.XLSX,
-                stripe: !!window.Stripe,
                 agGrid: !!window.agGrid
             }
         };
@@ -211,7 +155,6 @@
     // Export API
     window.ElectrisimThirdParty = {
         loadXLSX,
-        loadStripe,
         ensureAGGrid,
         preconnectExternalResources,
         prefetchResources,
@@ -221,7 +164,6 @@
         // Convenience methods
         isLoaded: (library) => loadedLibraries.has(library) || 
                                (library === 'xlsx' && !!window.XLSX) ||
-                               (library === 'stripe' && !!window.Stripe) ||
                                (library === 'agGrid' && !!window.agGrid)
     };
     

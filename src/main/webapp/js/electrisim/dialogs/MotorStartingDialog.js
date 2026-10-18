@@ -1,6 +1,5 @@
 // MotorStartingDialog.js - Motor starting / voltage dip study parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 function parseCellStyle(style) {
     if (!style) return {};
@@ -196,66 +195,35 @@ export class MotorStartingDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the Motor Starting analysis feature.');
-                    }
-                    return;
-                }
+            let params;
+            if (values && typeof values === 'object' && !Array.isArray(values) && ('mode' in values || 'starting_method' in values)) {
+                params = values;
+            } else if (Array.isArray(values)) {
+                params = {
+                    mode: values[0],
+                    motor_ids: values[1],
+                    starting_method: values[2],
+                    i_limit_pu: values[3],
+                    at_tap_pu: values[4],
+                    reactor_x_pu: values[5],
+                    voltage_limit_percent: values[6],
+                    thermal_limit_percent: values[7],
+                    t_start: values[8],
+                    t_end: values[9],
+                    frequency: values[10],
+                    sn_mva: values[11],
+                    thermal_check: values[12],
+                    trafo_tau_min: values[13],
+                    line_tau_min: values[14]
+                };
+            } else {
+                params = values || {};
+            }
 
-                let params;
-                if (values && typeof values === 'object' && !Array.isArray(values) && ('mode' in values || 'starting_method' in values)) {
-                    params = values;
-                } else if (Array.isArray(values)) {
-                    params = {
-                        mode: values[0],
-                        motor_ids: values[1],
-                        starting_method: values[2],
-                        i_limit_pu: values[3],
-                        at_tap_pu: values[4],
-                        reactor_x_pu: values[5],
-                        voltage_limit_percent: values[6],
-                        thermal_limit_percent: values[7],
-                        t_start: values[8],
-                        t_end: values[9],
-                        frequency: values[10],
-                        sn_mva: values[11],
-                        thermal_check: values[12],
-                        trafo_tau_min: values[13],
-                        line_tau_min: values[14]
-                    };
-                } else {
-                    params = values || {};
-                }
-
-                if (callback) {
-                    callback(params);
-                }
-            } catch (error) {
-                console.error('MotorStartingDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+            if (callback) {
+                callback(params);
             }
         });
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('MotorStartingDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }
 

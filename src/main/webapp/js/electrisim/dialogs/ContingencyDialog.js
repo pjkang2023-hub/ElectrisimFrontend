@@ -1,6 +1,5 @@
 // ContingencyDialog.js - Dialog for Contingency Analysis parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 export class ContingencyDialog extends Dialog {
     constructor(editorUi) {
@@ -87,81 +86,23 @@ export class ContingencyDialog extends Dialog {
         console.log('ContingencyDialog.show() called');
         super.show(async (values) => {
             console.log('ContingencyDialog Analyze button clicked, values:', values);
-            
-            // Check subscription status before proceeding
-            try {
-                console.log('ContingencyDialog: Starting subscription check...');
-                const hasSubscription = await this.checkSubscriptionStatus();
-                console.log('ContingencyDialog: Subscription check result:', hasSubscription);
-                
-                if (!hasSubscription) {
-                    console.log('ContingencyDialog: No subscription, showing modal...');
-                    // Show subscription modal if no active subscription
-                    if (window.showSubscriptionModal) {
-                        console.log('ContingencyDialog: Calling showSubscriptionModal');
-                        window.showSubscriptionModal();
-                    } else {
-                        console.error('ContingencyDialog: Subscription modal not available');
-                        alert('A subscription is required to use the Contingency Analysis feature.');
-                    }
-                    return;
-                }
-                
-                console.log('ContingencyDialog: Subscription check passed, proceeding with analysis...');
-                
-                // Array order matches contingencyAnalysis.js: element_type, voltage_limits, thermal_limits, min/max V, max loading
-                const valuesArray = [
-                    values[0],  // element_type
-                    values[1],  // voltage_limits
-                    values[2],  // thermal_limits
-                    values[3],  // min_vm_pu
-                    values[4],  // max_vm_pu
-                    values[5]   // max_loading_percent
-                ];
-                
-                console.log('ContingencyDialog: Calling callback with values array:', valuesArray);
-                
-                if (callback) {
-                    callback(valuesArray);
-                }
-            } catch (error) {
-                console.error('ContingencyDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+
+            // Array order matches contingencyAnalysis.js: element_type, voltage_limits, thermal_limits, min/max V, max loading
+            const valuesArray = [
+                values[0],  // element_type
+                values[1],  // voltage_limits
+                values[2],  // thermal_limits
+                values[3],  // min_vm_pu
+                values[4],  // max_vm_pu
+                values[5]   // max_loading_percent
+            ];
+
+            console.log('ContingencyDialog: Calling callback with values array:', valuesArray);
+
+            if (callback) {
+                callback(valuesArray);
             }
         });
-    }
-
-    // Function to check subscription status
-    async checkSubscriptionStatus() {
-        console.log('ContingencyDialog.checkSubscriptionStatus() called');
-        try {
-            // First ensure subscription functions are available
-            console.log('ContingencyDialog: Ensuring subscription functions are available...');
-            const functionsStatus = await ensureSubscriptionFunctions();
-            console.log('ContingencyDialog: Functions status:', functionsStatus);
-            
-            // Use the global subscription check function
-            if (window.checkSubscriptionStatus) {
-                console.log('ContingencyDialog: Using window.checkSubscriptionStatus');
-                const result = await window.checkSubscriptionStatus();
-                console.log('ContingencyDialog: window.checkSubscriptionStatus result:', result);
-                return result;
-            }
-            
-            // Fallback: check if subscription manager exists
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                console.log('ContingencyDialog: Using SubscriptionManager.checkSubscriptionStatus');
-                const result = await window.SubscriptionManager.checkSubscriptionStatus();
-                console.log('ContingencyDialog: SubscriptionManager result:', result);
-                return result;
-            }
-            
-            console.warn('ContingencyDialog: No subscription check function available');
-            return false;
-        } catch (error) {
-            console.error('ContingencyDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }
 

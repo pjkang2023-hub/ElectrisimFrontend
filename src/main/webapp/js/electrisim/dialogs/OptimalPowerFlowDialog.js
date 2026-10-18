@@ -5,9 +5,6 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
 (function() {
     function initOptimalPowerFlowDialog() {
         console.log('Initializing OptimalPowerFlowDialog as standalone...');
-        
-        const ensureSubscriptionFunctions = window.ensureSubscriptionFunctions;
-        console.log('ensureSubscriptionFunctions available:', !!ensureSubscriptionFunctions);
 
         class OptimalPowerFlowDialog {
             constructor(editorUi) {
@@ -477,44 +474,16 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
                 
                 submitButton.addEventListener('click', async () => {
                     console.log('OptimalPowerFlowDialog Calculate button clicked, values:', values);
-                    
-                    // Check subscription status before proceeding
+
+                    closeOverlay();
+
                     try {
-                        console.log('OptimalPowerFlowDialog: Starting subscription check...');
-                        const hasSubscription = await this.checkSubscriptionStatus();
-                        console.log('OptimalPowerFlowDialog: Subscription check result:', hasSubscription);
-                        
-                        if (!hasSubscription) {
-                            console.log('OptimalPowerFlowDialog: No subscription, showing modal...');
-                            // Close the dialog first
-                            closeOverlay();
-                            
-                            // Show subscription modal if no active subscription
-                            if (window.showSubscriptionModal) {
-                                console.log('OptimalPowerFlowDialog: Calling showSubscriptionModal');
-                                window.showSubscriptionModal();
-                            } else {
-                                console.error('OptimalPowerFlowDialog: Subscription modal not available');
-                                alert('A subscription is required to use the Optimal Power Flow calculation feature.');
-                            }
-                            return;
-                        }
-                        
-                        console.log('OptimalPowerFlowDialog: Subscription check passed, proceeding with calculation...');
-
-                        closeOverlay();
-
-                        try {
-                            if (callback) {
-                                callback(values);
-                            }
-                        } catch (error) {
-                            console.error('OptimalPowerFlowDialog: Error running optimal power flow:', error);
-                            alert('Optimal power flow calculation failed. Check that all components are connected to buses and try again.');
+                        if (callback) {
+                            callback(values);
                         }
                     } catch (error) {
-                        console.error('OptimalPowerFlowDialog: Error checking subscription status:', error);
-                        alert('Unable to verify subscription status. Please try again.');
+                        console.error('OptimalPowerFlowDialog: Error running optimal power flow:', error);
+                        alert('Optimal power flow calculation failed. Check that all components are connected to buses and try again.');
                     }
                 });
 
@@ -528,27 +497,6 @@ import { attachBackdropCloseHandler, preventAccidentalFormSubmit } from '../util
                 attachBackdropCloseHandler(overlay, dialog, closeOverlay);
 
                 document.addEventListener('keydown', onEscapeKey);
-            }
-
-            async checkSubscriptionStatus() {
-                try {
-                    if (ensureSubscriptionFunctions && typeof ensureSubscriptionFunctions.checkSubscriptionStatus === 'function') {
-                        console.log('OptimalPowerFlowDialog: Using ensureSubscriptionFunctions.checkSubscriptionStatus');
-                        return await ensureSubscriptionFunctions.checkSubscriptionStatus();
-                    } else if (window.checkSubscriptionStatus && typeof window.checkSubscriptionStatus === 'function') {
-                        console.log('OptimalPowerFlowDialog: Using window.checkSubscriptionStatus');
-                        return await window.checkSubscriptionStatus();
-                    } else if (window.ensureSubscriptionFunctions && typeof window.ensureSubscriptionFunctions.checkSubscriptionStatus === 'function') {
-                        console.log('OptimalPowerFlowDialog: Using window.ensureSubscriptionFunctions.checkSubscriptionStatus');
-                        return await window.ensureSubscriptionFunctions.checkSubscriptionStatus();
-                    }
-                    
-                    console.warn('OptimalPowerFlowDialog: No subscription check function available');
-                    return false;
-                } catch (error) {
-                    console.error('OptimalPowerFlowDialog: Error in checkSubscriptionStatus:', error);
-                    return false;
-                }
             }
         }
 

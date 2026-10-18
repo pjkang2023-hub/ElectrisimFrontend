@@ -3,7 +3,6 @@
 <html>
 <head>
     <!-- Resource Hints for Performance -->
-    <link rel="preconnect" href="https://js.stripe.com" crossorigin>
     <link rel="preconnect" href="https://unpkg.com" crossorigin>
     <link rel="dns-prefetch" href="https://web-sdk.smartlook.com">
     <link rel="preload" href="js/app.min.js?v=ieee118-fit2" as="script">
@@ -96,8 +95,6 @@
     
 
     <script type="module" src="js/electrisim/config/environment.js"></script>
-    <!-- Attaches the bearer token to simulation-backend calls. Classic script, so it installs before any deferred module can reach the backend; window.ENV is read per request, not at install time. -->
-    <script src="js/electrisim/utils/authFetch.js"></script>
     <!-- Draws diagrams sent by the Electrisim MCP server through its local bridge. Active only when served from localhost unless enabled in localStorage. -->
     <script src="js/electrisim/utils/mcpBridge.js"></script>
     <!-- Removed duplicate scripts (domCache, batchDOM, performanceTracker, performance-optimizer) - loaded once in electrisimScripts -->
@@ -320,24 +317,6 @@
             { src: 'https://unpkg.com/ag-grid-community@31.3.2/dist/ag-grid-community.min.js' }
         ];
 
-        // Define auth and subscription scripts (ES modules)
-        const authScripts = [
-            { src: 'https://js.stripe.com/v3/' },
-            { src: 'js/electrisim/loginsubscription/stripe.js', type: 'module', async: true },
-            { src: 'js/electrisim/loginsubscription/auth-handler.js', type: 'module', async: true },
-            { src: 'js/electrisim/loginsubscription/stripe-subscription.js', type: 'module', async: true }
-        ];
-
-        // Add auth fallback functions for app.min.js compatibility
-        window.isAuthenticated = window.isAuthenticated || function() {
-            return !!localStorage.getItem('token');
-        };
-        
-        window.getCurrentUser = window.getCurrentUser || function() {
-            const userStr = localStorage.getItem('user');
-            return userStr ? JSON.parse(userStr) : null;
-        };
-
         // Define mxGraph scripts (dependent on mxClient)
         const mxGraphScripts = [
         //    { src: 'js/mxgraph/Init.js' }
@@ -355,14 +334,12 @@
 
         // Define application scripts (ES modules)
         const appScripts = [
-            { src: 'js/electrisim/auth-globals.js' },
             { src: 'js/app.min.js?v=ieee118-fit2' },
            // { src: 'js/extensions.min.js' },
            // { src: 'js/shapes.min.js' },
             { src: 'js/electrisim/dialogs/EditDataDialog.js', type: 'module', async: true },
             { src: 'js/electrisim/dialogs/ComponentsDataDialog.js', type: 'module', async: true },
             { src: 'js/electrisim/utils/cellUtils.js', type: 'module', async: true },
-            { src: 'js/electrisim/ensureSubscriptionFunctions.js', type: 'module', async: true },
             { src: 'js/electrisim/dialogs/LoadFlowDialog.js?v=1.0', type: 'module', async: true },
             { src: 'js/electrisim/dialogs/BessSizingDialog.js', type: 'module', async: true },
             { src: 'js/electrisim/dialogs/RPCDialog.js', type: 'module', async: true },
@@ -530,17 +507,12 @@
                     loadScriptSequence(coreScripts, function() {
                         // Load utility scripts
                         loadScriptSequence(utilScripts, function() {
-                            // Load auth scripts
-                            loadScriptSequence(authScripts, function() {
-                                // Load mxGraph scripts
-                                loadScriptSequence(mxGraphScripts, function() {
-                                    // Load application scripts
-                                    loadScriptSequence(appScripts, function() {
-
-
-                                        mxScriptsLoaded = true;
-                                        checkAllLoaded();
-                                    });
+                            // Load mxGraph scripts
+                            loadScriptSequence(mxGraphScripts, function() {
+                                // Load application scripts
+                                loadScriptSequence(appScripts, function() {
+                                    mxScriptsLoaded = true;
+                                    checkAllLoaded();
                                 });
                             });
                         });
@@ -648,9 +620,6 @@
 					// Load AG Grid library before app.min.js
 					mxscript('https://unpkg.com/ag-grid-community@31.3.2/dist/ag-grid-community.min.js', function()
 					{
-                        // Load auth-globals.js BEFORE app.min.js
-                    mxscript('js/electrisim/auth-globals.js', function()
-                    {
 						// PERFORMANCE: Patches temporarily disabled due to rendering issues
 						// TODO: Need safer, more conservative performance optimizations
 						// mxscript('js/electrisim/core-performance-patch.js', function() {
@@ -766,7 +735,6 @@
                                 'js/electrisim/dialogs/ComponentsDataDialog.js',
 								'js/electrisim/utils/cellUtils.js',
 								'js/electrisim/utils/networkPreparation.js',
-                                'js/electrisim/ensureSubscriptionFunctions.js',
                                 'js/electrisim/dialogs/dialogInitializer.js',
 								'js/electrisim/dialogs/BessSizingDialog.js',
 								'js/electrisim/dialogs/RPCDialog.js',
@@ -837,44 +805,19 @@
                                 // stateEstimation, dcFault, emt
                             ];
 							
-							// Auth scripts (Stripe, etc.) - deferred until after Electrisim scripts for faster initial load
-							var authScripts = [
-								'https://js.stripe.com/v3/',
-								'js/electrisim/loginsubscription/stripe.js',
-								'js/electrisim/loginsubscription/auth-handler.js',
-								'js/electrisim/loginsubscription/stripe-subscription.js'
-							];
-							
-							function loadAuthScripts(index) {
-								if (index < authScripts.length) {
-									var script = document.createElement('script');
-									if (index > 0) script.type = 'module';
-									script.src = authScripts[index];
-									script.onload = function() {
-										loadAuthScripts(index + 1);
-									};
-									script.onerror = function() {
-										if (index === 0) {
-											console.warn('Stripe SDK script failed to load (e.g. ad blocker or network). Subscription/checkout will use redirect flow.');
-											window._stripeScriptFailed = true;
-										}
-										loadAuthScripts(index + 1);
-									};
-									document.head.appendChild(script);
+							// Libraries not needed at start (XLSX for Excel import/export), loaded when idle
+							function loadDeferredLibraries() {
+								var loadXLSXDeferred = function() {
+									if (window.XLSX) return;
+									var s = document.createElement('script');
+									s.src = 'https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.full.min.js';
+									s.async = true;
+									document.head.appendChild(s);
+								};
+								if (typeof requestIdleCallback !== 'undefined') {
+									requestIdleCallback(function() { loadXLSXDeferred(); }, { timeout: 3000 });
 								} else {
-									// Defer XLSX - load during idle (Excel import/export)
-									var loadXLSXDeferred = function() {
-										if (window.XLSX) return;
-										var s = document.createElement('script');
-										s.src = 'https://unpkg.com/xlsx-style@0.8.13/dist/xlsx.full.min.js';
-										s.async = true;
-										document.head.appendChild(s);
-									};
-									if (typeof requestIdleCallback !== 'undefined') {
-										requestIdleCallback(function() { loadXLSXDeferred(); }, { timeout: 3000 });
-									} else {
-										setTimeout(loadXLSXDeferred, 3000);
-									}
+									setTimeout(loadXLSXDeferred, 3000);
 								}
 							}
 							
@@ -941,14 +884,14 @@
 										loadOne(scriptSrc, 0);
 									});
 								} else {
-									// Electrisim scripts done - now load deferred auth (Stripe) for faster initial load
-									loadAuthScripts(0);
+									// Electrisim scripts done - now the deferred libraries
+									loadDeferredLibraries();
 									mxScriptsLoaded = true;
 									checkAllLoaded();
 								}
 							}
 							
-							// Start loading Electrisim scripts first (Stripe deferred until after)
+							// Start loading Electrisim scripts
 							loadElectrisimScripts(0);
 							
 							} // end startElectrisimModules
@@ -959,7 +902,6 @@
 							console.log('🚀 app.min.js loading started');
 							
 						})(); // Close immediate function
-					}); // Close auth-globals.js callback
 					}); // Close ag-grid callback
 							
 					if (!supportedDomain)

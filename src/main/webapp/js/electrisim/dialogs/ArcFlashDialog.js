@@ -1,6 +1,5 @@
 // ArcFlashDialog.js - Dialog for IEEE 1584-2018 Arc Flash parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 export class ArcFlashDialog extends Dialog {
     constructor(editorUi) {
@@ -140,48 +139,17 @@ export class ArcFlashDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the Arc Flash analysis feature.');
-                    }
-                    return;
-                }
+            // Prefer named object if Dialog returns one; otherwise map array by parameter order
+            let params;
+            if (values && typeof values === 'object' && !Array.isArray(values) && ('electrode_config' in values || 'working_distance_mm' in values)) {
+                params = values;
+            } else {
+                params = values || {};
+            }
 
-                // Prefer named object if Dialog returns one; otherwise map array by parameter order
-                let params;
-                if (values && typeof values === 'object' && !Array.isArray(values) && ('electrode_config' in values || 'working_distance_mm' in values)) {
-                    params = values;
-                } else {
-                    params = values || {};
-                }
-
-                if (callback) {
-                    callback(params);
-                }
-            } catch (error) {
-                console.error('ArcFlashDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+            if (callback) {
+                callback(params);
             }
         });
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('ArcFlashDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }

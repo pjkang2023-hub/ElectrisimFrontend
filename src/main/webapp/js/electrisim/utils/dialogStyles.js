@@ -34,7 +34,7 @@ export const SIMULATION_INFO_BANNER_STYLE = {
 };
 
 /** Must stack above {@link STUDY_MODAL_OVERLAY_STYLE} and Draw.io study dialogs. */
-export const SUBSCRIPTION_MODAL_Z_INDEX = 11000;
+export const TOP_MODAL_Z_INDEX = 11000;
 
 /** Full-screen overlay for custom study modals (Load Flow, Harmonics, …) */
 export const STUDY_MODAL_OVERLAY_STYLE = {
@@ -319,7 +319,7 @@ export const DIALOG_STYLES = {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        zIndex: String(SUBSCRIPTION_MODAL_Z_INDEX)
+        zIndex: String(TOP_MODAL_Z_INDEX)
     },
 
     // Grid layout styles

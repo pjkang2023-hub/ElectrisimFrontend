@@ -1,7 +1,6 @@
 // LoadFlowDialog.js - Dialog for Load Flow parameters with tabs for Pandapower and OpenDSS
 // VERSION: 2024-10-18 - Updated with correct OpenDSS parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE, STUDY_MODAL_OVERLAY_STYLE, attachBackdropCloseHandler, getStudyModalDialogBoxStyle, preventAccidentalFormSubmit, STUDY_MODAL_CONTENT_WRAPPER_STYLE } from '../utils/dialogStyles.js';
 import { devLog, isDevEnvironment } from '../utils/devLog.js';
 
@@ -881,93 +880,63 @@ export class LoadFlowDialog extends Dialog {
         applyButton.onclick = async (e) => {
             e.preventDefault();
             
-            // Check subscription status before proceeding
-            try {
-                devLog('LoadFlowDialog: Starting subscription check...');
-                const hasSubscription = await this.checkSubscriptionStatus();
-                devLog('LoadFlowDialog: Subscription check result:', hasSubscription);
-                
-                if (!hasSubscription) {
-                    devLog('LoadFlowDialog: No subscription, showing modal...');
-                    // Close the dialog first
-                    if (this.modalOverlay && this.modalOverlay.parentNode) {
-                        document.body.removeChild(this.modalOverlay);
+            // The pandapower tab's checkboxes only: on the OpenDSS tab there
+            // is no exportPython, and every run logged "NOT FOUND" as an error.
+            if (isDevEnvironment() && this.currentTab === 'pandapower') {
+                console.log('=== PRE-CALLBACK DEBUG ===');
+                console.log('Current tab:', this.currentTab);
+                console.log('Inputs map size before getFormValues:', this.inputs.size);
+                console.log('Inputs map keys:', Array.from(this.inputs.keys()));
+
+                // Debug: Check ALL checkboxes in the DOM
+                const allCheckboxes = this.container ? this.container.querySelectorAll('input[type="checkbox"]') : [];
+                console.log('All checkboxes in container:', allCheckboxes.length);
+                allCheckboxes.forEach((cb, idx) => {
+                    console.log(`  Checkbox ${idx}: id="${cb.id}", checked=${cb.checked}, instance="${cb.getAttribute('data-instance-id')}"`);
+                });
+
+                // Debug: Check if exportPython checkbox is in the inputs map
+                if (this.inputs.has('exportPython')) {
+                    const checkbox = this.inputs.get('exportPython');
+                    console.log('exportPython checkbox found in inputs map:');
+                    console.log('  - checked:', checkbox.checked);
+                    console.log('  - id:', checkbox.id);
+                    console.log('  - type:', checkbox.type);
+                    console.log('  - instance ID:', checkbox.getAttribute('data-instance-id'));
+                    console.log('  - Element still in DOM:', document.body.contains(checkbox));
+
+                    // Also check if there's a different checkbox in the DOM with same ID
+                    const domCheckbox = document.getElementById('exportPython');
+                    if (domCheckbox && domCheckbox !== checkbox) {
+                        console.warn('⚠️ FOUND DIFFERENT CHECKBOX IN DOM WITH SAME ID!');
+                        console.log('  - DOM checkbox checked:', domCheckbox.checked);
+                        console.log('  - DOM checkbox instance ID:', domCheckbox.getAttribute('data-instance-id'));
+                        console.log('  - Map checkbox instance ID:', checkbox.getAttribute('data-instance-id'));
                     }
-                    
-                    // Show subscription modal if no active subscription
-                    if (window.showSubscriptionModal) {
-                        devLog('LoadFlowDialog: Calling showSubscriptionModal');
-                        window.showSubscriptionModal();
+                } else {
+                    console.warn('❌ exportPython checkbox NOT FOUND in inputs map!');
+                    console.log('Attempting direct DOM lookup...');
+                    const domCheckbox = document.getElementById('exportPython');
+                    if (domCheckbox) {
+                        console.log('✅ Found via DOM lookup:');
+                        console.log('  - checked:', domCheckbox.checked);
+                        console.log('  - id:', domCheckbox.id);
+                        console.log('  - instance ID:', domCheckbox.getAttribute('data-instance-id'));
                     } else {
-                        console.error('LoadFlowDialog: Subscription modal not available');
-                        alert('A subscription is required to use the Load Flow calculation feature.');
+                        console.error('❌ NOT FOUND via DOM lookup either!');
                     }
-                    return;
                 }
-                
-                devLog('LoadFlowDialog: Subscription check passed, proceeding with calculation...');
-
-                // The pandapower tab's checkboxes only: on the OpenDSS tab there
-                // is no exportPython, and every run logged "NOT FOUND" as an error.
-                if (isDevEnvironment() && this.currentTab === 'pandapower') {
-                    console.log('=== PRE-CALLBACK DEBUG ===');
-                    console.log('Current tab:', this.currentTab);
-                    console.log('Inputs map size before getFormValues:', this.inputs.size);
-                    console.log('Inputs map keys:', Array.from(this.inputs.keys()));
-
-                    // Debug: Check ALL checkboxes in the DOM
-                    const allCheckboxes = this.container ? this.container.querySelectorAll('input[type="checkbox"]') : [];
-                    console.log('All checkboxes in container:', allCheckboxes.length);
-                    allCheckboxes.forEach((cb, idx) => {
-                        console.log(`  Checkbox ${idx}: id="${cb.id}", checked=${cb.checked}, instance="${cb.getAttribute('data-instance-id')}"`);
-                    });
-
-                    // Debug: Check if exportPython checkbox is in the inputs map
-                    if (this.inputs.has('exportPython')) {
-                        const checkbox = this.inputs.get('exportPython');
-                        console.log('exportPython checkbox found in inputs map:');
-                        console.log('  - checked:', checkbox.checked);
-                        console.log('  - id:', checkbox.id);
-                        console.log('  - type:', checkbox.type);
-                        console.log('  - instance ID:', checkbox.getAttribute('data-instance-id'));
-                        console.log('  - Element still in DOM:', document.body.contains(checkbox));
-
-                        // Also check if there's a different checkbox in the DOM with same ID
-                        const domCheckbox = document.getElementById('exportPython');
-                        if (domCheckbox && domCheckbox !== checkbox) {
-                            console.warn('⚠️ FOUND DIFFERENT CHECKBOX IN DOM WITH SAME ID!');
-                            console.log('  - DOM checkbox checked:', domCheckbox.checked);
-                            console.log('  - DOM checkbox instance ID:', domCheckbox.getAttribute('data-instance-id'));
-                            console.log('  - Map checkbox instance ID:', checkbox.getAttribute('data-instance-id'));
-                        }
-                    } else {
-                        console.warn('❌ exportPython checkbox NOT FOUND in inputs map!');
-                        console.log('Attempting direct DOM lookup...');
-                        const domCheckbox = document.getElementById('exportPython');
-                        if (domCheckbox) {
-                            console.log('✅ Found via DOM lookup:');
-                            console.log('  - checked:', domCheckbox.checked);
-                            console.log('  - id:', domCheckbox.id);
-                            console.log('  - instance ID:', domCheckbox.getAttribute('data-instance-id'));
-                        } else {
-                            console.error('❌ NOT FOUND via DOM lookup either!');
-                        }
-                    }
-                    console.log('=== END PRE-CALLBACK DEBUG ===');
-                }
-
-                const values = this.getFormValues();
-                devLog(`${this.title} collected values:`, values);
-
-                if (callback) {
-                    callback(values);
-                }
-                
-                this.closeDialog();
-            } catch (error) {
-                console.error('LoadFlowDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+                console.log('=== END PRE-CALLBACK DEBUG ===');
             }
+
+            const values = this.getFormValues();
+            devLog(`${this.title} collected values:`, values);
+
+            if (callback) {
+                callback(values);
+            }
+            
+            this.closeDialog();
         };
 
         buttonContainer.appendChild(cancelButton);
@@ -1051,38 +1020,5 @@ export class LoadFlowDialog extends Dialog {
         });
 
         return button;
-    }
-
-    // Function to check subscription status
-    async checkSubscriptionStatus() {
-        console.log('LoadFlowDialog.checkSubscriptionStatus() called');
-        try {
-            // First ensure subscription functions are available
-            console.log('LoadFlowDialog: Ensuring subscription functions are available...');
-            const functionsStatus = await ensureSubscriptionFunctions();
-            console.log('LoadFlowDialog: Functions status:', functionsStatus);
-            
-            // Use the global subscription check function
-            if (window.checkSubscriptionStatus) {
-                console.log('LoadFlowDialog: Using window.checkSubscriptionStatus');
-                const result = await window.checkSubscriptionStatus();
-                console.log('LoadFlowDialog: window.checkSubscriptionStatus result:', result);
-                return result;
-            }
-            
-            // Fallback: check if subscription manager exists
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                console.log('LoadFlowDialog: Using SubscriptionManager.checkSubscriptionStatus');
-                const result = await window.SubscriptionManager.checkSubscriptionStatus();
-                console.log('LoadFlowDialog: SubscriptionManager result:', result);
-                return result;
-            }
-            
-            console.warn('LoadFlowDialog: No subscription check function available');
-            return false;
-        } catch (error) {
-            console.error('LoadFlowDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 } 

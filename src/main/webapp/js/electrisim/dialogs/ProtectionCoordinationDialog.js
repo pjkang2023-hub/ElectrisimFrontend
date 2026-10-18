@@ -1,8 +1,6 @@
 // ProtectionCoordinationDialog.js - Dialog for Protection Coordination parameters.
-// Modeled on ShortCircuitDialog.js: 3 tabs (Fault / Grading / Output) and a subscription
-// gate before the callback fires.
+// Modeled on ShortCircuitDialog.js: 3 tabs (Fault / Grading / Output).
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { getDrawioStudyDialogHeight, SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE, preventAccidentalFormSubmit } from '../utils/dialogStyles.js';
 
 export class ProtectionCoordinationDialog extends Dialog {
@@ -528,27 +526,13 @@ export class ProtectionCoordinationDialog extends Dialog {
 
         applyButton.onclick = async (e) => {
             e.preventDefault();
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the Protection Coordination feature.');
-                    }
-                    return;
-                }
-                const values = this.getFormValues();
-                if (values.fault_location_mode === 'bus' && !String(values.fault_bus_id || '').trim()) {
-                    alert('Select a fault busbar, or switch fault location to "Along a line".');
-                    return;
-                }
-                if (callback) callback(values);
-                this.closeDialog();
-            } catch (error) {
-                console.error('ProtectionCoordinationDialog: subscription check failed:', error);
-                alert('Unable to verify subscription status. Please try again.');
+            const values = this.getFormValues();
+            if (values.fault_location_mode === 'bus' && !String(values.fault_bus_id || '').trim()) {
+                alert('Select a fault busbar, or switch fault location to "Along a line".');
+                return;
             }
+            if (callback) callback(values);
+            this.closeDialog();
         };
 
         buttonContainer.appendChild(cancelButton);
@@ -563,22 +547,6 @@ export class ProtectionCoordinationDialog extends Dialog {
             });
         } else {
             this.showModalFallback(container);
-        }
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('ProtectionCoordinationDialog: checkSubscriptionStatus error:', error);
-            return false;
         }
     }
 }

@@ -12,7 +12,6 @@ import {
     STUDY_MODAL_CONTENT_WRAPPER_STYLE,
     STUDY_MODAL_OVERLAY_STYLE
 } from './utils/dialogStyles.js';
-import { ensureSubscriptionFunctions } from './ensureSubscriptionFunctions.js';
 
 // Try to import performance utils, but don't fail if not available
 let EventListenerRegistry;
@@ -33,22 +32,8 @@ export class Dialog {
         this.inputs = new Map();
         this.cleanupCallback = null; // Callback to call when dialog is destroyed
         this.eventListenerIds = []; // Track event listener IDs for cleanup
-        /** When true, Run/Calculate checks subscription before invoking the callback (Load Flow pattern). */
-        this.requiresSubscription = false;
-        this.subscriptionFeatureName = null;
     }
 
-    async checkSubscriptionStatus() {
-        await ensureSubscriptionFunctions();
-        if (typeof window.checkSubscriptionStatus === 'function') {
-            return await window.checkSubscriptionStatus();
-        }
-        if (window.SubscriptionManager?.checkSubscriptionStatus) {
-            return await window.SubscriptionManager.checkSubscriptionStatus();
-        }
-        return false;
-    }
-    
     /**
      * Add event listener with automatic cleanup tracking
      * @param {EventTarget} element - DOM element
@@ -330,26 +315,6 @@ export class Dialog {
         applyButton.onclick = async (e) => {
             e.preventDefault();
 
-            if (this.requiresSubscription) {
-                try {
-                    const hasSubscription = await this.checkSubscriptionStatus();
-                    if (!hasSubscription) {
-                        this.closeDialog();
-                        if (window.showSubscriptionModal) {
-                            window.showSubscriptionModal();
-                        } else {
-                            const feature = this.subscriptionFeatureName || this.title;
-                            alert(`A subscription is required to use ${feature}.`);
-                        }
-                        return;
-                    }
-                } catch (error) {
-                    console.error(`${this.title}: Error checking subscription status:`, error);
-                    alert('Unable to verify subscription status. Please try again.');
-                    return;
-                }
-            }
-
             const values = this.getFormValues();
             console.log(`${this.title} values:`, values);
             
@@ -621,25 +586,6 @@ export class Dialog {
             okButton.textContent = 'Processing...';
             
             try {
-                if (this.requiresSubscription) {
-                    const hasSubscription = await this.checkSubscriptionStatus();
-                    if (!hasSubscription) {
-                        okButton.disabled = false;
-                        okButton.textContent = originalText;
-                        this.destroy();
-                        if (document.body.contains(overlay)) {
-                            document.body.removeChild(overlay);
-                        }
-                        if (window.showSubscriptionModal) {
-                            window.showSubscriptionModal();
-                        } else {
-                            const feature = this.subscriptionFeatureName || this.title;
-                            alert(`A subscription is required to use ${feature}.`);
-                        }
-                        return;
-                    }
-                }
-
                 const values = this.getFormValues();
                 console.log(`${this.title} values:`, values);
                 

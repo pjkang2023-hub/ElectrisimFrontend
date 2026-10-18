@@ -1,6 +1,5 @@
 // BessPreliminaryDesignDialog.js - BESS preliminary design wizard
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import {
     SIMULATION_FORM_SCROLL_STYLE,
     SIMULATION_INFO_BANNER_STYLE,
@@ -387,20 +386,6 @@ export class BessPreliminaryDesignDialog extends Dialog {
         return out;
     }
 
-    async checkSubscriptionStatus() {
-        try {
-            if (typeof ensureSubscriptionFunctions === 'function') {
-                await ensureSubscriptionFunctions();
-            }
-            if (typeof window.checkSubscriptionStatus === 'function') {
-                return await window.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (e) {
-            throw e;
-        }
-    }
-
     show(callback) {
         this.displayDialog(callback);
     }
@@ -691,16 +676,6 @@ export class BessPreliminaryDesignDialog extends Dialog {
             runBtn.disabled = true;
             runBtn.textContent = 'Starting…';
             try {
-                const hasSub = await this.checkSubscriptionStatus();
-                if (!hasSub) {
-                    this.closeDialog();
-                    if (typeof window.showSubscriptionModal === 'function') {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to run BESS Preliminary Design.');
-                    }
-                    return;
-                }
                 // destroy() clears this.callback, so capture it before closing.
                 const onRun = this.callback;
                 const params = preparePlantParams();

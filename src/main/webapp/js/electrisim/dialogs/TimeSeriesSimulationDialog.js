@@ -308,14 +308,6 @@ class TimeSeriesSimulationDialog {
 
         const runSimulation = async () => {
             try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    document.body.removeChild(overlay);
-                    if (window.showSubscriptionModal) window.showSubscriptionModal();
-                    else alert('A subscription is required to use the Time Series Simulation feature.');
-                    return;
-                }
-
                 if (this.profileElements.length === 0) {
                     alert('Add at least one Load or Generator/Static Generator to the diagram.');
                     return;
@@ -368,11 +360,7 @@ class TimeSeriesSimulationDialog {
                 if (callback) callback(params);
             } catch (error) {
                 console.error('TimeSeriesSimulationDialog: Error:', error);
-                if (error.message?.includes('Token expired')) {
-                    alert('Your session has expired. Please log in again.');
-                } else {
-                    alert('Unable to verify subscription status. Please try again.');
-                }
+                alert('Error: ' + (error?.message || error));
             }
         };
 
@@ -513,13 +501,6 @@ class TimeSeriesSimulationDialog {
         for (const editor of this.profileEditors || []) {
             editor.hint.textContent = `Base P from diagram: ${editor.basePMw} MW — enter ${n} values`;
         }
-    }
-
-    async checkSubscriptionStatus() {
-        if (window.ensureSubscriptionFunctions) await window.ensureSubscriptionFunctions();
-        if (window.checkSubscriptionStatus) return window.checkSubscriptionStatus();
-        if (window.SubscriptionManager?.checkSubscriptionStatus) return window.SubscriptionManager.checkSubscriptionStatus();
-        return false;
     }
 
     createNumberInput(id, label, defaultValue, step, max, hintText) {

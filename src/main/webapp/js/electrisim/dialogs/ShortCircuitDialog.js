@@ -1,6 +1,5 @@
 // ShortCircuitDialog.js - Dialog for Short Circuit parameters (Pandapower IEC, ANSI/IEEE C37, OpenDSS)
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { getDrawioStudyDialogHeight, SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE, preventAccidentalFormSubmit } from '../utils/dialogStyles.js';
 import {
     getSelectedDiagramBusbars,
@@ -871,35 +870,18 @@ export class ShortCircuitDialog extends Dialog {
         applyButton.onclick = async (e) => {
             e.preventDefault();
 
-            try {
-                const values = this.getFormValues();
-                if (isUserSelectionFaultMode(values.fault_bus_mode)
-                    && (!Array.isArray(values.fault_bus_ids) || values.fault_bus_ids.length === 0)) {
-                    alert('User Selection requires at least one busbar. Tick busbars in the list, or select them on the diagram before opening Short Circuit.');
-                    return;
-                }
-
-                const hasSubscription = await this.checkSubscriptionStatus();
-
-                if (!hasSubscription) {
-                    this.closeDialog();
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the Short Circuit calculation feature.');
-                    }
-                    return;
-                }
-
-                if (callback) {
-                    callback(values);
-                }
-
-                this.closeDialog();
-            } catch (error) {
-                console.error('ShortCircuitDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
+            const values = this.getFormValues();
+            if (isUserSelectionFaultMode(values.fault_bus_mode)
+                && (!Array.isArray(values.fault_bus_ids) || values.fault_bus_ids.length === 0)) {
+                alert('User Selection requires at least one busbar. Tick busbars in the list, or select them on the diagram before opening Short Circuit.');
+                return;
             }
+
+            if (callback) {
+                callback(values);
+            }
+
+            this.closeDialog();
         };
 
         buttonContainer.appendChild(cancelButton);
@@ -916,25 +898,6 @@ export class ShortCircuitDialog extends Dialog {
             });
         } else {
             this.showModalFallback(container);
-        }
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-
-            return false;
-        } catch (error) {
-            console.error('ShortCircuitDialog: Error in checkSubscriptionStatus:', error);
-            return false;
         }
     }
 }

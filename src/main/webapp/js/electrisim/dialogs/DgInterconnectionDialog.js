@@ -1,6 +1,5 @@
 // DgInterconnectionDialog.js - OpenDSS DG interconnection screening parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 function _cellLabel(cell, fallback) {
     try {
@@ -158,42 +157,11 @@ export class DgInterconnectionDialog extends Dialog {
         return Object.fromEntries(ids.map((id, i) => [id, list[i]]));
     }
 
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (typeof window.checkSubscriptionStatus === 'function') {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager?.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-        } catch (e) {
-            console.warn('DgInterconnectionDialog subscription check failed', e);
-        }
-        return true;
-    }
-
     show(callback) {
         super.show(async (values) => {
             if (!values) {
                 callback?.(null);
                 return;
-            }
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (this.modalOverlay?.parentNode) {
-                        document.body.removeChild(this.modalOverlay);
-                    }
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use DG Interconnection Screening.');
-                    }
-                    return;
-                }
-            } catch (e) {
-                console.warn('Subscription check error', e);
             }
 
             const derId = values.derId;

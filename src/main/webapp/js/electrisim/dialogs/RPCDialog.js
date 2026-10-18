@@ -1,5 +1,4 @@
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE } from '../utils/dialogStyles.js';
 
 console.log('RPCDialog.js LOADED');
@@ -1594,17 +1593,6 @@ export class RPCDialog extends Dialog {
         return values;
     }
 
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) return await window.checkSubscriptionStatus();
-            if (window.SubscriptionManager?.checkSubscriptionStatus) return await window.SubscriptionManager.checkSubscriptionStatus();
-            return false;
-        } catch (e) {
-            throw e;
-        }
-    }
-
     show(callback) {
         try { this.populateOptions(); } catch (e) { console.error('Error populating RPC options:', e); }
         this.displayDialog(callback);
@@ -1745,21 +1733,9 @@ export class RPCDialog extends Dialog {
 
         applyButton.onclick = async (e) => {
             e.preventDefault();
-            try {
-                const hasSub = await this.checkSubscriptionStatus();
-                if (!hasSub) {
-                    cleanupAndClose();
-                    if (window.showSubscriptionModal) window.showSubscriptionModal();
-                    else alert('A subscription is required to use Reactive Power Capability analysis.');
-                    return;
-                }
-                const values = this.getFormValues();
-                if (this.callback) this.callback(values);
-                cleanupAndClose();
-            } catch (error) {
-                console.error('RPCDialog error:', error);
-                alert('Unable to verify subscription status. Please try again.');
-            }
+            const values = this.getFormValues();
+            if (this.callback) this.callback(values);
+            cleanupAndClose();
         };
 
         buttonContainer.appendChild(cancelButton);

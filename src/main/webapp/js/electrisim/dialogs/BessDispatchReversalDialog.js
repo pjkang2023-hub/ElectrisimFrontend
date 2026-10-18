@@ -1,6 +1,5 @@
 // BessDispatchReversalDialog.js - BESS charge/discharge P-step study (OpenDER + OpenDSS)
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 function _cellLabel(cell, fallback) {
     try {
@@ -310,21 +309,6 @@ export class BessDispatchReversalDialog extends Dialog {
             '(choose inject or absorb max below) or when a non-unity PF hits the kVA / curve limit. Unity PF with inverter Q stays at Q = 0.';
     }
 
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (typeof window.checkSubscriptionStatus === 'function') {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager?.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-        } catch (e) {
-            console.warn('BessDispatchReversalDialog subscription check failed', e);
-        }
-        return true;
-    }
-
     show(callback) {
         super.show(async (values) => {
             if (!values) {
@@ -332,22 +316,6 @@ export class BessDispatchReversalDialog extends Dialog {
                 return;
             }
             const form = (values && !Array.isArray(values)) ? values : this.getFormValues();
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (this.modalOverlay?.parentNode) {
-                        document.body.removeChild(this.modalOverlay);
-                    }
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use BESS Dispatch Reversal study.');
-                    }
-                    return;
-                }
-            } catch (e) {
-                console.warn('Subscription check error', e);
-            }
 
             // The ramp is what the form shows. Default values were swapped
             // here for the battery's drawn P and its negative, unseen - for a

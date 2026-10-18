@@ -97,14 +97,6 @@
             'supportingFunctions',
             'configureAttributes',
             'LibraryDialogManager'
-        ],
-        
-        // Subscription and auth - loaded when needed
-        subscription: [
-            'ensureSubscriptionFunctions',
-            'loginsubscription/auth-handler',
-            'loginsubscription/stripe',
-            'loginsubscription/stripe-subscription'
         ]
     };
     
@@ -239,41 +231,6 @@
     }
     
     /**
-     * Load Stripe SDK on demand
-     */
-    function loadStripe() {
-        if (window.Stripe) {
-            return Promise.resolve(window.Stripe);
-        }
-        
-        if (window._stripeLoading) {
-            return window._stripeLoading;
-        }
-        
-        window._stripeLoading = new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://js.stripe.com/v3/';
-            script.async = true;
-            script.onload = () => {
-                console.log('✅ Stripe SDK loaded');
-                // Also load Stripe integration modules
-                loadCategory('subscription').then(() => {
-                    delete window._stripeLoading;
-                    resolve(window.Stripe);
-                }).catch(reject);
-            };
-            script.onerror = () => {
-                console.error('❌ Failed to load Stripe SDK');
-                delete window._stripeLoading;
-                reject(new Error('Failed to load Stripe'));
-            };
-            document.head.appendChild(script);
-        });
-        
-        return window._stripeLoading;
-    }
-    
-    /**
      * Get loading statistics
      */
     function getStats() {
@@ -295,7 +252,6 @@
         loadCategory,
         preloadModules,
         loadXLSX,
-        loadStripe,
         getStats,
         
         // Convenience methods

@@ -1,6 +1,5 @@
 // BessSizingDialog.js - Dialog for BESS Sizing parameters
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE, preventAccidentalFormSubmit } from '../utils/dialogStyles.js';
 
 console.log('BessSizingDialog.js LOADED');
@@ -467,42 +466,6 @@ export class BessSizingDialog extends Dialog {
         return values;
     }
 
-    // Function to check subscription status (same pattern as other subscription-gated dialogs)
-    async checkSubscriptionStatus() {
-        console.log('BessSizingDialog.checkSubscriptionStatus() called');
-        try {
-            // First ensure subscription functions are available
-            console.log('BessSizingDialog: Ensuring subscription functions are available...');
-            if (window.ensureSubscriptionFunctions) {
-                const functionsStatus = await window.ensureSubscriptionFunctions();
-                console.log('BessSizingDialog: Functions status:', functionsStatus);
-            }
-            
-            // Use the global subscription check function
-            if (window.checkSubscriptionStatus) {
-                console.log('BessSizingDialog: Using window.checkSubscriptionStatus');
-                const result = await window.checkSubscriptionStatus();
-                console.log('BessSizingDialog: window.checkSubscriptionStatus result:', result);
-                return result;
-            }
-            
-            // Fallback: check if subscription manager exists
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                console.log('BessSizingDialog: Using SubscriptionManager.checkSubscriptionStatus');
-                const result = await window.SubscriptionManager.checkSubscriptionStatus();
-                console.log('BessSizingDialog: SubscriptionManager result:', result);
-                return result;
-            }
-            
-            console.warn('BessSizingDialog: No subscription check function available');
-            return false;
-        } catch (error) {
-            console.error('BessSizingDialog: Error in checkSubscriptionStatus:', error);
-            // Re-throw so the applyButton.onclick catch block can handle it with specific error messages
-            throw error;
-        }
-    }
-
     show(callback) {
         // Populate options BEFORE showing the dialog
         try {
@@ -518,22 +481,8 @@ export class BessSizingDialog extends Dialog {
                 busbarParam.options = [{ value: '', label: 'Error loading busbars' }];
             }
         }
-        
-        // Check subscription status first
-        if (ensureSubscriptionFunctions && ensureSubscriptionFunctions.checkSubscriptionStatus) {
-            ensureSubscriptionFunctions.checkSubscriptionStatus().then((hasAccess) => {
-                if (!hasAccess) {
-                    alert('BESS Sizing requires an active subscription. Please upgrade your plan.');
-                    return;
-                }
-                this.displayDialog(callback);
-            }).catch((error) => {
-                console.error('Error checking subscription:', error);
-                this.displayDialog(callback);
-            });
-        } else {
-            this.displayDialog(callback);
-        }
+
+        this.displayDialog(callback);
     }
 
     displayDialog(callback) {
@@ -680,67 +629,26 @@ export class BessSizingDialog extends Dialog {
 
         applyButton.onclick = async (e) => {
             e.preventDefault();
-            
-            // Check subscription status before proceeding (same pattern as other subscription-gated dialogs)
-            try {
-                console.log('BessSizingDialog: Starting subscription check...');
-                const hasSubscription = await this.checkSubscriptionStatus();
-                console.log('BessSizingDialog: Subscription check result:', hasSubscription);
-                
-                if (!hasSubscription) {
-                    console.log('BessSizingDialog: No subscription, showing modal...');
-                    // Close the dialog first
-                    this.closeDialog();
-                    
-                    // Show subscription modal if no active subscription
-                    if (window.showSubscriptionModal) {
-                        console.log('BessSizingDialog: Calling showSubscriptionModal');
-                        window.showSubscriptionModal();
-                    } else {
-                        console.error('BessSizingDialog: Subscription modal not available');
-                        alert('A subscription is required to use the BESS Sizing feature.');
-                    }
+
+            const values = this.getFormValues();
+            console.log(`${this.title} values:`, values);
+
+            // Validate scenarios if multiple mode
+            if (values.calculationMode === 'multiple' && values.scenarios) {
+                const invalidScenarios = values.scenarios.filter(s =>
+                    isNaN(s.p) || isNaN(s.q) || s.p === null || s.q === null
+                );
+                if (invalidScenarios.length > 0) {
+                    alert('Please enter valid P and Q values for all scenarios.');
                     return;
                 }
-                
-                console.log('BessSizingDialog: Subscription check passed, proceeding with calculation...');
-                
-                const values = this.getFormValues();
-                console.log(`${this.title} values:`, values);
-                
-                // Validate scenarios if multiple mode
-                if (values.calculationMode === 'multiple' && values.scenarios) {
-                    const invalidScenarios = values.scenarios.filter(s => 
-                        isNaN(s.p) || isNaN(s.q) || s.p === null || s.q === null
-                    );
-                    if (invalidScenarios.length > 0) {
-                        alert('Please enter valid P and Q values for all scenarios.');
-                        return;
-                    }
-                }
-                
-                if (this.callback) {
-                    this.callback(values);
-                }
-                
-                this.closeDialog();
-            } catch (error) {
-                console.error('BessSizingDialog: Error checking subscription status:', error);
-                // Provide more helpful error messages based on error type
-                if (error.message && error.message.includes('Token expired')) {
-                    alert('Your session has expired. Please log in again.');
-                    // Redirect to login if possible
-                    if (window.location.href.includes('app.electrisim.com')) {
-                        window.location.href = '/login.html';
-                    }
-                } else if (error.message && error.message.includes('NetworkError')) {
-                    alert('Network connection error. Please check your internet connection and try again.');
-                } else if (error.message && error.message.includes('Failed to fetch')) {
-                    alert('Unable to connect to the server. Please check your internet connection and try again.');
-                } else {
-                    alert('Unable to verify subscription status. Please try again. If the issue persists, contact support.');
-                }
             }
+
+            if (this.callback) {
+                this.callback(values);
+            }
+
+            this.closeDialog();
         };
 
         buttonContainer.appendChild(cancelButton);

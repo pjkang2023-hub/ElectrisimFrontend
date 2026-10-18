@@ -1,6 +1,5 @@
 // EmtDialog.js - Dialog for the EMT study of the DC networks
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 // The last settings, kept in this browser.
 export const EMT_SETTINGS_KEY = 'electrisim.emt.settings';
@@ -202,39 +201,9 @@ export class EmtDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the EMT Study.');
-                    }
-                    return;
-                }
-                const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
-                saveSettings(params);
-                if (callback) callback(params);
-            } catch (error) {
-                console.error('EmtDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
-            }
+            const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
+            saveSettings(params);
+            if (callback) callback(params);
         });
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('EmtDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }

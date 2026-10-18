@@ -17,15 +17,6 @@ function initializeEditorExtensions() {
     try {
         // Override the showLoadFlowDialogPandaPower method with modern implementation
         EditorUi.prototype.showLoadFlowDialogPandaPower = function(title, okButtonText, callback) {
-            // Check subscription status
-            const hasSubscription = window.subscriptionHandler?.checkSubscriptionStatus();
-            
-            if (!hasSubscription) {
-                // Show subscription modal if no active subscription
-                window.subscriptionHandler?.showSubscriptionModal();
-                return;
-            }
-            
             // Create and show the modern dialog
             const dialog = new LoadFlowDialog();
             dialog.show(callback);

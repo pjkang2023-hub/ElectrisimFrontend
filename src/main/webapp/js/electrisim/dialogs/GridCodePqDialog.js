@@ -823,21 +823,9 @@ export class GridCodePqDialog extends RPCDialog {
 
         applyButton.onclick = async (e) => {
             e.preventDefault();
-            try {
-                const hasSub = await this.checkSubscriptionStatus();
-                if (!hasSub) {
-                    cleanupAndClose();
-                    if (window.showSubscriptionModal) window.showSubscriptionModal();
-                    else alert('A subscription is required to use Grid Code Compliance (P-Q) analysis.');
-                    return;
-                }
-                const values = this.getFormValues();
-                if (this.callback) this.callback(values);
-                cleanupAndClose();
-            } catch (error) {
-                console.error('GridCodePqDialog error:', error);
-                alert('Unable to verify subscription status. Please try again.');
-            }
+            const values = this.getFormValues();
+            if (this.callback) this.callback(values);
+            cleanupAndClose();
         };
 
         buttonContainer.appendChild(cancelButton);

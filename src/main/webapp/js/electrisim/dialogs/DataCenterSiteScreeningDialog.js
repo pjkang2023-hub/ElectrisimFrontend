@@ -1,6 +1,5 @@
 // DataCenterSiteScreeningDialog.js — site screening parameters (pandapower)
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 function loadDisplayName(graph, cell) {
     const val = graph.getModel().getValue(cell);
@@ -346,32 +345,13 @@ export class DataCenterSiteScreeningDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) window.showSubscriptionModal();
-                    else alert('A subscription is required for Data Center Site Screening.');
-                    return;
-                }
-                const siteIds = String(values.site_load_ids || '').trim();
-                if (!siteIds) {
-                    alert('Select at least one load.');
-                    return;
-                }
-                if (callback) callback({ ...values, site_load_ids: siteIds });
-            } catch (e) {
-                alert('Unable to verify subscription status.');
+            const siteIds = String(values.site_load_ids || '').trim();
+            if (!siteIds) {
+                alert('Select at least one load.');
+                return;
             }
+            if (callback) callback({ ...values, site_load_ids: siteIds });
         });
-    }
-
-    async checkSubscriptionStatus() {
-        await ensureSubscriptionFunctions();
-        if (window.checkSubscriptionStatus) return window.checkSubscriptionStatus();
-        if (window.SubscriptionManager?.checkSubscriptionStatus) {
-            return window.SubscriptionManager.checkSubscriptionStatus();
-        }
-        return false;
     }
 }
 

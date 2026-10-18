@@ -1,6 +1,5 @@
 // DcFaultDialog.js - Dialog for the DC fault study
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 
 // The last settings, kept in this browser.
 export const DC_FAULT_SETTINGS_KEY = 'electrisim.dcFault.settings';
@@ -123,39 +122,9 @@ export class DcFaultDialog extends Dialog {
 
     show(callback) {
         super.show(async (values) => {
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-                if (!hasSubscription) {
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the DC Fault Study.');
-                    }
-                    return;
-                }
-                const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
-                saveSettings(params);
-                if (callback) callback(params);
-            } catch (error) {
-                console.error('DcFaultDialog: Error checking subscription status:', error);
-                alert('Unable to verify subscription status. Please try again.');
-            }
+            const params = values && typeof values === 'object' && !Array.isArray(values) ? values : {};
+            saveSettings(params);
+            if (callback) callback(params);
         });
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-            return false;
-        } catch (error) {
-            console.error('DcFaultDialog: Error in checkSubscriptionStatus:', error);
-            return false;
-        }
     }
 }

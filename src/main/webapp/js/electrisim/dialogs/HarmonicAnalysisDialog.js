@@ -1,5 +1,4 @@
 import { Dialog } from '../Dialog.js';
-import { ensureSubscriptionFunctions } from '../ensureSubscriptionFunctions.js';
 import { SIMULATION_FORM_SCROLL_STYLE, SIMULATION_INFO_BANNER_STYLE, STUDY_MODAL_OVERLAY_STYLE, attachBackdropCloseHandler, getStudyModalDialogBoxStyle, preventAccidentalFormSubmit, STUDY_MODAL_CONTENT_WRAPPER_STYLE } from '../utils/dialogStyles.js';
 
 /**
@@ -350,45 +349,11 @@ export class HarmonicAnalysisDialog extends Dialog {
         applyButton.onclick = async (e) => {
             e.preventDefault();
 
-            // Check subscription status before proceeding
-            try {
-                const hasSubscription = await this.checkSubscriptionStatus();
-
-                if (!hasSubscription) {
-                    this.closeDialog();
-
-                    // Show subscription modal if no active subscription
-                    if (window.showSubscriptionModal) {
-                        window.showSubscriptionModal();
-                    } else {
-                        alert('A subscription is required to use the Harmonic Analysis feature.');
-                    }
-                    return;
-                }
-
-                const values = this.getFormValues();
-                if (callback) {
-                    callback(values);
-                }
-                this.closeDialog();
-            } catch (error) {
-                console.error('HarmonicAnalysisDialog: Error checking subscription status:', error);
-                if (error.message && error.message.includes('Token expired')) {
-                    alert('Your session has expired. Please log in again.');
-                    if (window.location.href.includes('app.electrisim.com')) {
-                        window.location.href = '/login.html';
-                    }
-                } else if (error.message && error.message.includes('NetworkError')) {
-                    alert('Network connection error. Please check your internet connection and try again.');
-                } else if (error.message && error.message.includes('Failed to fetch')) {
-                    alert(
-                        'Unable to connect to the server.\n\n' +
-                        'This often happens when using a corporate VPN (SSL/certificate is not trusted). Try disconnecting from VPN, using another network, or ask IT to add your organisation\'s root certificate. Contact electrisim@electrisim.com if it persists.'
-                    );
-                } else {
-                    alert('Unable to verify subscription status. Please try again. If the issue persists, contact support.');
-                }
+            const values = this.getFormValues();
+            if (callback) {
+                callback(values);
             }
+            this.closeDialog();
         };
 
         buttonContainer.appendChild(cancelButton);
@@ -468,26 +433,6 @@ export class HarmonicAnalysisDialog extends Dialog {
         });
 
         return button;
-    }
-
-    async checkSubscriptionStatus() {
-        try {
-            await ensureSubscriptionFunctions();
-
-            if (window.checkSubscriptionStatus) {
-                return await window.checkSubscriptionStatus();
-            }
-
-            if (window.SubscriptionManager && window.SubscriptionManager.checkSubscriptionStatus) {
-                return await window.SubscriptionManager.checkSubscriptionStatus();
-            }
-
-            console.warn('HarmonicAnalysisDialog: No subscription check function available');
-            return false;
-        } catch (error) {
-            console.error('HarmonicAnalysisDialog: Error in checkSubscriptionStatus:', error);
-            throw error;
-        }
     }
 }
 
