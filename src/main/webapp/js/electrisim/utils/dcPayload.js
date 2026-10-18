@@ -184,7 +184,8 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
                 'vm_lv_ac_pu', 'emt_model', 'spectrum', 'switching_khz', 'dcdc_switching_khz', 'current_limit_pu',
                 'current_loop_hz', 'rect_dc_link_esr_mohm', 'rect_dc_link_esl_uh', 'dcdc_c_in_esr_mohm',
                 'dcdc_c_in_esl_uh', 'dcdc_c_out_esr_mohm', 'dcdc_c_out_esl_uh',
-                'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'ride_through_pu', 'in_service', 'cost_per_unit_by_currency'])
+                'inv_dc_link_esr_mohm', 'inv_dc_link_esl_uh', 'ride_through_pu', 'uv_ease_pu', 'uv_floor_pu',
+                'uv_restore_s', 'ease_f_start_hz', 'ease_f_end_hz', 'in_service', 'cost_per_unit_by_currency'])
         };
     }
     case 'DC Diode': {

@@ -25,6 +25,8 @@ export const defaultSstData = {
     dcdc_c_out_esr_mohm: 0, dcdc_c_out_esl_uh: 0, inv_dc_link_esr_mohm: 0, inv_dc_link_esl_uh: 0,
     // EMT study: its fault ride-through - below this link voltage its DC/DC stage pauses, not blocks; 0 = none
     ride_through_pu: 0,
+    // ANDES and EMT studies: easing its LV DC output in an island short of power; 0 = never
+    uv_ease_pu: 0, uv_floor_pu: 0.5, uv_restore_s: 5, ease_f_start_hz: 0, ease_f_end_hz: 0,
     in_service: true,
     cost_per_unit_by_currency: '0'
 };
@@ -106,6 +108,11 @@ export class SstDialog extends LoadDcDialog {
             num('inv_dc_link_esr_mohm', 'Inverter: DC-link ESR (EMT, DC fault)', 'mOhm', 'For the EMT and DC fault studies: the series resistance of the inverter DC-link capacitor, on the LV DC port, with its busbars; it limits its discharge into a DC fault there. 0: none.', '0.1'),
             num('inv_dc_link_esl_uh', 'Inverter: DC-link ESL (EMT, DC fault)', 'uH', 'For the EMT and DC fault studies: the series inductance of the inverter DC-link capacitor, on the LV DC port, with its busbars. 0: none.', '0.01'),
             num('ride_through_pu', 'Fault ride-through: link voltage to pause at (EMT)', 'pu', 'For the EMT study: with its internal DC link below this, its DC/DC stage passes no power - keeping the link charged through an MV fault, its LV DC bus left to the racks\' own storage - and resumes once the link is back 5 % above it; its stages block only below 30 %. 0: none - they block at 80 %.', '0.05'),
+            num('uv_ease_pu', 'Easing: backing off below (ANDES, EMT)', 'pu', 'In an island short of power: its MV voltage below this, the power its LV DC port delivers is cut at once to its floor, its LV DC bus sagging into its stores' droop - an island formed at full load collapses its voltage within some 10 ms, long before its frequency falls. Never by more than its bus's stores can take. 0: never.', '0.05'),
+            num('uv_floor_pu', 'Easing: backed-off floor (ANDES, EMT)', 'pu', 'What it may still deliver, per unit of its rating, once backed off: what its bus's stores cannot carry.', '0.05'),
+            num('uv_restore_s', 'Easing: back to its rating over (ANDES, EMT)', 's', 'Its voltage restored, the time it takes to climb from its floor back to its rating; a further dip cuts it back.', '0.5'),
+            num('ease_f_start_hz', 'Easing off from (ANDES, EMT)', 'Hz', 'Below this frequency at its MV side the power its LV DC port delivers is capped, falling from its rating here to its floor (ANDES) or nothing (EMT) at the end frequency. 0: never.', '0.1'),
+            num('ease_f_end_hz', 'Eased off fully at (ANDES, EMT)', 'Hz', 'The frequency at which it is eased fully; below its start. 0: never.', '0.1'),
             num('current_loop_hz', 'Rectifier and inverter: current loop bandwidth (EMT)', 'Hz', 'For the EMT study: the bandwidth of their current control. 500 Hz is fast; in an island no grid holds, f_sw / 20 (250 Hz at 5 kHz) keeps it clear of the resonance of the network.', '10'),
             { id: 'in_service', label: 'In service', symbol: 'in_service', description: 'Out of service, it neither draws nor delivers power.', type: 'checkbox', value: this.data.in_service }
         ];

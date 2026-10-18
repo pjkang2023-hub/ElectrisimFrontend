@@ -1510,7 +1510,9 @@ export function configureSstAttributes(grafka, vertex, options = {}) {
         rect_dc_link_esr_mohm: "0", rect_dc_link_esl_uh: "0", dcdc_c_in_esr_mohm: "0", dcdc_c_in_esl_uh: "0",
         dcdc_c_out_esr_mohm: "0", dcdc_c_out_esl_uh: "0", inv_dc_link_esr_mohm: "0", inv_dc_link_esl_uh: "0",
         // For the EMT study: its fault ride-through (0: none)
-        ride_through_pu: "0"
+        ride_through_pu: "0",
+        // For the ANDES and EMT studies: easing its LV DC output in an island short of power (0: never)
+        uv_ease_pu: "0", uv_floor_pu: "0.5", uv_restore_s: "5", ease_f_start_hz: "0", ease_f_end_hz: "0"
     };
     Object.keys(defaults).forEach(function (k) { g.setAttribute(k, String(options[k] ?? defaults[k])); });
 
