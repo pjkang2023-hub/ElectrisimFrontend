@@ -101,6 +101,19 @@
                         : 'nothing shed.');
                 body.appendChild(box);
             }
+            const eased = (this.results.rectifier_easing || []).filter((e) => e.eased_from_s != null);
+            if (eased.length) {
+                // Rectifiers that handed their DC bus to its stores: when, how far, and how much the stores could take.
+                const box = document.createElement('div');
+                box.style.cssText = 'margin-top:10px;padding:10px;background:#e7f1ff;border-radius:4px;font-size:12px;';
+                const rows = eased.map((e) => `<tr><td style="padding-right:12px;">${e.label}</td><td>${Number(e.eased_from_s).toFixed(3)}</td>`
+                    + `<td>${Number(e.min_factor).toFixed(2)}</td><td>${Number(e.spare_mw).toFixed(3)}</td></tr>`).join('');
+                box.innerHTML = `<strong>Rectifiers handing over to their stores</strong> (${eased.length})`
+                    + '<table style="margin-top:6px;border-collapse:collapse;"><tr><th style="text-align:left;padding-right:12px;">Rectifier</th>'
+                    + '<th style="text-align:left;padding-right:12px;">From (s)</th><th style="text-align:left;padding-right:12px;">Lowest (of its load)</th>'
+                    + `<th style="text-align:left;">Stores' spare (MW)</th></tr>${rows}</table>`;
+                body.appendChild(box);
+            }
             const rt = this.results.ride_through;
             if (rt?.enabled && rt.pass === false) {
                 const fail = document.createElement('div');
