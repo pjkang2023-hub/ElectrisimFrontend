@@ -70,6 +70,19 @@ Shed: ${fmt(d.shed_mw)} MW`, size);
 P: ${fmt(d.p_mw)} MW, Q: ${fmt(d.q_mvar)} Mvar
 Loading: ${fmt(d.loading_percent, 1)} %`, size);
             });
+            (r.dcdc || []).forEach((d) => {
+                const cell = d.id && model.getCell(d.id);
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, d.name, 'DC/DC')}
+P out: ${fmt(d.p_mw)} MW
+Loading: ${fmt(d.loading_percent, 1)} %`, size);
+            });
+            (r.diodes || []).forEach((d) => {
+                const cell = d.id && model.getCell(d.id);
+                if (!cell) return;
+                placeLabel(graph, cell, `${formatResultNameHeader(cell, d.name, 'Diode')}
+P: ${fmt(d.p_mw)} MW, I: ${fmt(d.i_ka)} kA`, size);
+            });
             (r.branches || []).forEach((d) => {
                 const cell = d.id && model.getCell(d.id);
                 if (!cell) return;

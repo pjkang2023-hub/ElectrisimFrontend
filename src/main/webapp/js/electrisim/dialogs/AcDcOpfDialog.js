@@ -54,6 +54,12 @@ export class AcDcOpfDialog extends Dialog {
                 type: 'select',
                 options: YES_NO(false)
             },
+            {
+                id: 'fuel_cells',
+                label: 'Fuel cells may run up to their rating (above their set power, priced as the batteries)',
+                type: 'select',
+                options: YES_NO(false)
+            },
             { id: 'branch_limits', label: 'Enforce line and transformer ratings', type: 'select', options: YES_NO(true) },
             {
                 id: 'transformer_factor',
@@ -88,10 +94,12 @@ export class AcDcOpfDialog extends Dialog {
         return '<strong>AC/DC optimal power flow</strong><br>' +
             'The network as the load flow builds it, with its DC side: each AFE and grid-forming PCS within its ' +
             'derated rating circle (the PCS within its reactive cap), the SSTs with their stage losses, the batteries ' +
-            'within their C-rates, the DC buses joined by their cables and breakers. <em>Least shed</em> answers ' +
-            'how much load must go when no dispatch serves it all - where the Optimal Power Flow can only say it did ' +
-            'not converge. Solved with Ipopt. DC/DC converters, DC diodes, supercapacitors, fuel cells and PV arrays ' +
-            'are not modelled yet: a network with them is refused, naming them.';
+            'within their C-rates, the DC buses joined by their cables and breakers, each DC/DC converter a link ' +
+            'with its efficiency within its rating, each DC diode one way, the PV arrays up to their maximum power ' +
+            'point, the fuel cells at their set power (or up to their rating). Supercapacitors and flywheels hold ' +
+            'no steady power, so at none. <em>Least shed</em> answers how much load must go when no dispatch serves ' +
+            'it all - where the Optimal Power Flow can only say it did not converge. Solved with Ipopt. The DC buses ' +
+            'have no voltage here: what each of two diode-ORed feeds carries is the optimiser\'s choice.';
     }
 
     getFormValues() {

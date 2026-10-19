@@ -68,6 +68,12 @@ export class AcDcOpfResultsDialog {
                 (r.afes || []).map(d => [this._escape(d.name), fmt(d.p_mw), fmt(d.q_mvar), this._loadingCell(d.loading_percent)]));
             html += this._table('Solid-state transformers', ['SST', 'MV draw (MW)', 'LV DC delivered (MW)'],
                 (r.ssts || []).map(d => [this._escape(d.name), fmt(d.p_mv_mw), fmt(d.p_lvdc_mw)]));
+            html += this._table('DC/DC converters', ['Converter', 'P out (MW)', 'Loading'],
+                (r.dcdc || []).map(d => [this._escape(d.name), fmt(d.p_mw), this._loadingCell(d.loading_percent)]));
+            html += this._table('DC diodes', ['Diode', 'P (MW)', 'I (kA)'],
+                (r.diodes || []).map(d => [this._escape(d.name), fmt(d.p_mw), fmt(d.i_ka)]));
+            html += this._table('PV arrays and fuel cells', ['Source', 'Kind', 'P (MW)', 'Most (MW)'],
+                (r.sources || []).map(d => [this._escape(d.name), this._escape(d.kind), fmt(d.p_mw), fmt(d.p_max_mw)]));
             html += this._table('Generators', ['Generator', 'P (MW)', 'Q (Mvar)'],
                 (r.generators || []).map(d => [this._escape(d.name), fmt(d.p_mw), fmt(d.q_mvar)]));
             html += this._table('Lines and transformers', ['Branch', 'Kind', 'Loading'],
