@@ -72,6 +72,8 @@ export class AcDcOpfResultsDialog {
                 (r.dcdc || []).map(d => [this._escape(d.name), fmt(d.p_mw), this._loadingCell(d.loading_percent)]));
             html += this._table('DC diodes', ['Diode', 'P (MW)', 'I (kA)'],
                 (r.diodes || []).map(d => [this._escape(d.name), fmt(d.p_mw), fmt(d.i_ka)]));
+            html += this._table(`DC bus voltages (set points ${r.dc_setpoints === 'free' ? 'free' : 'as drawn'})`, ['DC bus', 'V (pu)'],
+                (r.dc_buses || []).map(d => [this._escape(d.name), fmt(d.vm_pu, 4)]));
             html += this._table('PV arrays and fuel cells', ['Source', 'Kind', 'P (MW)', 'Most (MW)'],
                 (r.sources || []).map(d => [this._escape(d.name), this._escape(d.kind), fmt(d.p_mw), fmt(d.p_max_mw)]));
             html += this._table('Generators', ['Generator', 'P (MW)', 'Q (Mvar)'],

@@ -60,6 +60,28 @@ export class AcDcOpfDialog extends Dialog {
                 type: 'select',
                 options: YES_NO(false)
             },
+            { id: 'dc_section', label: 'DC side', type: 'section' },
+            {
+                id: 'dc_voltages',
+                label: 'DC buses with their voltages and cables (otherwise each group of joined buses a node)',
+                type: 'select',
+                options: YES_NO(true)
+            },
+            {
+                id: 'dc_setpoints',
+                label: 'Converters\' DC set points',
+                type: 'select',
+                options: [
+                    { value: 'drawn', label: 'As drawn: each holds its bus up to its limit, droops as set', default: true },
+                    { value: 'free', label: 'Free: retuned by the optimiser (the best they could do)' }
+                ]
+            },
+            {
+                id: 'vsc_reverse',
+                label: 'VSCs may reverse their load flow\'s direction (a rectifier inverting)',
+                type: 'select',
+                options: YES_NO(false)
+            },
             { id: 'branch_limits', label: 'Enforce line and transformer ratings', type: 'select', options: YES_NO(true) },
             {
                 id: 'transformer_factor',
@@ -99,7 +121,10 @@ export class AcDcOpfDialog extends Dialog {
             'point, the fuel cells at their set power (or up to their rating). Supercapacitors and flywheels hold ' +
             'no steady power, so at none. <em>Least shed</em> answers how much load must go when no dispatch serves ' +
             'it all - where the Optimal Power Flow can only say it did not converge. Solved with Ipopt. The DC buses ' +
-            'have no voltage here: what each of two diode-ORed feeds carries is the optimiser\'s choice.';
+            'have their voltages: with the set points as drawn, diode-ORed feeds share as their voltages make them, ' +
+            'and a store whose droop is set at its rectifier\'s voltage carries its bus only once the rectifier is at ' +
+            'its limit - or, in an island, past its easing floor if its easing is set; free, the converters are ' +
+            'retuned for the case.';
     }
 
     getFormValues() {
