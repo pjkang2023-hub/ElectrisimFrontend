@@ -114,6 +114,16 @@ export class TransientStabilityDialog extends Dialog {
                 step: '0.001'
             },
             {
+                id: 'load_model',
+                label: 'Loads through the run',
+                type: 'select',
+                options: [
+                    { value: 'impedance', label: 'Constant impedance (ANDES default: power with the voltage squared)', default: true },
+                    { value: 'current', label: 'Constant current' },
+                    { value: 'power', label: 'Constant power (as the load flow; may not converge through a deep fault)' }
+                ]
+            },
+            {
                 id: 'fault_bus',
                 label: 'Fault Bus',
                 type: 'select',

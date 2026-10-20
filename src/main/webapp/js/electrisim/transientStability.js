@@ -203,6 +203,7 @@ window.transientStabilityAndes = function (a, b, c) {
             sn_mva: String(values.sn_mva ?? '100'),
             tf: String(values.tf ?? '10'),
             tstep: String(values.tstep ?? '0'),
+            load_model: values.load_model || 'impedance',
             fault_bus: values.fault_bus || '',
             fault_enabled: values.fault_bus ? 'true' : 'false',
             fault_tf: String(values.fault_tf ?? '1.0'),
