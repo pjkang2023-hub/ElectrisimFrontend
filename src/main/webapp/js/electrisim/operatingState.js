@@ -5,13 +5,16 @@
 // transfers. Loaded here (Insert > Operating State..., above the studies), a state chosen is sent with every study
 // as `mgtwin_state`; the backend reads it onto the drawn network (mgtwin_site_io.apply_state) and the study runs in
 // it. A banner over the drawing names the state while one is chosen. Insert > Export as mgtwin Site... writes the
-// drawn network as a Site, the loaded Site lending its states and relays.
+// drawn network as a Site, the loaded Site lending its states and relays. Insert > Check Design... runs mgtwin's gates
+// on the drawn network (with the Site's states and relays), and a study run in a state comes back labelled with the
+// twin's verdict on it - inside, provisional or outside, and why - shown in the banner.
 
 import ENV, { getBackendUrlCandidates } from './config/environment.js';
-import { prepareNetworkData } from './utils/networkPreparation.js';
+import { prepareNetworkData } from './utils/networkDataPreparation.js';
 
 const STORE_KEY = 'electrisim.mgtwinState';
 const current = { site: null, fileName: '', stateId: null };
+let lastLabel = null;      // the envelope's verdict on the last study run in a state: {verdict, why, study}
 
 function stripSlash(u) {
     return String(u || '').replace(/\/+$/, '');
@@ -57,6 +60,7 @@ export function setOperatingState(site, stateId, fileName = '') {
     current.site = site || null;
     current.fileName = fileName || current.fileName;
     current.stateId = site ? stateId : null;
+    lastLabel = null;
     save();
     renderBanner();
 }
@@ -66,6 +70,7 @@ function installFetchHook() {
     if (typeof window === 'undefined' || window.fetch._elOperatingState) return;
     const original = window.fetch.bind(window);
     const hooked = function (input, init) {
+        let study = null;
         try {
             const state = activeOperatingState();
             const url = typeof input === 'string' ? input : (input && input.url) || '';
@@ -77,12 +82,21 @@ function installFetchHook() {
                         && !body.mgtwin_state) {
                     body.mgtwin_state = { site: state.site, state_id: state.stateId };
                     init = { ...init, body: JSON.stringify(body) };
+                    study = String(body['0'].typ).replace(/ Parameters$/, '');
                 }
             }
         } catch (e) {
             // not a JSON study body: sent as it was
         }
-        return original(input, init);
+        const pending = original(input, init);
+        if (!study) return pending;
+        return pending.then(res => {
+            // the twin's verdict on this study in this state (X-Electrisim-Envelope), for the banner
+            const verdict = res.headers && res.headers.get('X-Electrisim-Envelope');
+            lastLabel = verdict ? { verdict, why: res.headers.get('X-Electrisim-Envelope-Why') || '', study } : null;
+            renderBanner();
+            return res;
+        });
     };
     hooked._elOperatingState = true;
     window.fetch = hooked;
@@ -99,7 +113,8 @@ function renderBanner() {
         banner = document.createElement('div');
         banner.id = 'el-operating-state-banner';
         Object.assign(banner.style, {
-            position: 'fixed', top: '72px', left: '50%', transform: 'translateX(-50%)', zIndex: 9,
+            // at the foot of the drawing, clear of the toolbar (its Simulate button) and the page tabs
+            position: 'fixed', bottom: '44px', left: '50%', transform: 'translateX(-50%)', zIndex: 9,
             background: '#FFF4E0', border: '1px solid #E0A040', borderRadius: '14px', padding: '4px 12px',
             font: '12px Arial, sans-serif', color: '#5A3A00', boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
             display: 'none', alignItems: 'center', gap: '8px', cursor: 'pointer'
@@ -123,6 +138,17 @@ function renderBanner() {
     const text = document.createElement('span');
     text.textContent = `Operating state: ${state.stateId}` + (island.description ? ` - ${island.description}` : '')
         + ` (${state.site.id || state.fileName})`;
+    if (lastLabel) {
+        const colours = { inside: ['#E3F4E3', '#2E7D32'], provisional: ['#FFF0C2', '#8A6100'], outside: ['#FBE0E0', '#B71C1C'] };
+        const [bg, fg] = colours[lastLabel.verdict] || ['#eee', '#333'];
+        const chip = document.createElement('span');
+        chip.textContent = `last result: ${lastLabel.verdict.toUpperCase()}`;
+        chip.title = `The twin's verdict on the last ${lastLabel.study} in this state`
+            + (lastLabel.why ? `:\n- ${lastLabel.why.split('; ').join('\n- ')}` : ': nothing in the Site qualifies it.');
+        Object.assign(chip.style, { background: bg, color: fg, border: `1px solid ${fg}`, borderRadius: '10px',
+                                    padding: '0 8px', fontWeight: 'bold', fontSize: '11px' });
+        text.append(' ', chip);
+    }
     const clear = document.createElement('span');
     clear.textContent = '×';
     clear.dataset.clear = '1';
@@ -233,6 +259,7 @@ function stateDialog(ui) {
         const actions = document.createElement('div');
         Object.assign(actions.style, { marginTop: '12px', textAlign: 'right' });
         actions.append(
+            button('Help', () => window.open('templates/tutorials/operating_states_mgtwin.md', '_blank', 'noopener')),
             button('Load Site...', () => readSiteFile((s, name) => { site = s; fileName = name; chosen = null; render(); })),
             button('Cancel', close),
             button('Apply', () => { setOperatingState(site, chosen, fileName); close(); }, true));
@@ -240,10 +267,88 @@ function stateDialog(ui) {
     });
 }
 
+// The drawn network as the studies send it (their shared payload builder), a load flow's parameters in cell '0'.
+function drawnNetwork(graph) {
+    return prepareNetworkData(graph, { typ: 'PowerFlowPandaPower Parameters', frequency: '50' }, { removeResultCells: false });
+}
+
+function findingsTable(out) {
+    const wrap = document.createElement('div');
+    const c = out.counts || {};
+    const head = document.createElement('div');
+    head.innerHTML = '';
+    head.textContent = `mgtwin ${out.mgtwin_version}: ${c.fail || 0} FAIL, ${c.warn || 0} WARN, ${c.pass || 0} PASS`
+        + ` across ${(out.states || []).length} operating states. The gates screen from ratings - a PASS is necessary,`
+        + ' not sufficient; a study decides.';
+    head.style.marginBottom = '8px';
+    wrap.appendChild(head);
+    const table = document.createElement('table');
+    Object.assign(table.style, { borderCollapse: 'collapse', marginBottom: '10px', fontSize: '12px' });
+    table.innerHTML = '<tr><th style="text-align:left;padding:2px 10px">Gate</th><th>FAIL</th><th>WARN</th><th>PASS</th></tr>';
+    for (const [gate, n] of Object.entries(out.by_gate || {})) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td style="padding:2px 10px">${gate}</td><td style="text-align:center;color:${n.fail ? '#B71C1C' : '#888'}">${n.fail}</td>`
+            + `<td style="text-align:center;color:${n.warn ? '#8A6100' : '#888'}">${n.warn}</td><td style="text-align:center;color:#888">${n.pass}</td>`;
+        table.appendChild(tr);
+    }
+    wrap.appendChild(table);
+    for (const sev of ['fail', 'warn']) {
+        const items = (out.findings || []).filter(f => f.severity === sev);
+        if (!items.length) continue;
+        const det = document.createElement('details');
+        det.open = sev === 'fail';
+        const sum = document.createElement('summary');
+        sum.textContent = `${sev.toUpperCase()} (${items.length})`;
+        Object.assign(sum.style, { fontWeight: 'bold', cursor: 'pointer', color: sev === 'fail' ? '#B71C1C' : '#8A6100' });
+        det.appendChild(sum);
+        for (const f of items.slice(0, 200)) {
+            const d = document.createElement('div');
+            Object.assign(d.style, { padding: '4px 0 4px 12px', borderBottom: '1px solid #eee', fontSize: '12px' });
+            const where = document.createElement('div');
+            where.textContent = `${f.gate} - ${f.scope}`;
+            Object.assign(where.style, { color: '#555', fontSize: '11px' });
+            const msg = document.createElement('div');
+            msg.textContent = f.message;
+            d.append(where, msg);
+            if (f.remedy) {
+                const fix = document.createElement('div');
+                fix.textContent = `Remedy: ${f.remedy}`;
+                Object.assign(fix.style, { color: '#2E5597', fontSize: '11px' });
+                d.appendChild(fix);
+            }
+            det.appendChild(d);
+        }
+        wrap.appendChild(det);
+    }
+    return wrap;
+}
+
+async function checkDesign(ui) {
+    try {
+        const diagram = drawnNetwork(ui.editor.graph);
+        const template = current.site || undefined;
+        const response = await fetch(backendUrl('/mgtwin/check'), {
+            method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ diagram, site_id: (template && template.id) || 'DRAWN', template })
+        });
+        const out = await response.json();
+        if (!response.ok || out.error) throw new Error(out.message || response.status);
+        modal(`Check design - ${out.site_id}` + (template ? '' : ' (no Site loaded: the drawn state only)'), (box, close) => {
+            box.appendChild(findingsTable(out));
+            const actions = document.createElement('div');
+            Object.assign(actions.style, { marginTop: '12px', textAlign: 'right' });
+            actions.append(button('Close', close, true));
+            box.appendChild(actions);
+        });
+    } catch (err) {
+        alert(`The design could not be checked: ${err.message}`);
+    }
+}
+
 async function exportSite(ui) {
     try {
         const graph = ui.editor.graph;
-        const diagram = prepareNetworkData(graph, ui, {});
+        const diagram = drawnNetwork(graph);
         const template = current.site || undefined;
         const response = await fetch(backendUrl('/mgtwin/site'), {
             method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
@@ -266,18 +371,20 @@ function install(ui) {
     if (!ui || ui._elOperatingState || !ui.actions || !ui.menus) return;
     ui._elOperatingState = true;
     if (typeof mxResources !== 'undefined') {
-        mxResources.parse('operatingState=Operating State...\nexportMgtwinSite=Export as mgtwin Site...');
+        mxResources.parse('operatingState=Operating State...\ncheckDesign=Check Design...\n'
+            + 'exportMgtwinSite=Export as mgtwin Site...');
     }
     openDialog = () => stateDialog(ui);
     ui.actions.addAction('operatingState', () => stateDialog(ui));
     ui.actions.addAction('exportMgtwinSite', () => exportSite(ui));
+    ui.actions.addAction('checkDesign', () => checkDesign(ui));
     // The studies' menu (the toolbar's Insert button lists Load Flow, Short Circuit, ...): the state first, as
     // every study below it runs in it.
     const menu = ui.menus.get('insert');
     if (menu && typeof menu.funct === 'function') {
         const funct = menu.funct;
         menu.funct = function (m, parent) {
-            ui.menus.addMenuItems(m, ['operatingState', 'exportMgtwinSite'], parent);
+            ui.menus.addMenuItems(m, ['operatingState', 'checkDesign', 'exportMgtwinSite'], parent);
             m.addSeparator(parent);
             funct.apply(this, arguments);
         };
