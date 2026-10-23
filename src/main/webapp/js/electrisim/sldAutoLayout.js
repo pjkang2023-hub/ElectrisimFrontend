@@ -363,6 +363,9 @@ export function relayoutSld(graph, parent) {
         let used = Math.max(entryOffset(u) + 36 + (parallelSpan.get(u) || 0),
             deviceX.length ? deviceX[deviceX.length - 1] + Math.max(SLOT / 2, halfName(prev)) - 20 : 0,
             ...drops.map((d) => d.x + d.clear - 20));
+        // A ring's wire goes down from its port: past the bars hung under this one, not through them (an SOFC
+        // group's second feed, down from its node, ran through the group's own LV bar).
+        if (ringEnds.get(u).length) used = Math.max(used, kidsRight);
         const portX = [];
         ringEnds.get(u).forEach((w) => {
             used += 40;
@@ -761,8 +764,21 @@ export function relayoutSld(graph, parent) {
             route(br.cell, ends, br.cell.source === upper.bus ? pts : [...pts].reverse(), jumps);
             return;
         }
-        // The element sits on the channel, between the two legs.
-        const midX = (ux + lx) / 2;
+        // The element sits on the channel, between the two legs - clear of the drops the channel crosses (a
+        // Rev C group's open second feed sat on a BESS board's drop to its PCS).
+        const crossing = [];
+        children.forEach((list, u) => list.forEach((br) => {
+            const x = dropX.get(br);
+            if (x != null && barBottom(u) < chY && chY < barTop(br.kids[0])) crossing.push(x);
+        }));
+        const lo = Math.min(ux, lx) + 30;
+        const hi = Math.max(ux, lx) - 30;
+        let midX = (ux + lx) / 2;
+        for (let k = 0; k <= 60 && crossing.some((x) => Math.abs(x - midX) < 60); k++) {
+            const step = 10 * Math.ceil(k / 2) * (k % 2 ? 1 : -1);
+            const cand = (ux + lx) / 2 + step;
+            if (cand >= lo && cand <= hi) midX = cand;
+        }
         const isLine = shapeOf(br.cell) === 'Line';
         if (isLine) {
             const g = model.getGeometry(br.cell);

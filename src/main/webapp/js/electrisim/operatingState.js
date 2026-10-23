@@ -7,7 +7,8 @@
 // it. A banner over the drawing names the state while one is chosen. Insert > Export as mgtwin Site... writes the
 // drawn network as a Site, the loaded Site lending its states and relays. Insert > Check Design... runs mgtwin's gates
 // on the drawn network (with the Site's states and relays), and a study run in a state comes back labelled with the
-// twin's verdict on it - inside, provisional or outside, and why - shown in the banner.
+// twin's verdict on it - inside, provisional or outside, and why - shown in the banner. Insert > Apply Site
+// Protection... puts the Site's relay settings on the drawn breakers (their Protection tab), for a settings group.
 
 import ENV, { getBackendUrlCandidates } from './config/environment.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
@@ -367,24 +368,125 @@ async function exportSite(ui) {
     }
 }
 
+// The Site's relay settings onto the drawn breakers (a switch named by its breaker's id): their Protection tab as the
+// Site sets it, for the protection coordination run here. One undoable edit.
+function applyProtectionFields(graph, switches, fields) {
+    const model = graph.getModel();
+    const done = [];
+    model.beginUpdate();
+    try {
+        for (const cell of Object.values(model.cells)) {
+            if (!cell.vertex || !cell.value || !cell.value.getAttribute || !/Switch/.test(cell.getStyle() || '')) continue;
+            const id = cell.value.getAttribute('name');
+            const set = id && switches[id];
+            if (!set) continue;
+            const value = cell.value.cloneNode(true);
+            for (const f of fields) {
+                if (set[f] != null) value.setAttribute(f, String(set[f]));
+                else value.removeAttribute(f);
+            }
+            model.setValue(cell, value);
+            done.push(id);
+        }
+    } finally {
+        model.endUpdate();
+    }
+    return done;
+}
+
+function siteProtectionDialog(ui) {
+    const site = current.site;
+    if (!site || !Array.isArray(site.relays) || !site.relays.length) {
+        alert('Load a Site with its relays first (Operating State... > Load Site...).');
+        return;
+    }
+    const state = activeOperatingState();
+    const island = state ? site.islands.find(i => i.id === state.stateId) : null;
+    const groups = [...new Set((site.islands || []).map(i => i.settings_group || 'A'))].sort();
+    modal('Apply Site protection', (box, close) => {
+        const intro = document.createElement('p');
+        intro.textContent = "The Site's relay settings onto the drawn breakers - their Protection tab, for a "
+            + 'protection coordination here. 87L / 87T become the differential relay, 87B its bus-differential '
+            + 'add-on, otherwise the definite-time overcurrent or the earth-fault relay: one relay per breaker.';
+        Object.assign(intro.style, { margin: '0 0 10px', color: '#555' });
+        const g = document.createElement('select');
+        for (const name of groups) {
+            const o = document.createElement('option');
+            o.value = o.textContent = name;
+            g.appendChild(o);
+        }
+        g.value = (island && island.settings_group) || 'A';
+        const gl = document.createElement('label');
+        gl.append('Settings group ', g);
+        gl.title = 'The group the operating state runs (black start: B in the C003 drafts)';
+        const earth = document.createElement('input');
+        earth.type = 'checkbox';
+        const el = document.createElement('label');
+        el.append(earth, ' earth elements (for single-phase studies): a relay with both carries its 67N / 51N');
+        Object.assign(el.style, { display: 'block', margin: '8px 0' });
+        const actions = document.createElement('div');
+        Object.assign(actions.style, { marginTop: '12px', textAlign: 'right' });
+        actions.append(button('Cancel', close), button('Apply', async () => {
+            try {
+                const response = await fetch(backendUrl('/mgtwin/protection'), {
+                    method: 'POST', mode: 'cors', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ site, group: g.value, fault_type: earth.checked ? '1ph' : '3ph' })
+                });
+                const out = await response.json();
+                if (!response.ok || out.error) throw new Error(out.message || response.status);
+                const done = applyProtectionFields(ui.editor.graph, out.switches, out.fields);
+                const missing = Object.keys(out.switches).filter(id => !done.includes(id));
+                close();
+                modal('Site protection applied', (b2, close2) => {
+                    const t = document.createElement('div');
+                    t.textContent = `Settings group ${out.group}: ${done.length} breaker(s) set from ${site.id || current.fileName}.`
+                        + (missing.length ? ` Not in the drawing: ${missing.join(', ')}.` : '');
+                    b2.appendChild(t);
+                    if ((out.notes || []).length) {
+                        const det = document.createElement('details');
+                        const sum = document.createElement('summary');
+                        sum.textContent = `Notes (${out.notes.length})`;
+                        det.appendChild(sum);
+                        for (const n of out.notes) {
+                            const d = document.createElement('div');
+                            d.textContent = n;
+                            Object.assign(d.style, { fontSize: '12px', padding: '2px 0 2px 12px', color: '#555' });
+                            det.appendChild(d);
+                        }
+                        b2.appendChild(det);
+                    }
+                    const a2 = document.createElement('div');
+                    Object.assign(a2.style, { marginTop: '12px', textAlign: 'right' });
+                    a2.append(button('Close', close2, true));
+                    b2.appendChild(a2);
+                });
+            } catch (err) {
+                alert(`The Site's protection could not be applied: ${err.message}`);
+            }
+        }, true));
+        box.append(intro, gl, el, actions);
+    });
+}
+
 function install(ui) {
     if (!ui || ui._elOperatingState || !ui.actions || !ui.menus) return;
     ui._elOperatingState = true;
     if (typeof mxResources !== 'undefined') {
         mxResources.parse('operatingState=Operating State...\ncheckDesign=Check Design...\n'
-            + 'exportMgtwinSite=Export as mgtwin Site...');
+            + 'exportMgtwinSite=Export as mgtwin Site...\napplySiteProtection=Apply Site Protection...');
     }
     openDialog = () => stateDialog(ui);
     ui.actions.addAction('operatingState', () => stateDialog(ui));
     ui.actions.addAction('exportMgtwinSite', () => exportSite(ui));
     ui.actions.addAction('checkDesign', () => checkDesign(ui));
+    ui.actions.addAction('applySiteProtection', () => siteProtectionDialog(ui));
     // The studies' menu (the toolbar's Insert button lists Load Flow, Short Circuit, ...): the state first, as
     // every study below it runs in it.
     const menu = ui.menus.get('insert');
     if (menu && typeof menu.funct === 'function') {
         const funct = menu.funct;
         menu.funct = function (m, parent) {
-            ui.menus.addMenuItems(m, ['operatingState', 'checkDesign', 'exportMgtwinSite'], parent);
+            ui.menus.addMenuItems(m, ['operatingState', 'applySiteProtection', 'checkDesign', 'exportMgtwinSite'], parent);
             m.addSeparator(parent);
             funct.apply(this, arguments);
         };
