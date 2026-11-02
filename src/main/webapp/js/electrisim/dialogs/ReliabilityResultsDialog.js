@@ -115,7 +115,7 @@ export class ReliabilityResultsDialog {
         const wrap = document.createElement('div');
         wrap.style.cssText = 'margin-bottom:16px;';
         wrap.innerHTML = `<h3 style="margin:6px 0 4px 0;font-size:16px;">Year-long Monte Carlo</h3>
-            <p style="margin:0 0 8px 0;font-size:12.5px;color:#6c757d;">${mc.years.toLocaleString()} years (seed ${esc(mc.seed)}), repairs ${esc(mc.repair)}, storage back from empty in ${esc(mc.recharge_h)} h; ${mc.events_that_can_lose} of ${mc.events_enumerated} events can lose load.</p>
+            <p style="margin:0 0 8px 0;font-size:12.5px;color:#6c757d;">${mc.years.toLocaleString()} years (seed ${esc(mc.seed)}), repairs ${esc(mc.repair)}, storage back from empty in ${esc(mc.recharge_h)} h; ${mc.events_that_can_lose} of ${mc.events_enumerated} events can lose load.${this._profilesLine(mc)}</p>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
             <table style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">
             ${row('IT energy not served, enumeration', fmt(mc.analytic.it_mwh_yr, 4), 'MWh/yr')}
@@ -129,6 +129,24 @@ export class ReliabilityResultsDialog {
             <div><div style="font-size:12.5px;color:#495057;margin-bottom:4px;">Years by their IT energy not served (MWh; bars on a log scale)</div>${bars}</div>
             </div>`;
         dialog.appendChild(wrap);
+    }
+
+    // Where the Monte Carlo's load and storage came from: a time-series run's units and their range, or the profiles.
+    _profilesLine(mc) {
+        const pr = mc.profiles || {};
+        const from = pr.from_time_series || [];
+        const notes = mc.time_series_notes || [];
+        let out = '';
+        if (from.length) {
+            const mins = Object.values(pr.storage_mwh_min || {});
+            const maxs = Object.values(pr.storage_mwh_max || {});
+            out += ` From the time-series run: ${esc(from.join(', '))}` +
+                (mins.length ? `; storage above each battery's floor ${fmt(Math.min(...mins), 3)} to ${fmt(Math.max(...maxs), 3)} MWh` : '') +
+                `; IT at ${fmt(pr.it_scale_min, 2)} to ${fmt(pr.it_scale_max, 2)} of its drawn load.`;
+        }
+        if (pr.states_exact === false) out += ` Expectation over ${pr.states} hours spread through the year.`;
+        if (notes.length) out += ` <span style="color:#9a5b12;">Not matched: ${esc(notes.join('; '))}.</span>`;
+        return out;
     }
 
     // The designs on one table, lowest total first, and the sweep with its tie-points.

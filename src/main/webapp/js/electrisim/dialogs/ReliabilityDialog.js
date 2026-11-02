@@ -171,6 +171,9 @@ export class ReliabilityDialog extends Dialog {
                 { value: 'exponential', label: 'Exponential, with the repair time above as the mean', default: true },
                 { value: 'fixed', label: 'Fixed at the repair time above' }] },
             num('mc_recharge_h', 'Storage recharged from empty in (h; 0: at once)', 2),
+            { id: 'mc_profile_source', label: 'Load and storage by hour from', type: 'select', options: [
+                { value: 'pasted', label: 'The profiles below', default: true },
+                { value: 'time_series', label: this._lastRunLabel() }] },
             { id: 'mc_it_profile', label: 'IT load by hour: 24 (a day) or 8760 (a year) factors on the drawn load (blank: flat)', type: 'text', value: '' },
             { id: 'mc_storage_profile', label: 'Storage available by hour: 24 or 8760 shares of the storage above (blank: all of it)', type: 'text', value: '' },
             { id: 'compare_section', label: 'Sensitivity and design comparison', type: 'section',
@@ -186,6 +189,18 @@ export class ReliabilityDialog extends Dialog {
             { id: 'element_data', type: 'custom' }
         ];
         this._applySaved(loadSettings());
+    }
+
+    // The time-series run this page has kept (timeSeriesSimulation.js), as the dialog names it.
+    _lastRun() {
+        return (globalThis.electrisimTimeSeriesRuns || {})[this.ui?.currentPage?.getId?.() || 'page'] || null;
+    }
+
+    _lastRunLabel() {
+        const run = this._lastRun();
+        if (!run) return 'The last time-series run of this page (none run yet: run Time Series first)';
+        const step = run.time_step_s === 3600 ? '1 h' : `${run.time_step_s} s`;
+        return `The last time-series run of this page (${run.time_steps} steps of ${step}, at ${run.at}; ${Object.keys(run.stores).length} batteries)`;
     }
 
     _applySaved(saved) {

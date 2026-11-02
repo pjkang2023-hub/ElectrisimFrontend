@@ -86,6 +86,18 @@ window.reliabilityStudy = function (a, b, c) {
             simProgress.overlay.append('Preparing network data…', { time: true });
             const typ = 'ReliabilityElectrisim Parameters';
             const { designs: chosen = [], ...rest } = values;
+            // the Monte Carlo's load and storage from this page's last time-series run (timeSeriesSimulation.js)
+            if (rest.mc_profile_source === 'time_series' && Number(rest.mc_years) > 0) {
+                const run = (globalThis.electrisimTimeSeriesRuns || {})[a.currentPage?.getId?.() || 'page'];
+                if (!run) {
+                    simProgress.overlay.remove();
+                    simProgress = null;
+                    alert('No time-series run of this page to take the profiles from: run Time Series first, or choose the profiles below.');
+                    return;
+                }
+                rest.mc_time_series = { time_step_s: run.time_step_s, stores: run.stores, loads: run.loads };
+                simProgress.overlay.append(`Profiles from the time-series run at ${run.at} (${run.time_steps} steps)`, { time: true });
+            }
             const simulationParameters = {
                 typ,
                 ...rest,

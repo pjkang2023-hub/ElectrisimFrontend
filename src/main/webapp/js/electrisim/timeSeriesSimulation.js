@@ -300,6 +300,11 @@ async function processNetworkData(url, obj, graph, apka, options = {}, simProgre
         } catch (labelErr) {
             console.warn('Time series results not placed on the diagram:', labelErr);
         }
+        try {
+            keepForReliability(dataJson, apka);
+        } catch (keepErr) {
+            console.warn('Time series not kept for the reliability study:', keepErr);
+        }
 
         overlay?.append('Done.', { time: true });
         await settleSimulationProgress(overlay, null, simProgress?.abortController);
@@ -322,6 +327,31 @@ async function processNetworkData(url, obj, graph, apka, options = {}, simProgre
         console.error('Error processing time series simulation data:', err);
         alert('Error processing time series results: ' + (err.message || 'Unknown error'));
     }
+}
+
+// The run's batteries' state of charge and loads' power, step by step, kept for the reliability study's Monte Carlo
+// (its profiles from this run): the last run of each page, in this browser tab only.
+function keepForReliability(dataJson, apka) {
+    const ui = apka?.currentPage ? apka : (window.App?.main?.editor?.editorUi || null);
+    const page = ui?.currentPage;
+    const stores = {};
+    ((dataJson.microgrid && dataJson.microgrid.ders) || []).forEach((r) => {
+        if (r.kind !== 'Battery') return;
+        (stores[r.name] = stores[r.name] || { id: r.id, label: r.label, soc: [] }).soc.push(r.soc_percent_end);
+    });
+    const loads = {};
+    (dataJson.loads || []).forEach((r) => {
+        (loads[r.id] = loads[r.id] || { id: r.id, label: r.name, p_mw: [] }).p_mw.push(r.p_mw);
+    });
+    const kept = globalThis.electrisimTimeSeriesRuns = globalThis.electrisimTimeSeriesRuns || {};
+    kept[page?.getId?.() || 'page'] = {
+        pageName: page?.getName?.() || '',
+        at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        time_steps: dataJson.time_steps,
+        time_step_s: dataJson.time_step_s,
+        stores,
+        loads
+    };
 }
 
 globalThis.timeSeriesSimulationPandaPower = timeSeriesSimulationPandaPower;
