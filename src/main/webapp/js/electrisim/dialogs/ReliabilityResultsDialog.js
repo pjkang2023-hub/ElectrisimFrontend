@@ -8,6 +8,8 @@ const CLASS_LABEL = {
     stuck: 'Breaker fails to open',
     relay: 'Main protection fails (backup clears)',
     maint: 'Fault while a breaker is in maintenance',
+    close: 'Restoration fails: a tie does not close',
+    overlap: 'Second zone fault during a repair',
     blackout: 'Total blackout, black start fails'
 };
 const ZONE_COLOUR = '#d9480f';
@@ -91,7 +93,7 @@ export class ReliabilityResultsDialog {
         dialog.appendChild(box);
         const note = document.createElement('p');
         note.style.cssText = 'margin:0 0 14px 0;font-size:13px;color:#495057;line-height:1.5;';
-        note.innerHTML = `Operating state <strong>${esc(r.state || '-')}</strong>. First-order events over the protection zones; ` +
+        note.innerHTML = `Operating state <strong>${esc(r.state || '-')}</strong>. Events over the protection zones, to second order where counted; ` +
             'each consequence an island balance (no grid-forming source: dead; storage bridges what the sources cannot carry). ' +
             'Rates are planning values - the workbook keeps them editable.';
         dialog.appendChild(note);
@@ -246,7 +248,7 @@ export class ReliabilityResultsDialog {
         bar.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:10001;background:#1f2a26;color:#fff;border-radius:6px;padding:10px 14px;display:flex;gap:12px;align-items:center;font:13px Arial,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.3);max-width:90vw;';
         const text = document.createElement('span');
         text.style.cssText = 'overflow-wrap:anywhere;';
-        text.innerHTML = `<strong>${esc(CLASS_LABEL[e.class] || e.class)}</strong> - ${esc(e.zone)}${e.class === 'stuck' || e.class === 'maint' ? ` (${esc(e.detail)})` : ''}: ${fmt(e.it_mwh_yr, 5)} MWh/yr of IT`;
+        text.innerHTML = `<strong>${esc(CLASS_LABEL[e.class] || e.class)}</strong> - ${esc(e.zone)}${e.class === 'stuck' || e.class === 'maint' ? ` (${esc(e.detail)})` : e.class === 'overlap' ? ` with ${esc(e.detail)}` : ''}: ${fmt(e.it_mwh_yr, 5)} MWh/yr of IT`;
         const back = this._button('Back to results', '#007bff', () => {
             bar.remove();
             this.bar = null;
