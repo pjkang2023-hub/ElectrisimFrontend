@@ -44,6 +44,7 @@ export class ReliabilityResultsDialog {
             dialog.appendChild(box);
         } else {
             this._summary(dialog);
+            this._comparison(dialog);
             this._byClass(dialog);
             this._events(dialog);
         }
@@ -94,6 +95,54 @@ export class ReliabilityResultsDialog {
             'each consequence an island balance (no grid-forming source: dead; storage bridges what the sources cannot carry). ' +
             'Rates are planning values - the workbook keeps them editable.';
         dialog.appendChild(note);
+    }
+
+    // The designs on one table, lowest total first, and the sweep with its tie-points.
+    _comparison(dialog) {
+        const c = this.results.comparison;
+        if (!c) return;
+        const th = (t, right = true) => `<th style="padding:6px 8px;text-align:${right ? 'right' : 'left'};">${esc(t)}</th>`;
+        const td = (t, right = true, bold = false) => `<td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:${right ? 'right' : 'left'};${bold ? 'font-weight:600;' : ''}">${t}</td>`;
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'overflow-x:auto;margin-bottom:16px;';
+        const designs = [...c.designs].sort((x, y) => x.rank - y.rank);
+        let html = '';
+        if (c.designs.length > 1) {
+            html += `<h3 style="margin:6px 0 4px 0;font-size:16px;">Designs compared</h3>
+                <p style="margin:0 0 8px 0;font-size:12.5px;color:#6c757d;">Total = cost of energy not served + capex x ${fmt(c.crf, 3)} per year; against the base, <strong>${esc(c.base)}</strong>. Break-even capex: the capex at which a design's total equals the base's. Other pages are studied as drawn.</p>
+                <table style="border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums;">
+                <tr style="background:#f5f5f5;">${th('Rank')}${th('Design', false)}${th('IT MWh/yr')}${th('Aux MWh/yr')}${th('Cost kEUR/yr')}${th('Capex MEUR')}${th('Total vs base kEUR/yr')}${th('Break-even capex MEUR')}</tr>
+                ${designs.map(d => `<tr>${td(d.rank)}${td(esc(d.name), false, d.name === c.base)}${td(fmt(d.it_mwh_yr, 4))}${td(fmt(d.aux_mwh_yr, 3))}${td(fmt(d.cost_keur_yr, 1))}${td(fmt(d.capex_meur, 2))}${td(fmt(d.total_vs_base_keur_yr, 1))}${td(d.name === c.base ? '-' : fmt(d.break_even_capex_meur, 2))}</tr>`).join('')}
+                </table>`;
+            const notes = c.designs.filter(d => (d.notes || []).length);
+            if (notes.length) {
+                html += `<div style="margin-top:8px;padding:8px 10px;border:1px solid #ffe08a;background:#fff8e1;border-radius:4px;font-size:12.5px;">
+                    <strong>Check the inputs</strong> - give a page its own in the dialog (its own inputs, e.g. transfer_groups=DH1_cordA+DH3_cordB, DH2_cordA+DH4_cordB):
+                    ${notes.map(d => `<br>${esc(d.name)}: ${d.notes.map(esc).join('; ')}`).join('')}</div>`;
+            }
+        }
+        const sw = c.sweep;
+        if (sw) {
+            const names = c.designs.map(d => d.name);
+            const many = names.length > 1;
+            html += `<h3 style="margin:14px 0 4px 0;font-size:16px;">Sweep: ${esc(sw.label)}</h3>
+                <p style="margin:0 0 8px 0;font-size:12.5px;color:#6c757d;">${esc(sw.param)}, base value ${esc(sw.base_value)}; the value holds for every design. ${many ? 'Each design\'s total against the base, and the ranking.' : 'This page\'s energy not served and its cost.'}</p>
+                <table style="border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums;">
+                <tr style="background:#f5f5f5;">${th(sw.param, false)}${many
+                    ? names.map(n => th(n)).join('') + th('Ranking, lowest total first', false)
+                    : th('IT MWh/yr') + th('Aux MWh/yr') + th('Cost kEUR/yr')}</tr>
+                ${sw.rows.map(r => `<tr>${td(esc(r.value), false, r.value === sw.base_value)}${many
+                    ? names.map(n => td(fmt(r.designs[n].total_vs_base_keur_yr, 1))).join('') + td(esc(r.ranking.join(' < ')), false)
+                    : td(fmt(r.designs[names[0]].it_mwh_yr, 4)) + td(fmt(r.designs[names[0]].aux_mwh_yr, 3)) + td(fmt(r.designs[names[0]].cost_keur_yr, 1))}</tr>`).join('')}
+                </table>`;
+            if (many) {
+                html += sw.tie_points.length
+                    ? `<p style="margin:8px 0 0 0;font-size:13px;"><strong>Tie-points</strong> (linear between the swept values): ${sw.tie_points.map(t => `${esc(sw.param)} = ${Number(t.value).toPrecision(4)}: ${esc(t.below)} cheaper below, ${esc(t.above)} above`).join('; ')}.</p>`
+                    : '<p style="margin:8px 0 0 0;font-size:13px;">No tie-points: the ranking holds over the swept range.</p>';
+            }
+        }
+        wrap.innerHTML = html;
+        dialog.appendChild(wrap);
     }
 
     _byClass(dialog) {

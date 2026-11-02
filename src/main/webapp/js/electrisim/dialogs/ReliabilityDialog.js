@@ -29,6 +29,21 @@ const YES_NO = (yes) => [
 
 const num = (id, label, value, step = 'any') => ({ id, label, type: 'number', value: String(value), step });
 
+// The inputs a sweep may move (backend reliability_electrisim.SWEEPABLE).
+const SWEEP_OPTIONS = [
+    ['lam_zone', 'Bus section of a zone (/yr)'], ['lam_tx', 'Transformer (/yr)'], ['lam_cab_km', 'Cable (/km-yr)'],
+    ['t_rep_h', 'Repair time (h)'], ['restore_min', 'Restoration by switching (min)'],
+    ['p_bf', 'Breaker fails to open'], ['p_rf', 'Main protection fails'], ['dup_87', 'Duplicated main protection (no / yes)'],
+    ['beta_cc', 'Common-cause share'], ['t_maint_h', 'Maintenance per breaker (h/yr)'],
+    ['maint_restore_h', 'Breaker back from maintenance (h)'], ['include_maintenance', 'Maintenance overlap counted (no / yes)'],
+    ['storage_mwh', 'Storage per grid-forming unit (MWh)'], ['forming_storage_backed', 'Forming units storage-backed (no / yes)'],
+    ['p_vrt', 'Backup clearances that trip the fleet'], ['recoverable_factor', 'Load the forming units recover'],
+    ['t_rt_min', 'Fleet back from hot standby (min)'], ['p_cold', 'Share of cold restarts'], ['t_cold_h', 'Cold restart (h)'],
+    ['ups_min', 'UPS ride-through (min)'], ['aux_shed_max_h', 'Auxiliaries shed up to (h)'], ['lam_bo', 'Total blackouts (/yr)'],
+    ['p_step', 'Black-start step fails'], ['black_start_steps', 'Black-start steps'], ['t_man_h', 'Manual recovery (h)'],
+    ['voll_it', 'Value of lost IT load'], ['voll_aux', 'Value of lost auxiliary load'], ['crf', 'Capital recovery factor']
+].map(([value, label]) => ({ value, label }));
+
 // The per-element failure data, kept on the drawing's cells (read by networkDataPreparation's RELIABILITY_ATTRS).
 const ELEMENT_KINDS = ['Bus', 'Transformer', 'Line', 'Switch'];
 const ELEMENT_FIELDS = [
@@ -100,6 +115,7 @@ export class ReliabilityDialog extends Dialog {
         this.ui = editorUi || window.App?.main?.editor?.editorUi;
         this.graph = graph || this.ui?.editor?.graph;
         this._elements = elementRows(this.graph);
+        this._pages = (this.ui?.pages || []).filter(pg => pg !== this.ui.currentPage);
 
         // Defaults: IEEE 493-class planning values, as the C003 reliability model uses them.
         this.parameters = [
@@ -142,6 +158,14 @@ export class ReliabilityDialog extends Dialog {
             num('p_step', 'Black-start step fails (per step)', 0.02),
             num('t_man_h', 'Manual recovery after a failed black start (h)', 2),
             num('zone_kv', 'Protection zones at and above (kV)', 10),
+            { id: 'compare_section', label: 'Sensitivity and design comparison', type: 'section',
+              subtitle: 'This page is the base design. Other pages of the file can be set beside it, each with its capex; one input can be swept across them all.' },
+            { id: 'sweep_param', label: 'Input to sweep', type: 'select',
+              options: [{ value: '', label: 'None', default: true }, ...SWEEP_OPTIONS] },
+            { id: 'sweep_values', label: 'Values, comma-separated; x0.5 is half its value above (blank: x0.5, x1, x2)', type: 'text', value: '' },
+            num('crf', 'Capital recovery factor (per year)', 0.08),
+            num('capex_meur', 'Capex of this page\'s design (MEUR)', 0),
+            { id: 'designs', type: 'custom' },
             { id: 'element_section', label: 'Element failure data', type: 'section',
               subtitle: 'An element\'s own data replaces the defaults above; blank keeps them. Saved on the drawing.' },
             { id: 'element_data', type: 'custom' }
@@ -177,6 +201,7 @@ export class ReliabilityDialog extends Dialog {
 
     // The element table: one row per bus, transformer, line and switch, filterable; only values changed are written.
     createCustomParameter(param) {
+        if (param.id === 'designs') return this._designsTable(param);
         if (param.id !== 'element_data') return null;
         const wrap = document.createElement('div');
         const hidden = document.createElement('input');
@@ -270,7 +295,66 @@ export class ReliabilityDialog extends Dialog {
         const ids = this.parameters.filter(p => p.type !== 'section').map(p => p.id);
         const out = Object.fromEntries(ids.map((id, i) => [id, values[i]]));
         delete out.element_data;
+        out.designs = (this._designInputs || []).filter(d => d.tick.checked).map(d => ({
+            page_id: d.page.getId(),
+            name: d.page.getName() || d.page.getId(),
+            capex_meur: d.capex.value.trim() || '0',
+            own_inputs: d.own.value.trim()
+        }));
         return out;
+    }
+
+    // The file's other pages, each a design to set beside this one: ticked, its capex and the inputs it has of its
+    // own (a forming unit's storage, its black-start steps), as 'storage_mwh=0.0635; black_start_steps=1'.
+    _designsTable(param) {
+        const wrap = document.createElement('div');
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = param.id;
+        this.inputs.set(param.id, hidden);
+        wrap.appendChild(hidden);
+        this._designInputs = [];
+        if (!this._pages.length) {
+            const empty = document.createElement('div');
+            empty.textContent = 'This file has one page: add a page per design to compare designs. A sweep runs on this page alone.';
+            Object.assign(empty.style, { fontSize: '12.5px', color: '#6c757d' });
+            wrap.appendChild(empty);
+            return wrap;
+        }
+        const table = document.createElement('table');
+        Object.assign(table.style, { width: '100%', borderCollapse: 'collapse', fontSize: '12.5px' });
+        const head = table.createTHead().insertRow();
+        ['', 'Page (design)', 'Capex (MEUR)', 'Its own inputs, ; between them: storage_mwh=0.0635; transfer_groups=A1+B1, A2+B2'].forEach((text) => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            Object.assign(th.style, { textAlign: 'left', padding: '4px 6px', background: '#f8f9fa', borderBottom: '1px solid #dee2e6' });
+            head.appendChild(th);
+        });
+        const body = table.createTBody();
+        const box = (w) => {
+            const i = document.createElement('input');
+            Object.assign(i.style, { width: w, padding: '3px 6px', border: '1px solid #ced4da', borderRadius: '3px', fontSize: '12px', boxSizing: 'border-box' });
+            return i;
+        };
+        this._pages.forEach((page) => {
+            const tr = body.insertRow();
+            const tick = document.createElement('input');
+            tick.type = 'checkbox';
+            const capex = box('90px');
+            capex.type = 'number';
+            capex.step = 'any';
+            capex.placeholder = '0';
+            const own = box('100%');
+            own.type = 'text';
+            [tick, page.getName() || page.getId(), capex, own].forEach((x) => {
+                const td = tr.insertCell();
+                Object.assign(td.style, { padding: '3px 6px', borderBottom: '1px solid #f1f3f5' });
+                if (typeof x === 'string') td.textContent = x; else td.appendChild(x);
+            });
+            this._designInputs.push({ page, tick, capex, own });
+        });
+        wrap.appendChild(table);
+        return wrap;
     }
 
     // The element values changed in the table, written onto the drawing before the study reads it.

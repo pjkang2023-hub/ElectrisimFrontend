@@ -53,6 +53,27 @@ window.reliabilityStudy = function (a, b, c) {
         }
     }
 
+    // The network of each design page, read by visiting the page; back on this page after, whatever happens.
+    function designNetworks(ui, chosen, typ) {
+        if (!chosen.length) return [];
+        const home = ui.currentPage;
+        const out = [];
+        try {
+            chosen.forEach((d) => {
+                const page = ui.getPageById(d.page_id);
+                if (!page) return;
+                ui.selectPage(page, true);
+                const net = prepareNetworkData(ui.editor.graph, { typ }, { removeResultCells: false });
+                const network = {};
+                Object.entries(net).forEach(([k, v]) => { if (!(v && v.typ === typ)) network[k] = v; });
+                out.push({ name: d.name, capex_meur: d.capex_meur, own_inputs: d.own_inputs, network });
+            });
+        } finally {
+            if (ui.currentPage !== home) ui.selectPage(home, true);
+        }
+        return out;
+    }
+
     if (b.isEnabled() && !b.isCellLocked(b.getDefaultParent())) {
         const dialog = new ReliabilityDialog(a, b);
         dialog.show(function (values) {
@@ -63,13 +84,21 @@ window.reliabilityStudy = function (a, b, c) {
                 filePrefix: 'reliability'
             });
             simProgress.overlay.append('Preparing network data…', { time: true });
+            const typ = 'ReliabilityElectrisim Parameters';
+            const { designs: chosen = [], ...rest } = values;
             const simulationParameters = {
-                typ: 'ReliabilityElectrisim Parameters',
-                ...values,
+                typ,
+                ...rest,
+                page_name: a.currentPage?.getName?.() || 'This page',
                 user_email: getUserEmail()
             };
             try {
-                const obj = prepareNetworkData(b, simulationParameters, { removeResultCells: false });
+                const designs = designNetworks(a, chosen, typ);
+                if (designs.length) simProgress.overlay.append(`Designs beside this page: ${designs.map(d => d.name).join(', ')}`, { time: true });
+                const prepared = prepareNetworkData(b, simulationParameters, { removeResultCells: false });
+                // the designs ride on the study's own entry - a copy, the prepared payload is cached
+                const obj = Object.fromEntries(Object.entries(prepared).map(([k, v]) =>
+                    [k, v && v.typ === typ ? { ...v, designs } : v]));
                 run(ENV.backendUrl + '/', obj, b);
             } catch (error) {
                 console.error('Reliability network preparation failed:', error);
