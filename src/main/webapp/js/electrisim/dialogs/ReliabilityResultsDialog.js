@@ -47,6 +47,7 @@ export class ReliabilityResultsDialog {
         } else {
             this._summary(dialog);
             this._comparison(dialog);
+            this._monteCarlo(dialog);
             this._byClass(dialog);
             this._events(dialog);
         }
@@ -97,6 +98,37 @@ export class ReliabilityResultsDialog {
             'each consequence an island balance (no grid-forming source: dead; storage bridges what the sources cannot carry). ' +
             'Rates are planning values - the workbook keeps them editable.';
         dialog.appendChild(note);
+    }
+
+    // The year-long Monte Carlo: the means beside the enumeration's, the spread of the years and its histogram.
+    _monteCarlo(dialog) {
+        const mc = this.results.monte_carlo;
+        if (!mc) return;
+        const s = mc.simulated;
+        const row = (a, b, c = '') => `<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;">${a}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;text-align:right;">${b}</td><td style="padding:5px 8px;border-bottom:1px solid #eee;color:#6c757d;">${c}</td></tr>`;
+        const most = Math.max(...s.histogram.map(b => b.years), 1);
+        const label = (b) => b.hi === 0 ? 'none' : b.hi === null ? `over ${b.lo}` : `${b.lo || '0'} to ${b.hi}`;
+        const bars = s.histogram.map(b => `<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;margin:2px 0;">
+            <span style="width:110px;text-align:right;color:#495057;">${esc(label(b))}</span>
+            <span style="height:12px;background:#1f6f5c;border-radius:2px;width:${b.years ? Math.max(2, 260 * Math.log10(1 + b.years) / Math.log10(1 + most)) : 0}px;"></span>
+            <span style="font-variant-numeric:tabular-nums;">${b.years}</span></div>`).join('');
+        const wrap = document.createElement('div');
+        wrap.style.cssText = 'margin-bottom:16px;';
+        wrap.innerHTML = `<h3 style="margin:6px 0 4px 0;font-size:16px;">Year-long Monte Carlo</h3>
+            <p style="margin:0 0 8px 0;font-size:12.5px;color:#6c757d;">${mc.years.toLocaleString()} years (seed ${esc(mc.seed)}), repairs ${esc(mc.repair)}, storage back from empty in ${esc(mc.recharge_h)} h; ${mc.events_that_can_lose} of ${mc.events_enumerated} events can lose load.</p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;">
+            <table style="border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;">
+            ${row('IT energy not served, enumeration', fmt(mc.analytic.it_mwh_yr, 4), 'MWh/yr')}
+            ${row('expected over the profiles', fmt(mc.expected.it_mwh_yr, 4), 'MWh/yr, full storage')}
+            ${row('simulated mean', `${fmt(s.it_mwh_yr, 4)} &plusmn; ${fmt(s.it_se, 4)}`, 'MWh/yr, 1 s.e.')}
+            ${row('Years with any IT loss', `${fmt(100 * s.share_of_years_with_it_loss, 2)} %`, `1 in ${s.share_of_years_with_it_loss > 0 ? Math.round(1 / s.share_of_years_with_it_loss) : '-'}`)}
+            ${row('IT interruptions', fmt(s.it_interruptions_per_yr, 4), `per year; size P50 ${fmt(s.interruption_p50_mwh, 1)}, P90 ${fmt(s.interruption_p90_mwh, 1)} MWh`)}
+            ${row('A year\'s IT loss: P90 / P99 / P99.9', `${fmt(s.p90, 2)} / ${fmt(s.p99, 2)} / ${fmt(s.p999, 1)}`, 'MWh')}
+            ${row('Worst year', fmt(s.worst, 1), 'MWh')}
+            </table>
+            <div><div style="font-size:12.5px;color:#495057;margin-bottom:4px;">Years by their IT energy not served (MWh; bars on a log scale)</div>${bars}</div>
+            </div>`;
+        dialog.appendChild(wrap);
     }
 
     // The designs on one table, lowest total first, and the sweep with its tie-points.
