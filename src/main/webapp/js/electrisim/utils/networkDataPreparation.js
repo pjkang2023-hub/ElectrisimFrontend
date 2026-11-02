@@ -33,6 +33,14 @@ import {
 import { collectParkControllers } from './parkControllerCollect.js';
 import { clearFaultLocationMarkers } from './faultLocationMarkers.js';
 
+// The reliability study's per-element failure data (blank: the study's defaults): failures per year of the whole
+// element, its repair time, and a breaker's chance of failing to open per demand.
+const RELIABILITY_ATTRS = {
+    rel_failure_rate: { name: 'rel_failure_rate', optional: true },
+    rel_repair_h: { name: 'rel_repair_h', optional: true },
+    rel_p_fail_open: { name: 'rel_p_fail_open', optional: true },
+};
+
 /**
  * Check if the model has load and/or generation elements (for Economic Analysis profile options).
  * @param {Object} graph - The mxGraph instance
@@ -863,6 +871,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                     ...getAttributesAsObject(cell, {
                         min_vm_pu: { name: 'min_vm_pu', optional: true },
                         max_vm_pu: { name: 'max_vm_pu', optional: true },
+                        ...RELIABILITY_ATTRS,
                     }),
                 };
                 componentArrays.busbar.push(busbar);
@@ -919,6 +928,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         vm_lower_pu: { name: 'vm_lower_pu', optional: true },
                         vm_upper_pu: { name: 'vm_upper_pu', optional: true },
                         max_loading_percent: { name: 'max_loading_percent', optional: true },
+                        ...RELIABILITY_ATTRS,
                     })
                 };
                 componentArrays.transformer.push(transformer);
@@ -1476,7 +1486,8 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                     momentary_rating_ka: { name: 'momentary_rating_ka', optional: true },
                     rated_voltage_kv: { name: 'rated_voltage_kv', optional: true },
                     contact_parting_cycles: { name: 'contact_parting_cycles', optional: true },
-                    generator_cb: { name: 'generator_cb', optional: true }
+                    generator_cb: { name: 'generator_cb', optional: true },
+                    ...RELIABILITY_ATTRS
                 });
                 const switchElement = {
                     typ: `Switch${counters.switch++}`,
@@ -1535,6 +1546,7 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         endtemp_degree: { name: 'endtemp_degree', optional: true },
                         cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true },
                         max_loading_percent: { name: 'max_loading_percent', optional: true },
+                        ...RELIABILITY_ATTRS,
                     })
                 };
 

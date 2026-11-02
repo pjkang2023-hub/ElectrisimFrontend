@@ -54,7 +54,7 @@ window.reliabilityStudy = function (a, b, c) {
     }
 
     if (b.isEnabled() && !b.isCellLocked(b.getDefaultParent())) {
-        const dialog = new ReliabilityDialog(a);
+        const dialog = new ReliabilityDialog(a, b);
         dialog.show(function (values) {
             if (!values || typeof values !== 'object') return;
             simProgress = startSimulationProgress({
