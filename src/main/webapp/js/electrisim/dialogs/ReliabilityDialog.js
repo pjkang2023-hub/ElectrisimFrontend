@@ -1,5 +1,6 @@
 // ReliabilityDialog.js - Dialog for the reliability study: contingency enumeration over the protection zones
 import { Dialog } from '../Dialog.js';
+import { lastTimeSeriesRun } from '../utils/timeSeriesRun.js';
 import { parseCellStyle } from '../loadFlow.js';
 
 // The last settings, kept in this browser.
@@ -191,9 +192,9 @@ export class ReliabilityDialog extends Dialog {
         this._applySaved(loadSettings());
     }
 
-    // The time-series run this page has kept (timeSeriesSimulation.js), as the dialog names it.
+    // The time-series run this page has kept, or saved with the drawing (utils/timeSeriesRun.js), as the dialog names it.
     _lastRun() {
-        return (globalThis.electrisimTimeSeriesRuns || {})[this.ui?.currentPage?.getId?.() || 'page'] || null;
+        return lastTimeSeriesRun(this.ui);
     }
 
     _lastRunLabel() {

@@ -4,6 +4,7 @@
 import { ReliabilityDialog } from './dialogs/ReliabilityDialog.js';
 import { ReliabilityResultsDialog } from './dialogs/ReliabilityResultsDialog.js';
 import ENV from './config/environment.js';
+import { lastTimeSeriesRun } from './utils/timeSeriesRun.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
 import {
     startSimulationProgress,
@@ -86,9 +87,9 @@ window.reliabilityStudy = function (a, b, c) {
             simProgress.overlay.append('Preparing network data…', { time: true });
             const typ = 'ReliabilityElectrisim Parameters';
             const { designs: chosen = [], ...rest } = values;
-            // the Monte Carlo's load and storage from this page's last time-series run (timeSeriesSimulation.js)
+            // the Monte Carlo's load and storage from this page's last time-series run (utils/timeSeriesRun.js)
             if (rest.mc_profile_source === 'time_series' && Number(rest.mc_years) > 0) {
-                const run = (globalThis.electrisimTimeSeriesRuns || {})[a.currentPage?.getId?.() || 'page'];
+                const run = lastTimeSeriesRun(a);
                 if (!run) {
                     simProgress.overlay.remove();
                     simProgress = null;

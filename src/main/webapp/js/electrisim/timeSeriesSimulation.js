@@ -2,6 +2,7 @@ import ENV from './config/environment.js';
 import { formatResultNameHeader } from './utils/attributeUtils.js';
 import { prepareNetworkData } from './utils/networkDataPreparation.js';
 import { referencedLoadProfiles } from './utils/loadProfileLibrary.js';
+import { keepTimeSeriesRun, timeSeriesRunFrom } from './utils/timeSeriesRun.js';
 import {
     startSimulationProgress,
     settleSimulationProgress,
@@ -331,30 +332,11 @@ async function processNetworkData(url, obj, graph, apka, options = {}, simProgre
     }
 }
 
-// The run's batteries' state of charge and loads' power, step by step, kept for the reliability study's Monte Carlo
-// (its profiles from this run): the last run of each page, in this browser tab only.
+// The run's batteries' state of charge and loads' demand, step by step, kept for the reliability study's Monte Carlo
+// (its profiles from this run): the last run of each page, saved with the drawing (utils/timeSeriesRun.js).
 function keepForReliability(dataJson, apka) {
     const ui = apka?.currentPage ? apka : (window.App?.main?.editor?.editorUi || null);
-    const page = ui?.currentPage;
-    const stores = {};
-    ((dataJson.microgrid && dataJson.microgrid.ders) || []).forEach((r) => {
-        if (r.kind !== 'Battery') return;
-        (stores[r.name] = stores[r.name] || { id: r.id, label: r.label, soc: [] }).soc.push(r.soc_percent_end);
-    });
-    const loads = {};
-    (dataJson.loads || []).forEach((r) => {
-        // its demand, served or not: load shed in the run is still load the study can lose
-        (loads[r.id] = loads[r.id] || { id: r.id, label: r.name, p_mw: [] }).p_mw.push(r.p_demand_mw ?? r.p_mw);
-    });
-    const kept = globalThis.electrisimTimeSeriesRuns = globalThis.electrisimTimeSeriesRuns || {};
-    kept[page?.getId?.() || 'page'] = {
-        pageName: page?.getName?.() || '',
-        at: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        time_steps: dataJson.time_steps,
-        time_step_s: dataJson.time_step_s,
-        stores,
-        loads
-    };
+    keepTimeSeriesRun(ui, timeSeriesRunFrom(dataJson, ui?.currentPage));
 }
 
 globalThis.timeSeriesSimulationPandaPower = timeSeriesSimulationPandaPower;
