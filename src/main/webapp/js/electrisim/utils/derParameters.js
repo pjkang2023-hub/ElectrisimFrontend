@@ -103,6 +103,10 @@ export const DER_PARAMETERS = {
         num('p_set_kw', 'Set power', 'kW', 80, 'What it delivers, net of its auxiliary load: held between its minimum load and its rating less its auxiliary load. Behind a converter in follower mode, what the converter delivers from it.', '1'),
         num('fuel_utilisation_percent', 'Fuel utilisation', '%', 85, 'The share of the hydrogen fed that reacts.', '1'),
         num('min_load_percent', 'Minimum load', '%', 30, 'Below it the stack is not run.', '1'),
+        sel('hot_standby', 'Hot standby', 'yes', [
+            { value: 'yes', label: 'Can be taken off line and come back from hot standby' },
+            { value: 'no', label: 'Cannot: stays at its minimum load' }
+        ], 'In an island whose stores are full, SOFCs at their minimum load are taken off line only if they can come back from hot standby; if not, a surplus past their minimum is one the plant cannot absorb, and the time series reports it.'),
         num('aux_load_percent', 'Auxiliary load', '% of rated', 5, 'Its balance of plant: blowers, pumps, controls.', '0.1'),
         num('ramp_percent_s', 'Ramp rate', '% per s', 1, 'How fast its power may change (time-series and EMT studies).', '0.1'),
         inService
