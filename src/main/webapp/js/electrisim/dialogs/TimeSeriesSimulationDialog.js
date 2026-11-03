@@ -149,6 +149,18 @@ class TimeSeriesSimulationDialog {
         tsSection.appendChild(dispatchWrap);
         tsSection.appendChild(this.createNumberInput('sofc_tau_s', 'SOFC demand averaging (s)', '900', 'any', '86400',
             'Under the dispatch, each SOFC follows the demand averaged over this.'));
+        // Secondary control: the SOFCs also bring the grid-forming stations' batteries back to a set-point.
+        const secondaryEl = this.createNumberInput('secondary_soc_percent', 'Secondary control: hold the grid-forming '
+            + 'batteries at state of charge (%)', '', 'any', '100',
+            'Blank: off, the batteries drift with the load. Under the dispatch the SOFCs also make up what the '
+            + 'batteries behind grid-forming PCS hold short of this (or give up what they hold over it), over the '
+            + 'restore time below.');
+        secondaryEl.querySelector('input').placeholder = 'off';
+        tsSection.appendChild(secondaryEl);
+        const restoreEl = this.createNumberInput('secondary_restore_h', 'Secondary control restore time (h)', '1', 'any',
+            '168', 'Several times the SOFC demand averaging, or the batteries swing about the set-point.');
+        restoreEl.querySelector('input').min = '0';
+        tsSection.appendChild(restoreEl);
         form.appendChild(tsSection);
 
         // Load & generation profiles
@@ -328,6 +340,8 @@ class TimeSeriesSimulationDialog {
                     export_to_xlsx: exportCheckbox.checked,
                     microgrid_dispatch: !!document.getElementById('microgrid_dispatch')?.checked,
                     sofc_tau_s: parseFloat(getField('sofc_tau_s')?.value) || 900,
+                    secondary_soc_percent: getField('secondary_soc_percent')?.value?.trim() || '',
+                    secondary_restore_h: parseFloat(getField('secondary_restore_h')?.value) || 1,
                     element_profiles: {}
                 };
 

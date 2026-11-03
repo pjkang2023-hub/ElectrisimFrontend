@@ -231,6 +231,8 @@ function timeSeriesSimulationPandaPower(apka, graph) {
                     init: params.init || 'auto',
                     microgrid_dispatch: !!params.microgrid_dispatch,
                     sofc_tau_s: String(params.sofc_tau_s ?? 900),
+                    secondary_soc_percent: String(params.secondary_soc_percent ?? ''),
+                    secondary_restore_h: String(params.secondary_restore_h ?? 1),
                     user_email: getUserEmail()
                 };
 
@@ -341,7 +343,8 @@ function keepForReliability(dataJson, apka) {
     });
     const loads = {};
     (dataJson.loads || []).forEach((r) => {
-        (loads[r.id] = loads[r.id] || { id: r.id, label: r.name, p_mw: [] }).p_mw.push(r.p_mw);
+        // its demand, served or not: load shed in the run is still load the study can lose
+        (loads[r.id] = loads[r.id] || { id: r.id, label: r.name, p_mw: [] }).p_mw.push(r.p_demand_mw ?? r.p_mw);
     });
     const kept = globalThis.electrisimTimeSeriesRuns = globalThis.electrisimTimeSeriesRuns || {};
     kept[page?.getId?.() || 'page'] = {
