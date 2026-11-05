@@ -222,6 +222,9 @@ window.transientStabilityAndes = function (a, b, c) {
             shed_step_percent: String(values.shed_step_percent ?? '5'),
             shed_max_steps: String(values.shed_max_steps ?? '4'),
             shed_loads: String(values.shed_loads ?? ''),
+            sofc_ramp: values.sofc_ramp || 'false',
+            sofc_standby: String(values.sofc_standby ?? ''),
+            sofc_return_s: String(values.sofc_return_s ?? '120'),
             // The library profiles some load follows through the run.
             load_profiles: referencedLoadProfiles(b),
             user_email: getUserEmail()

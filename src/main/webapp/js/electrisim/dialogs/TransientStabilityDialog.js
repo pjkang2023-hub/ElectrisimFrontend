@@ -203,6 +203,13 @@ export class TransientStabilityDialog extends Dialog {
             { id: 'shed_max_steps', label: 'Steps at most', type: 'number', value: '4', min: '0', step: '1' },
             { id: 'shed_loads', label: 'Loads it may shed (optional)', type: 'text', value: '' },
             {
+                id: 'sofc_section', label: 'SOFC groups following the load', type: 'section',
+                subtitle: 'Off, a grid-following SOFC group holds its power through the run. On, each group moves towards its share of what its island’s grid-forming PCS carry, no faster than its ramp rates and between its minimum load and rating, with its Q at its power factor; how quickly it goes after that share within its ramp rates is assumed, at 1 s. A group in hot standby starts at nothing and comes back the set time after the stations first carry anything. Hot standby: PCS names separated by commas; empty, none. Secondary control is not modelled with this.'
+            },
+            { id: 'sofc_ramp', label: 'Groups follow the load', type: 'select', options: [{ value: 'false', label: 'Off: hold their power', default: true }, { value: 'true', label: 'On: at their ramp rates' }] },
+            { id: 'sofc_standby', label: 'PCS of the groups in hot standby (optional)', type: 'text', value: '' },
+            { id: 'sofc_return_s', label: 'Back from hot standby after (s)', type: 'number', value: '120', min: '0', step: '1' },
+            {
                 id: 'poi_bus',
                 label: 'POI bus (voltage / ride-through check)',
                 type: 'select',
