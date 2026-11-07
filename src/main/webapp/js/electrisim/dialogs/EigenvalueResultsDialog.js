@@ -168,6 +168,44 @@
                 });
             }
 
+            // Each mode's shape on the machines' speeds: who swings against whom.
+            if (this.results.mode_shapes?.length) {
+                const h = document.createElement('h3');
+                h.textContent = 'Mode shapes (rotor speeds, largest = 1)';
+                h.style.cssText = 'margin:16px 0 8px;font-size:14px;';
+                wrap.appendChild(h);
+                const byIndex = new Map(modes.map((m) => [m.index, m]));
+                this.results.mode_shapes.forEach((s) => {
+                    const m = byIndex.get(s.mode_index);
+                    const div = document.createElement('div');
+                    div.style.cssText = 'font-size:12px;margin-bottom:10px;';
+                    const strong = document.createElement('strong');
+                    const share = s.speed_participation == null ? '' : `, speeds ${(100 * s.speed_participation).toFixed(0)} % of it`;
+                    strong.textContent = `Mode ${s.mode_index}${m ? ` (${Number(m.freq_hz).toFixed(3)} Hz${share})` : ''}: `;
+                    div.appendChild(strong);
+                    const groups = (s.groups || []).map((g) => g.join(', '));
+                    div.appendChild(document.createTextNode(groups.length > 1 ? `${groups[0]} against ${groups.slice(1).join(' and ')}` : (groups[0] || '')));
+                    const bars = document.createElement('div');
+                    bars.style.cssText = 'margin:4px 0 0 12px;';
+                    (s.machines || []).forEach((r) => {
+                        const row = document.createElement('div');
+                        row.style.cssText = 'display:flex;align-items:center;gap:8px;';
+                        const name = document.createElement('span');
+                        name.style.cssText = 'width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+                        name.textContent = r.machine;
+                        const bar = document.createElement('span');
+                        const against = Math.abs(Number(r.angle_deg)) > 90;
+                        bar.style.cssText = `display:inline-block;height:8px;width:${Math.round(160 * Number(r.magnitude || 0))}px;background:${against ? '#dc3545' : '#007cba'};border-radius:2px;`;
+                        const val = document.createElement('span');
+                        val.style.color = '#555';
+                        val.textContent = `${Number(r.magnitude).toFixed(3)} at ${Number(r.angle_deg).toFixed(0)}°`;
+                        row.append(name, bar, val);
+                        bars.appendChild(row);
+                    });
+                    div.appendChild(bars);
+                    wrap.appendChild(div);
+                });
+            }
             // How the model was built: plants with no dynamic model, for one.
             if (this.results.warnings?.length) {
                 const box = document.createElement('div');

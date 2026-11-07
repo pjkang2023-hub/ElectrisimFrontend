@@ -18,7 +18,10 @@ export const defaultVscData = {
     dc_link_esr_mohm: 0,        // EMT and DC fault studies: its DC-link capacitor's series resistance; 0 = none
     dc_link_esl_uh: 0,          // EMT and DC fault studies: its DC-link capacitor's series inductance; 0 = none
     current_limit_pu: 1.2,      // EMT study: its current limit, per unit of its rated current
-    emt_model: 'average',       // EMT study: 'average' (averaged phases) or 'switching' (two-level bridge, PWM)
+    emt_model: 'average',       // EMT study: 'average' (averaged phases), 'switching' (two-level bridge, PWM) or 'mmc' (modular multilevel)
+    mmc_levels: 0,              // EMT study, mmc: submodules per arm, nearest-level steps; 0 = continuous (arm-averaged)
+    mmc_energy_kj_per_mva: 30,  // EMT study, mmc: energy stored in its arms per MVA of rating
+    mmc_x_arm_pu: 0.15,         // EMT study, mmc: each arm's reactor
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
     current_loop_hz: 500,       // EMT study: its current loop's bandwidth
     inlet_c: '',                // its rating where it runs (converter_rating): blank leaves its nameplate
@@ -189,8 +192,38 @@ export class VscDialog extends Dialog {
                 symbol: 'emt_model',
                 description: 'For the EMT study: average (its phase voltages averaged over each switching period - fast) or switching (a two-level bridge switched by PWM - its ripple and harmonics, with a time step of a fiftieth of its switching period or less).',
                 type: 'select',
-                options: ['average', 'switching'],
+                options: ['average', 'switching', 'mmc'],
                 value: this.data.emt_model
+            },
+            {
+                id: 'mmc_levels',
+                label: 'MMC levels per arm (EMT)',
+                symbol: 'mmc_levels',
+                description: 'For a modular multilevel model: its submodules per arm, its voltage in nearest-level steps; 0 for the arm-averaged model. It has no blocking: a trip or a DC fault does not stop it.',
+                type: 'number',
+                value: String(this.data.mmc_levels ?? 0),
+                step: '1',
+                min: '0'
+            },
+            {
+                id: 'mmc_energy_kj_per_mva',
+                label: 'MMC stored energy (kJ/MVA, EMT)',
+                symbol: 'mmc_energy_kj_per_mva',
+                description: 'For a modular multilevel model: the energy in its submodule capacitors per MVA of rating; typically 30-40.',
+                type: 'number',
+                value: String(this.data.mmc_energy_kj_per_mva ?? 30),
+                step: '1',
+                min: '1'
+            },
+            {
+                id: 'mmc_x_arm_pu',
+                label: 'MMC arm reactor (pu, EMT)',
+                symbol: 'mmc_x_arm_pu',
+                description: 'For a modular multilevel model: each arm\'s reactor, per unit of its rating; its AC side sees half of it.',
+                type: 'number',
+                value: String(this.data.mmc_x_arm_pu ?? 0.15),
+                step: '0.01',
+                min: '0.01'
             },
             {
                 id: 'spectrum',

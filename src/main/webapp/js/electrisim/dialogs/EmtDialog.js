@@ -154,9 +154,33 @@ export class EmtDialog extends Dialog {
                 options: [
                     { value: 'auto', label: 'Machines when the study islands, else sources behind x"d', default: true },
                     { value: 'machine', label: 'Machines: rotor swing, governor and exciter from their Dynamics tabs' },
+                    { value: 'detailed', label: 'Detailed machines: GENROU rotor with stator transients (DC offset, short-circuit torque)' },
                     { value: 'source', label: 'Sources behind x"d (a stiff frequency)' }
                 ]
             },
+            {
+                id: 'fd_line', label: 'AC lines',
+                type: 'select',
+                options: [
+                    { value: 'false', label: 'Pi sections, or frequency-dependent where a line’s EMT tab says so', default: true },
+                    { value: 'true', label: 'Frequency-dependent (travelling waves) wherever a line has its geometry' }
+                ]
+            },
+            { id: 'harmonics_section', label: 'Harmonics', type: 'section', subtitle: 'Each bus’s voltage and each branch’s current over the run’s last cycles, by Fourier transform: THD and each harmonic, what falls between them reported apart. No events should fall in the window.' },
+            { id: 'harmonics_cycles', label: 'Cycles analysed (0: none)', type: 'number', value: '0', min: '0', step: '1' },
+            { id: 'harmonics_h_max', label: 'Highest harmonic', type: 'number', value: '50', min: '2', step: '1' },
+            { id: 'scan_section', label: 'Impedance scan', type: 'section', subtitle: 'Small tones injected at a bus, its impedance read from the run, controls in the loop. The lowest tone sets the run’s length (1 / f). Settling must outlast the network’s slowest response.' },
+            {
+                id: 'scan_bus', label: 'Scanned bus',
+                type: 'select',
+                options: [{ value: 'none', label: 'None', default: true }, ...cellOptions(this.graph, 'Bus')]
+            },
+            { id: 'scan_f_min_hz', label: 'From (Hz)', type: 'number', value: '20', min: '0.05', step: '1' },
+            { id: 'scan_f_max_hz', label: 'To (Hz)', type: 'number', value: '2000', min: '1', step: '100' },
+            { id: 'scan_points_per_decade', label: 'Tones per decade', type: 'number', value: '10', min: '1', step: '1' },
+            { id: 'scan_amp_pu', label: 'Each tone’s current (pu of the base)', type: 'number', value: '0.01', min: '0.0001', step: '0.001' },
+            { id: 'scan_base_mva', label: 'Base (MVA)', type: 'number', value: '100', min: '0.001', step: '10' },
+            { id: 'scan_settle_ms', label: 'Settling before reading (ms)', type: 'number', value: '300', min: '0', step: '50' },
             { id: 'vsc_block_pu', label: 'Converters block below (p.u. of their DC voltage)', type: 'number', value: '0.8', min: '0', step: '0.05' },
             { id: 'max_section_km', label: 'Longest pi section of a DC cable (km)', type: 'number', value: '1', min: '0.001', step: '0.1' },
             { id: 'ac_max_section_km', label: 'Longest pi section of an AC line (km)', type: 'number', value: '50', min: '0.001', step: '5' },

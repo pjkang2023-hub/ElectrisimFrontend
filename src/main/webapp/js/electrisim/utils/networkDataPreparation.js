@@ -1546,6 +1546,13 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         endtemp_degree: { name: 'endtemp_degree', optional: true },
                         cost_per_unit_by_currency: { name: 'cost_per_unit_by_currency', optional: true },
                         max_loading_percent: { name: 'max_loading_percent', optional: true },
+                        // The EMT study's frequency-dependent model and its geometry.
+                        fd_line: { name: 'fd_line', optional: true },
+                        fd_height_m: { name: 'fd_height_m', optional: true },
+                        fd_spacing_m: { name: 'fd_spacing_m', optional: true },
+                        fd_radius_m: { name: 'fd_radius_m', optional: true },
+                        fd_rdc_ohm_per_km: { name: 'fd_rdc_ohm_per_km', optional: true },
+                        fd_rho_ohm_m: { name: 'fd_rho_ohm_m', optional: true },
                         ...RELIABILITY_ATTRS,
                     })
                 };

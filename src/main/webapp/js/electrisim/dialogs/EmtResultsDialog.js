@@ -65,6 +65,9 @@ export class EmtResultsDialog {
             this._renderIsland(body);
             this._renderEnergise(body);
             this._renderMachines(body);
+            this._renderFdLines(body);
+            this._renderScan(body);
+            this._renderHarmonics(body);
             this._renderConverters(body);
             this._renderDers(body);
             this._renderSmoothing(body);
@@ -211,7 +214,7 @@ export class EmtResultsDialog {
         if (!rows.length) return;
         this._h(body, 'Synchronous machines');
         body.appendChild(this._table([
-            { label: 'Generator', align: 'left', value: m => `${this._escape(m.label)} <span style="color:#6c757d;">(${m.governor ? 'governor' : 'no governor'}, ${m.exciter ? 'exciter' : 'E′ held'})</span>` },
+            { label: 'Generator', align: 'left', value: m => `${this._escape(m.label)} <span style="color:#6c757d;">(${m.model === 'detailed' ? 'detailed, ' : ''}${m.governor ? 'governor' : 'no governor'}, ${m.exciter ? 'exciter' : (m.model === 'detailed' ? 'field held' : 'E′ held')})</span>` },
             { label: 'P (MW)', title: 'Electrical, at its terminals: at the start and the end', value: m => `${fmt(m.p_start_mw)} → ${fmt(m.p_end_mw)}` },
             { label: 'Pm (MW)', title: 'Mechanical, from its governor: at the start and the end', value: m => `${fmt(m.pm_start_mw)} → ${fmt(m.pm_end_mw)}` },
             { label: 'Q (Mvar)', title: 'At the end', value: m => fmt(m.q_end_mvar) },
@@ -219,6 +222,99 @@ export class EmtResultsDialog {
             { label: 'Rotor angle (°)', title: 'How far it moved through the run', value: m => fmt(m.delta_end_deg, 1) },
             { label: 'E′ (p.u.)', title: 'Its internal voltage at the end', value: m => fmt(m.e_end_pu, 3) }
         ], rows));
+    }
+
+    /** Lines run as frequency-dependent: their travelling waves' times. */
+    _renderFdLines(body) {
+        const rows = this.emt.fd_lines || [];
+        if (!rows.length) return;
+        this._h(body, 'Frequency-dependent lines');
+        body.appendChild(this._table([
+            { label: 'Line', align: 'left', value: l => this._escape(l.label) },
+            { label: 'Aerial wave (ms)', title: 'Its travel time end to end, positive sequence', value: l => fmt(l.travel_aerial_ms, 4) },
+            { label: 'Ground wave (ms)', title: 'Its ground mode\'s travel time', value: l => fmt(l.travel_ground_ms, 4) }
+        ], rows));
+    }
+
+    /** The impedance scan: |Z| and its angle against frequency, and where its resistance is negative. */
+    _renderScan(body) {
+        const s = this.emt.impedance_scan;
+        if (!s || !s.f_hz?.length) return;
+        this._h(body, `Impedance at ${s.bus}`);
+        const neg = s.negative_resistance_hz || [];
+        const note = document.createElement('div');
+        note.style.cssText = `padding:8px 12px;border-radius:6px;margin-bottom:8px;${neg.length ? 'background:#fff3cd;color:#664d03;' : 'background:#e7f1ff;color:#084298;'}`;
+        note.textContent = (neg.length ? `Negative resistance at ${neg.join(', ')} Hz: a possible oscillation there, if it holds at a smaller tone and a longer settling. ` : 'No negative resistance at the tones scanned. ')
+            + `Tones ${fmt(s.f_base_hz, 4)} Hz apart, read over ${fmt(s.window_s, 3)} s, ${fmt(s.amp_ka_per_tone, 4)} kA each.`;
+        body.appendChild(note);
+        const host = document.createElement('div');
+        host.style.cssText = 'height:280px;margin-bottom:8px;';
+        body.appendChild(host);
+        this._scanChart(host, s);
+        body.appendChild(this._table([
+            { label: 'f (Hz)', value: (r) => fmt(r.f, 2) },
+            { label: '|Z| (Ω)', value: (r) => fmt(r.z, 4) },
+            { label: '|Z| (p.u.)', value: (r) => fmt(r.zpu, 4) },
+            { label: 'Angle (°)', value: (r) => fmt(r.a, 1) },
+            { label: 'R (Ω)', value: (r) => fmt(r.r, 4), style: '' },
+            { label: 'X (Ω)', value: (r) => fmt(r.x, 4) }
+        ], s.f_hz.map((f, i) => ({ f, z: s.z_ohm[i], zpu: s.z_pu?.[i], a: s.angle_deg[i], r: s.r_ohm[i], x: s.x_ohm[i] }))));
+    }
+
+    async _scanChart(host, s) {
+        try {
+            if (typeof Chart === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'js/vendor/chart.umd.min.js';
+                    script.onload = resolve;
+                    script.onerror = () => reject(new Error('Chart.js failed to load'));
+                    document.head.appendChild(script);
+                });
+            }
+            const canvas = document.createElement('canvas');
+            host.appendChild(canvas);
+            const chart = new window.Chart(canvas, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        { label: '|Z| (Ω)', yAxisID: 'z', borderColor: '#007cba', data: s.f_hz.map((f, i) => ({ x: f, y: s.z_ohm[i] })) },
+                        { label: 'Angle (°)', yAxisID: 'a', borderColor: '#dc3545', borderDash: [4, 3], data: s.f_hz.map((f, i) => ({ x: f, y: s.angle_deg[i] })) }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, parsing: false,
+                    scales: {
+                        x: { type: 'logarithmic', title: { display: true, text: 'Frequency (Hz)' } },
+                        z: { type: 'logarithmic', position: 'left', title: { display: true, text: '|Z| (Ω)' } },
+                        a: { position: 'right', min: -90, max: 90, title: { display: true, text: 'Angle (°)' }, grid: { drawOnChartArea: false } }
+                    }
+                }
+            });
+            (this.charts = this.charts || []).push(chart);
+        } catch (e) {
+            host.textContent = e.message;
+        }
+    }
+
+    /** Harmonics over the run's last cycles: each bus's voltage and each branch's current, their worst phase. */
+    _renderHarmonics(body) {
+        const h = this.emt.harmonics;
+        if (!h) return;
+        this._h(body, `Harmonics over the last ${h.cycles} cycle(s)`);
+        const top = (row) => (row.harmonics || []).slice().sort((a, b) => b.percent - a.percent).slice(0, 4)
+            .map(x => `h${x.h} ${fmt(x.percent, 2)} %`).join(', ') || '—';
+        const columns = (unit) => [
+            { label: 'Element', align: 'left', value: r => this._escape(r.label || r.name) + (r.kind ? ` <span style="color:#6c757d;">(${this._escape(r.kind)})</span>` : '') },
+            { label: 'Phase', align: 'left', title: 'The phase with the highest THD', value: r => r.phase || '—' },
+            { label: `Fundamental (${unit} rms)`, value: r => fmt(r.fundamental_rms, 4) },
+            { label: 'THD (%)', title: 'Against the fundamental, not the rated current (not IEEE 519 TDD)', value: r => fmt(r.thd_percent, 2) },
+            { label: 'Between harmonics (%)', title: 'Interharmonic distortion: high when the window is not settled', value: r => fmt(r.interharmonic_percent, 2) },
+            { label: 'Largest', align: 'left', value: r => top(r) }
+        ];
+        body.appendChild(this._table(columns('kV'), (h.buses || []).filter(r => r.thd_percent != null)));
+        const branches = (h.branches || []).filter(r => r.thd_percent != null);
+        if (branches.length) body.appendChild(this._table(columns('kA'), branches));
     }
 
     /** Smoothing converters: the racks' and the feed's peaks and steepest ramps. */

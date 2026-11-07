@@ -191,6 +191,20 @@ export class LineDialog extends Dialog {
         this.economicParameters = [
             { id: 'cost_per_unit_by_currency', label: 'Cost per unit', description: 'Cost per unit for Economic Analysis CAPEX calculation', type: 'text', value: '' }
         ];
+
+        // EMT: the line as travelling waves with R and L varying with frequency (emt_fd_line), from its geometry.
+        this.emtParameters = [
+            {
+                id: 'fd_line', label: 'Frequency-dependent in the EMT study',
+                description: 'true: travelling waves with their delay, and R and L varying with frequency (skin effect, earth return), from the geometry below. A transposed overhead line only. A line whose travel time is under the time step stays as pi sections, with a warning. false: pi sections, unless the EMT study turns it on for every line with a geometry.',
+                type: 'select', options: ['false', 'true'], value: 'false'
+            },
+            { id: 'fd_height_m', label: 'Conductor height (m)', description: 'Above the ground, the same for all three: a flat row.', type: 'number', value: '', step: '0.5', min: '0' },
+            { id: 'fd_spacing_m', label: 'Phase spacing (m)', description: 'Between neighbouring phases in the row.', type: 'number', value: '', step: '0.1', min: '0' },
+            { id: 'fd_radius_m', label: 'Conductor radius (m)', description: 'A solid round conductor; for a bundle, its equivalent.', type: 'number', value: '', step: '0.001', min: '0' },
+            { id: 'fd_rdc_ohm_per_km', label: 'DC resistance (Ω/km)', description: 'Per phase conductor.', type: 'number', value: '', step: '0.001', min: '0' },
+            { id: 'fd_rho_ohm_m', label: 'Earth resistivity (Ω·m)', description: 'Typically 10-1000; 100 if unknown.', type: 'number', value: '', step: '10', min: '0' }
+        ];
     }
     
     getDescription() {
@@ -252,11 +266,13 @@ export class LineDialog extends Dialog {
         const shortCircuitTab = this.createTab('Short Circuit', 'shortcircuit', this.currentTab === 'shortcircuit');
         const opfTab = this.createTab('OPF', 'opf', this.currentTab === 'opf');
         const economicTab = this.createTab('Economic', 'economic', this.currentTab === 'economic');
+        const emtTab = this.createTab('EMT', 'emt', this.currentTab === 'emt');
         
         tabContainer.appendChild(loadFlowTab);
         tabContainer.appendChild(shortCircuitTab);
         tabContainer.appendChild(opfTab);
         tabContainer.appendChild(economicTab);
+        tabContainer.appendChild(emtTab);
         container.appendChild(tabContainer);
 
         // Create content area
@@ -276,11 +292,13 @@ export class LineDialog extends Dialog {
         const shortCircuitContent = this.createTabContent('shortcircuit', this.shortCircuitParameters);
         const opfContent = this.createTabContent('opf', this.opfParameters);
         const economicContent = this.createTabContent('economic', this.economicParameters);
+        const emtContent = this.createTabContent('emt', this.emtParameters);
 
         contentArea.appendChild(loadFlowContent);
         contentArea.appendChild(shortCircuitContent);
         contentArea.appendChild(opfContent);
         contentArea.appendChild(economicContent);
+        contentArea.appendChild(emtContent);
         container.appendChild(contentArea);
 
         // Add button container
@@ -351,10 +369,11 @@ export class LineDialog extends Dialog {
         this.container = container;
         
         // Tab click handlers
-        loadFlowTab.onclick = () => this.switchTab('loadflow', loadFlowTab, [shortCircuitTab, opfTab, economicTab], loadFlowContent, [shortCircuitContent, opfContent, economicContent]);
-        shortCircuitTab.onclick = () => this.switchTab('shortcircuit', shortCircuitTab, [loadFlowTab, opfTab, economicTab], shortCircuitContent, [loadFlowContent, opfContent, economicContent]);
-        opfTab.onclick = () => this.switchTab('opf', opfTab, [loadFlowTab, shortCircuitTab, economicTab], opfContent, [loadFlowContent, shortCircuitContent, economicContent]);
-        economicTab.onclick = () => this.switchTab('economic', economicTab, [loadFlowTab, shortCircuitTab, opfTab], economicContent, [loadFlowContent, shortCircuitContent, opfContent]);
+        const tabs = [loadFlowTab, shortCircuitTab, opfTab, economicTab, emtTab];
+        const contents = [loadFlowContent, shortCircuitContent, opfContent, economicContent, emtContent];
+        ['loadflow', 'shortcircuit', 'opf', 'economic', 'emt'].forEach((id, k) => {
+            tabs[k].onclick = () => this.switchTab(id, tabs[k], tabs.filter((_, j) => j !== k), contents[k], contents.filter((_, j) => j !== k));
+        });
 
         // Show dialog using DrawIO's dialog system
         if (this.ui && typeof this.ui.showDialog === 'function') {
@@ -619,7 +638,7 @@ export class LineDialog extends Dialog {
         const values = {};
         
         // Collect values from all parameter sets
-        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || [])].forEach(param => {
+        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || []), ...(this.emtParameters || [])].forEach(param => {
             if (this.inputs.has(param.id)) {
                 const input = this.inputs.get(param.id);
                 if (input.type === 'checkbox') {
@@ -823,7 +842,10 @@ export class LineDialog extends Dialog {
                     if (ep) ep.value = attributeValue.toString();
                 }
 
-                if (!loadFlowParam && !shortCircuitParam && !opfParam) if (attributeName !== 'cost_per_unit_by_currency') {
+                const emtParam = (this.emtParameters || []).find(p => p.id === attributeName);
+                if (emtParam) emtParam.value = attributeValue;
+
+                if (!loadFlowParam && !shortCircuitParam && !opfParam && !emtParam) if (attributeName !== 'cost_per_unit_by_currency') {
                     console.log(`  WARNING: No parameter found for attribute ${attributeName}`);
                 }
             }
@@ -833,13 +855,13 @@ export class LineDialog extends Dialog {
         
         // Log final parameter values
         console.log('Final parameter values:');
-        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || [])].forEach(param => {
+        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || []), ...(this.emtParameters || [])].forEach(param => {
             console.log(`  ${param.id}: ${param.value} (${param.type})`);
         });
         
         // Update DOM inputs with the parameter values
         console.log('Updating DOM inputs with parameter values...');
-        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || [])].forEach(param => {
+        [...this.loadFlowParameters, ...this.shortCircuitParameters, ...this.opfParameters, ...(this.economicParameters || []), ...(this.emtParameters || [])].forEach(param => {
             if (this.inputs.has(param.id)) {
                 const input = this.inputs.get(param.id);
                 const value = param.value;
