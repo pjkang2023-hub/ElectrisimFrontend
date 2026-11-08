@@ -213,7 +213,16 @@ export class LineDialog extends Dialog {
             { id: 'fd_insulation_radius_m', label: 'Cable: insulation outer radius (m)', description: 'Where its sheath starts.', type: 'number', value: '', step: '0.0005', min: '0' },
             { id: 'fd_sheath_thickness_m', label: 'Cable: sheath thickness (m)', description: 'Its metallic sheath or screen.', type: 'number', value: '', step: '0.0001', min: '0' },
             { id: 'fd_sheath_rdc_ohm_per_km', label: 'Cable: sheath DC resistance (Ω/km)', description: 'Its metallic sheath or screen.', type: 'number', value: '', step: '0.01', min: '0' },
-            { id: 'fd_eps_r', label: 'Cable: insulation permittivity', description: 'Relative: XLPE about 2.3-2.5.', type: 'number', value: '', step: '0.1', min: '1' }
+            { id: 'fd_eps_r', label: 'Cable: insulation permittivity', description: 'Relative: XLPE about 2.3-2.5.', type: 'number', value: '', step: '0.1', min: '1' },
+            {
+                id: 'fd_bonding', label: 'Cable: sheath bonding', type: 'select', options: ['none', 'solid', 'single', 'cross'], value: 'none',
+                description: 'none: the coaxial travelling-wave model above. solid, single (grounded at the from end) or cross (three minor sections per major, sheaths transposed at each joint): the sheaths as conductors at 50 or 60 Hz, their voltages and circulating currents reported; spacing and resistivity from the fields above.'
+            },
+            { id: 'fd_formation', label: 'Cable: formation', type: 'select', options: ['trefoil', 'flat'], value: 'trefoil', description: 'Trefoil: a triangle of side the spacing above. Flat: a row, that spacing apart.' },
+            { id: 'fd_depth_m', label: 'Cable: burial depth (m)', description: 'To the cables.', type: 'number', value: '', step: '0.1', min: '0' },
+            { id: 'fd_jacket_radius_m', label: 'Cable: jacket outer radius (m)', description: 'Over its sheath: the sheath to earth capacitance.', type: 'number', value: '', step: '0.0005', min: '0' },
+            { id: 'fd_major_sections', label: 'Cable: major sections (cross-bonded)', description: 'Each of three minor sections.', type: 'number', value: '1', step: '1', min: '1' },
+            { id: 'fd_sections', label: 'Cable: pi sections per minor section', description: 'More for a long section.', type: 'number', value: '4', step: '1', min: '1' }
         ];
     }
     

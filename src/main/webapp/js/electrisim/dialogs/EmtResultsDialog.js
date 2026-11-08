@@ -66,6 +66,7 @@ export class EmtResultsDialog {
             this._renderEnergise(body);
             this._renderMachines(body);
             this._renderFdLines(body);
+            this._renderSheaths(body);
             this._renderScan(body);
             this._renderHarmonics(body);
             this._renderConverters(body);
@@ -233,6 +234,20 @@ export class EmtResultsDialog {
             { label: 'Line', align: 'left', value: l => this._escape(l.label) },
             { label: 'Aerial wave (ms)', title: 'Its travel time end to end, positive sequence', value: l => fmt(l.travel_aerial_ms, 4) },
             { label: 'Ground wave (ms)', title: 'Its ground mode\'s travel time', value: l => fmt(l.travel_ground_ms, 4) }
+        ], rows));
+    }
+
+    /** Cables run with their sheaths: their voltages and the currents their bonding leaves. */
+    _renderSheaths(body) {
+        const rows = this.emt.cable_sheaths || [];
+        if (!rows.length) return;
+        this._h(body, 'Cable sheaths');
+        body.appendChild(this._table([
+            { label: 'Cable', align: 'left', value: c => `${this._escape(c.label)} <span style="color:#6c757d;">(${this._escape(c.bonding)}, ${this._escape(c.formation)})</span>` },
+            { label: 'Sheath voltage, peak (kV)', title: 'The highest any sheath reached to earth through the run', value: c => fmt(c.sheath_v_peak_kv, 3) },
+            { label: 'Standing voltage (kV rms)', title: 'Over the last cycle, the highest along any sheath', value: c => fmt(c.sheath_v_standing_kv, 3) },
+            { label: 'Core current (A rms)', value: c => (c.core_i_a || []).map(x => fmt(x, 0)).join(' / ') },
+            { label: 'Sheath current (A rms)', title: 'At the from end: what the bonding leaves circulating', value: c => (c.sheath_i_a || []).map(x => fmt(x, 1)).join(' / ') }
         ], rows));
     }
 

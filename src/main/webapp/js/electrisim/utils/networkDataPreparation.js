@@ -1560,6 +1560,12 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         fd_sheath_thickness_m: { name: 'fd_sheath_thickness_m', optional: true },
                         fd_sheath_rdc_ohm_per_km: { name: 'fd_sheath_rdc_ohm_per_km', optional: true },
                         fd_eps_r: { name: 'fd_eps_r', optional: true },
+                        fd_bonding: { name: 'fd_bonding', optional: true },
+                        fd_formation: { name: 'fd_formation', optional: true },
+                        fd_depth_m: { name: 'fd_depth_m', optional: true },
+                        fd_jacket_radius_m: { name: 'fd_jacket_radius_m', optional: true },
+                        fd_major_sections: { name: 'fd_major_sections', optional: true },
+                        fd_sections: { name: 'fd_sections', optional: true },
                         ...RELIABILITY_ATTRS,
                     })
                 };
