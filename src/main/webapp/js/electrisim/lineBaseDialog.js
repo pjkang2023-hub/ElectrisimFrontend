@@ -199,11 +199,21 @@ export class LineDialog extends Dialog {
                 description: 'true: travelling waves with their delay, and R and L varying with frequency (skin effect, earth return), from the geometry below. A transposed overhead line only. A line whose travel time is under the time step stays as pi sections, with a warning. false: pi sections, unless the EMT study turns it on for every line with a geometry.',
                 type: 'select', options: ['false', 'true'], value: 'false'
             },
+            {
+                id: 'fd_kind', label: 'Construction', type: 'select', options: ['overhead', 'cable'], value: 'overhead',
+                description: 'overhead: the conductor geometry below. cable: each phase a coaxial core in its sheath, the sheath grounded (the cable fields further down); it carries each core’s whole return, which suits energising and switching waves but overstates the 50 Hz loss of cross-bonded sheaths.'
+            },
             { id: 'fd_height_m', label: 'Conductor height (m)', description: 'Above the ground, the same for all three: a flat row.', type: 'number', value: '', step: '0.5', min: '0' },
             { id: 'fd_spacing_m', label: 'Phase spacing (m)', description: 'Between neighbouring phases in the row.', type: 'number', value: '', step: '0.1', min: '0' },
             { id: 'fd_radius_m', label: 'Conductor radius (m)', description: 'A solid round conductor; for a bundle, its equivalent.', type: 'number', value: '', step: '0.001', min: '0' },
             { id: 'fd_rdc_ohm_per_km', label: 'DC resistance (Ω/km)', description: 'Per phase conductor.', type: 'number', value: '', step: '0.001', min: '0' },
-            { id: 'fd_rho_ohm_m', label: 'Earth resistivity (Ω·m)', description: 'Typically 10-1000; 100 if unknown.', type: 'number', value: '', step: '10', min: '0' }
+            { id: 'fd_rho_ohm_m', label: 'Earth resistivity (Ω·m)', description: 'Typically 10-1000; 100 if unknown.', type: 'number', value: '', step: '10', min: '0' },
+            { id: 'fd_core_radius_m', label: 'Cable: core radius (m)', description: 'A cable’s conductor.', type: 'number', value: '', step: '0.0005', min: '0' },
+            { id: 'fd_core_rdc_ohm_per_km', label: 'Cable: core DC resistance (Ω/km)', description: 'A cable’s conductor.', type: 'number', value: '', step: '0.001', min: '0' },
+            { id: 'fd_insulation_radius_m', label: 'Cable: insulation outer radius (m)', description: 'Where its sheath starts.', type: 'number', value: '', step: '0.0005', min: '0' },
+            { id: 'fd_sheath_thickness_m', label: 'Cable: sheath thickness (m)', description: 'Its metallic sheath or screen.', type: 'number', value: '', step: '0.0001', min: '0' },
+            { id: 'fd_sheath_rdc_ohm_per_km', label: 'Cable: sheath DC resistance (Ω/km)', description: 'Its metallic sheath or screen.', type: 'number', value: '', step: '0.01', min: '0' },
+            { id: 'fd_eps_r', label: 'Cable: insulation permittivity', description: 'Relative: XLPE about 2.3-2.5.', type: 'number', value: '', step: '0.1', min: '1' }
         ];
     }
     

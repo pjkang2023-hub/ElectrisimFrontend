@@ -1553,6 +1553,13 @@ export function prepareNetworkData(graph, simulationParameters, options = {}) {
                         fd_radius_m: { name: 'fd_radius_m', optional: true },
                         fd_rdc_ohm_per_km: { name: 'fd_rdc_ohm_per_km', optional: true },
                         fd_rho_ohm_m: { name: 'fd_rho_ohm_m', optional: true },
+                        fd_kind: { name: 'fd_kind', optional: true },
+                        fd_core_radius_m: { name: 'fd_core_radius_m', optional: true },
+                        fd_core_rdc_ohm_per_km: { name: 'fd_core_rdc_ohm_per_km', optional: true },
+                        fd_insulation_radius_m: { name: 'fd_insulation_radius_m', optional: true },
+                        fd_sheath_thickness_m: { name: 'fd_sheath_thickness_m', optional: true },
+                        fd_sheath_rdc_ohm_per_km: { name: 'fd_sheath_rdc_ohm_per_km', optional: true },
+                        fd_eps_r: { name: 'fd_eps_r', optional: true },
                         ...RELIABILITY_ATTRS,
                     })
                 };

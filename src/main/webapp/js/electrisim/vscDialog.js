@@ -199,7 +199,7 @@ export class VscDialog extends Dialog {
                 id: 'mmc_levels',
                 label: 'MMC levels per arm (EMT)',
                 symbol: 'mmc_levels',
-                description: 'For a modular multilevel model: its submodules per arm, its voltage in nearest-level steps; 0 for the arm-averaged model. It has no blocking: a trip or a DC fault does not stop it.',
+                description: 'For a modular multilevel model (half-bridge submodules): its submodules per arm, its voltage in nearest-level steps; 0 for the arm-averaged model. It blocks on arm overcurrent or a trip; a DC fault is still fed from its AC side through the bypass diodes.',
                 type: 'number',
                 value: String(this.data.mmc_levels ?? 0),
                 step: '1',
