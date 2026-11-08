@@ -64,6 +64,10 @@ const ANDES_BASE = [
     {
         id: 'load_model', label: 'Loads in the run', type: 'select',
         options: [{ value: 'impedance', label: 'Constant impedance', default: true }, { value: 'power', label: 'Constant power' }]
+    },
+    {
+        id: 'motor_model', label: 'Motors in the run', type: 'select',
+        options: [{ value: 'static', label: 'Static loads at their load-flow power', default: true }, { value: 'dynamic', label: 'Induction machines (ANDES Motor3): their slip and inertia, stalling if the voltage falls too long' }]
     }
 ];
 
@@ -125,6 +129,10 @@ export class VoltageStabilityDialog extends StudyDialog {
             { id: 'tolerance', label: 'Nose found to (load factor)', type: 'number', value: '0.002', min: '0.0001', step: '0.001' },
             { id: 'lambda_max', label: 'Stop at this many times the drawn load', type: 'number', value: '20', min: '1', step: '1' },
             { id: 'scale_gens', label: 'Generators', type: 'select', options: [{ value: 'false', label: 'Hold their set power', default: true }, { value: 'true', label: 'Scale with the load' }] },
+            { id: 'q_limits', label: 'Generators’ reactive limits', type: 'select', options: [{ value: 'true', label: 'Held: a machine at its limit lets its voltage go', default: true }, { value: 'false', label: 'Ignored' }] },
+            { id: 'lower_branch', label: 'Past the nose', type: 'select', options: [{ value: 'true', label: 'Trace the lower branch', default: true }, { value: 'false', label: 'Stop at the nose' }] },
+            { id: 'lower_v_step_pu', label: 'Lower branch: voltage step (pu)', type: 'number', value: '0.02', min: '0.001', step: '0.01' },
+            { id: 'lambda_lower_min', label: 'Lower branch: down to load factor', type: 'number', value: '0.3', min: '0', step: '0.1' },
             { id: 'qv_section', label: 'QV curve', type: 'section', subtitle: 'A fictitious generator holds the bus’s voltage, stepped down; the reactive power it supplies is the curve.' },
             { id: 'qv_bus', label: 'Bus', type: 'select', options: buses.length ? buses : [{ value: '', label: '(no bus drawn)' }] },
             { id: 'v_max_pu', label: 'From (pu)', type: 'number', value: '1.1', min: '0.5', step: '0.05' },
@@ -134,7 +142,7 @@ export class VoltageStabilityDialog extends StudyDialog {
     }
 
     getDescription() {
-        return 'By load flow. Reactive limits of the drawn generators are not enforced, which would bring the nose in. Run it again with an element out for N-1.';
+        return 'By load flow, the drawn generators held to their reactive limits (each reported where it reaches one). Past the nose, the lower branch: the weakest bus’s voltage stepped down and the load factor found for each. Run it again with an element out for N-1.';
     }
 }
 

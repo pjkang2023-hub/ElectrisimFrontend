@@ -196,7 +196,7 @@ export class LineDialog extends Dialog {
         this.emtParameters = [
             {
                 id: 'fd_line', label: 'Frequency-dependent in the EMT study',
-                description: 'true: travelling waves with their delay, and R and L varying with frequency (skin effect, earth return), from the geometry below. A transposed overhead line only. A line whose travel time is under the time step stays as pi sections, with a warning. false: pi sections, unless the EMT study turns it on for every line with a geometry.',
+                description: 'true: travelling waves with their delay, and R and L varying with frequency (skin effect, earth return), from the geometry below. A line whose travel time is under the time step stays as pi sections, with a warning. false: pi sections, unless the EMT study turns it on for every line with a geometry.',
                 type: 'select', options: ['false', 'true'], value: 'false'
             },
             {
@@ -208,6 +208,15 @@ export class LineDialog extends Dialog {
             { id: 'fd_radius_m', label: 'Conductor radius (m)', description: 'A solid round conductor; for a bundle, its equivalent.', type: 'number', value: '', step: '0.001', min: '0' },
             { id: 'fd_rdc_ohm_per_km', label: 'DC resistance (Ω/km)', description: 'Per phase conductor.', type: 'number', value: '', step: '0.001', min: '0' },
             { id: 'fd_rho_ohm_m', label: 'Earth resistivity (Ω·m)', description: 'Typically 10-1000; 100 if unknown.', type: 'number', value: '', step: '10', min: '0' },
+            {
+                id: 'fd_transposed', label: 'Overhead: transposed', type: 'select', options: ['true', 'false'], value: 'true',
+                description: 'true: the three phases averaged (one ground and two equal aerial modes). false: the flat row as it hangs - each phase coupled to the others as its place in the row has it, three modes of their own (J. Marti’s constant transformation).'
+            },
+            {
+                id: 'fd_conductors', label: 'Overhead: conductor positions (m)', type: 'text', value: '',
+                description: 'Optional: each conductor’s x,y (height), separated by semicolons - e.g. -4,20; -4.5,27; -4,34 for one vertical circuit. Three per circuit: with the line’s parallel set to 2, six for two circuits on its towers, coupled. Overrides the height and spacing above; untransposed.'
+            },
+            { id: 'fd_transform_hz', label: 'Overhead: modal transformation at (Hz)', description: 'Where its constant modal transformation is taken, untransposed. 1000 if empty.', type: 'number', value: '', step: '100', min: '1' },
             { id: 'fd_core_radius_m', label: 'Cable: core radius (m)', description: 'A cable’s conductor.', type: 'number', value: '', step: '0.0005', min: '0' },
             { id: 'fd_core_rdc_ohm_per_km', label: 'Cable: core DC resistance (Ω/km)', description: 'A cable’s conductor.', type: 'number', value: '', step: '0.001', min: '0' },
             { id: 'fd_insulation_radius_m', label: 'Cable: insulation outer radius (m)', description: 'Where its sheath starts.', type: 'number', value: '', step: '0.0005', min: '0' },
@@ -219,6 +228,10 @@ export class LineDialog extends Dialog {
                 description: 'none: the coaxial travelling-wave model above. solid, single (grounded at the from end) or cross (three minor sections per major, sheaths transposed at each joint): the sheaths as conductors at 50 or 60 Hz, their voltages and circulating currents reported; spacing and resistivity from the fields above.'
             },
             { id: 'fd_formation', label: 'Cable: formation', type: 'select', options: ['trefoil', 'flat'], value: 'trefoil', description: 'Trefoil: a triangle of side the spacing above. Flat: a row, that spacing apart.' },
+            {
+                id: 'fd_sheath_model', label: 'Cable: sheath model', type: 'select', options: ['fundamental', 'wideband'], value: 'fundamental',
+                description: 'fundamental: cores and sheaths as pi sections at 50 or 60 Hz. wideband: cores and sheaths as one universal line model (phase domain, frequency-dependent: skin effect, sheath surfaces, earth return), for travelling waves and switching too; needs each minor section’s travel time over the time step.'
+            },
             { id: 'fd_depth_m', label: 'Cable: burial depth (m)', description: 'To the cables.', type: 'number', value: '', step: '0.1', min: '0' },
             { id: 'fd_jacket_radius_m', label: 'Cable: jacket outer radius (m)', description: 'Over its sheath: the sheath to earth capacitance.', type: 'number', value: '', step: '0.0005', min: '0' },
             { id: 'fd_major_sections', label: 'Cable: major sections (cross-bonded)', description: 'Each of three minor sections.', type: 'number', value: '1', step: '1', min: '1' },

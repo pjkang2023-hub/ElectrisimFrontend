@@ -124,6 +124,10 @@ export class TransientStabilityDialog extends Dialog {
                 ]
             },
             {
+                id: 'motor_model', label: 'Motors in the run', type: 'select',
+                options: [{ value: 'static', label: 'Static loads at their load-flow power', default: true }, { value: 'dynamic', label: 'Induction machines (ANDES Motor3): their slip and inertia, stalling if the voltage falls too long' }]
+            },
+            {
                 id: 'fault_bus',
                 label: 'Fault Bus',
                 type: 'select',

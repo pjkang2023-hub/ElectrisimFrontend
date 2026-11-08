@@ -183,8 +183,22 @@ function voltageStability(r) {
             body.appendChild(host);
             const colors = ['#007cba', '#dc3545', '#28a745', '#fd7e14', '#6f42c1', '#20c997', '#e83e8c', '#6c757d'];
             const buses = (r.buses || []).slice().sort((a, b) => Math.min(...a.vm_pu) - Math.min(...b.vm_pu));
-            lineChart(host, buses.slice(0, 12).map((b, k) => ({ label: b.name, borderColor: colors[k % colors.length], data: b.vm_pu.map((v, i) => ({ x: r.p_total_mw[i], y: v })) })),
-                'Total load (MW)', 'Voltage (pu)', charts);
+            // The lower branch, past the nose, dashed on the same axes, joined at the nose.
+            const low = r.lower_branch;
+            const lowOf = (name) => low?.buses?.find((x) => x.name === name);
+            lineChart(host, buses.slice(0, 12).map((b, k) => ({
+                label: b.name, borderColor: colors[k % colors.length],
+                data: b.vm_pu.map((v, i) => ({ x: r.p_total_mw[i], y: v })).concat(
+                    (lowOf(b.name)?.vm_pu || []).map((v, i) => ({ x: low.p_total_mw[i], y: v })))
+            })), 'Total load (MW)', 'Voltage (pu)', charts);
+            if (low) {
+                body.appendChild(el('div', 'padding:6px 10px;background:#f8f9fa;border-radius:6px;margin-bottom:8px;',
+                    `Lower branch: ${low.lambda.length} points past the nose, down to ${fmt(low.p_total_mw[low.p_total_mw.length - 1], 2)} MW; it stopped as ${low.stopped}.`));
+            }
+            if (r.q_limited?.length) {
+                heading(body, 'Generators at a reactive limit');
+                body.appendChild(table([['Generator', (g) => g.generator], ['Limit', (g) => g.limit], ['From load factor', (g) => fmt(g.lambda, 3)]], r.q_limited));
+            }
             heading(body, 'Lowest buses at the nose');
             body.appendChild(table([['Bus', (b) => b.name], ['At the start (pu)', (b) => fmt(b.vm_pu[0], 3)], ['At the nose (pu)', (b) => fmt(b.vm_pu[b.vm_pu.length - 1], 3)]], buses.slice(0, 15)));
         }

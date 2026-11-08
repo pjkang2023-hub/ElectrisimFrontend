@@ -181,6 +181,15 @@ export class EmtDialog extends Dialog {
             { id: 'scan_amp_pu', label: 'Each tone’s current (pu of the base)', type: 'number', value: '0.01', min: '0.0001', step: '0.001' },
             { id: 'scan_base_mva', label: 'Base (MVA)', type: 'number', value: '100', min: '0.001', step: '10' },
             { id: 'scan_settle_ms', label: 'Settling before reading (ms)', type: 'number', value: '300', min: '0', step: '50' },
+            { id: 'scan_windows', label: 'Windows read, one after another', type: 'number', value: '2', min: '1', step: '1' },
+            { id: 'scan_settle_tol', label: 'Settled: a tone’s change between the last two within', type: 'number', value: '0.02', min: '0.001', step: '0.005' },
+            { id: 'middlebrook_section', label: 'Middlebrook’s criterion', type: 'section', subtitle: 'Small series voltage tones between a line and its from bus: the network behind the bus (Z source) and the line with all it feeds (Z load) in one run, and their ratio, the minor-loop gain. Inside |Zs / Zl| < 1 at every tone the interface is stable whatever the phases. The band, settling and windows are the impedance scan’s.' },
+            {
+                id: 'middlebrook_line', label: 'Line',
+                type: 'select',
+                options: [{ value: '', label: 'None', default: true }, ...lineOptions(this.graph)]
+            },
+            { id: 'middlebrook_amp_pu', label: 'Each tone’s voltage (pu of the phase voltage)', type: 'number', value: '0.002', min: '0.0001', step: '0.001' },
             { id: 'vsc_block_pu', label: 'Converters block below (p.u. of their DC voltage)', type: 'number', value: '0.8', min: '0', step: '0.05' },
             { id: 'max_section_km', label: 'Longest pi section of a DC cable (km)', type: 'number', value: '1', min: '0.001', step: '0.1' },
             { id: 'ac_max_section_km', label: 'Longest pi section of an AC line (km)', type: 'number', value: '50', min: '0.001', step: '5' },

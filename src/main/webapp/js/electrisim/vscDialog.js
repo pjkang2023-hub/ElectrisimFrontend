@@ -22,6 +22,9 @@ export const defaultVscData = {
     mmc_levels: 0,              // EMT study, mmc: submodules per arm, nearest-level steps; 0 = continuous (arm-averaged)
     mmc_energy_kj_per_mva: 30,  // EMT study, mmc: energy stored in its arms per MVA of rating
     mmc_x_arm_pu: 0.15,         // EMT study, mmc: each arm's reactor
+    mmc_cell: 'half',           // EMT study, mmc: half- or full-bridge submodules
+    mmc_submodules: 0,          // EMT study, mmc: submodules per arm modelled one by one (0: by arm)
+    mmc_balancing: 'true',      // EMT study, mmc: its capacitors balanced by sorting
     switching_khz: 5,           // EMT study: its PWM carrier frequency; its controller samples at twice it
     current_loop_hz: 500,       // EMT study: its current loop's bandwidth
     inlet_c: '',                // its rating where it runs (converter_rating): blank leaves its nameplate
@@ -224,6 +227,34 @@ export class VscDialog extends Dialog {
                 value: String(this.data.mmc_x_arm_pu ?? 0.15),
                 step: '0.01',
                 min: '0.01'
+            },
+            {
+                id: 'mmc_cell',
+                label: 'MMC submodules (EMT)',
+                symbol: 'mmc_cell',
+                description: 'half: half-bridge submodules - blocked, a DC fault is still fed from the AC side through their diodes. full: full-bridge - each arm can stand against current either way, so blocking stops a DC fault’s current.',
+                type: 'select',
+                options: ['half', 'full'],
+                value: this.data.mmc_cell ?? 'half'
+            },
+            {
+                id: 'mmc_submodules',
+                label: 'MMC submodules per arm, one by one (EMT)',
+                symbol: 'mmc_submodules',
+                description: 'Each submodule’s capacitor modelled (the detailed equivalent model), nearest-level insertion, its capacitors’ spread and switching reported. 0: by arm (the levels above). Slower with many.',
+                type: 'number',
+                value: String(this.data.mmc_submodules ?? 0),
+                step: '1',
+                min: '0'
+            },
+            {
+                id: 'mmc_balancing',
+                label: 'MMC capacitor balancing (EMT)',
+                symbol: 'mmc_balancing',
+                description: 'true: sorting - the least charged inserted while the arm’s current charges, the most while it discharges. false: always the same ones, to see them drift apart.',
+                type: 'select',
+                options: ['true', 'false'],
+                value: String(this.data.mmc_balancing ?? 'true')
             },
             {
                 id: 'spectrum',

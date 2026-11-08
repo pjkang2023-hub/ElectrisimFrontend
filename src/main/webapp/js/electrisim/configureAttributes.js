@@ -186,6 +186,35 @@ export function configureGeneratorAttributes(grafka, vertex, options = {}) {
     g.setAttribute("dyn_pss_model", options.dyn_pss_model || "NONE");
     g.setAttribute("dyn_pss_A1", options.dyn_pss_A1 != null ? String(options.dyn_pss_A1) : "");
     g.setAttribute("dyn_pss_A2", options.dyn_pss_A2 != null ? String(options.dyn_pss_A2) : "");
+    g.setAttribute("dyn_S10", options.dyn_S10 != null ? String(options.dyn_S10) : "");
+    g.setAttribute("dyn_S12", options.dyn_S12 != null ? String(options.dyn_S12) : "");
+    g.setAttribute("dyn_neutral_ohm", options.dyn_neutral_ohm != null ? String(options.dyn_neutral_ohm) : "");
+    g.setAttribute("dyn_x0", options.dyn_x0 != null ? String(options.dyn_x0) : "");
+    g.setAttribute("dyn_shaft_H", options.dyn_shaft_H != null ? String(options.dyn_shaft_H) : "");
+    g.setAttribute("dyn_shaft_K", options.dyn_shaft_K != null ? String(options.dyn_shaft_K) : "");
+    g.setAttribute("dyn_shaft_F", options.dyn_shaft_F != null ? String(options.dyn_shaft_F) : "");
+    g.setAttribute("dyn_shaft_D", options.dyn_shaft_D != null ? String(options.dyn_shaft_D) : "");
+    g.setAttribute("dyn_shaft_gen", options.dyn_shaft_gen != null ? String(options.dyn_shaft_gen) : "");
+    g.setAttribute("dyn_oel_ifd_pu", options.dyn_oel_ifd_pu != null ? String(options.dyn_oel_ifd_pu) : "");
+    g.setAttribute("dyn_oel_k_s", options.dyn_oel_k_s != null ? String(options.dyn_oel_k_s) : "");
+    g.setAttribute("dyn_uel_q0_pu", options.dyn_uel_q0_pu != null ? String(options.dyn_uel_q0_pu) : "");
+    g.setAttribute("dyn_uel_q1_pu", options.dyn_uel_q1_pu != null ? String(options.dyn_uel_q1_pu) : "");
+    g.setAttribute("dyn_pss_MODE", options.dyn_pss_MODE != null ? String(options.dyn_pss_MODE) : "1");
+    g.setAttribute("dyn_pss_A3", options.dyn_pss_A3 != null ? String(options.dyn_pss_A3) : "");
+    g.setAttribute("dyn_pss_A4", options.dyn_pss_A4 != null ? String(options.dyn_pss_A4) : "");
+    g.setAttribute("dyn_pss_A5", options.dyn_pss_A5 != null ? String(options.dyn_pss_A5) : "");
+    g.setAttribute("dyn_pss_A6", options.dyn_pss_A6 != null ? String(options.dyn_pss_A6) : "");
+    g.setAttribute("dyn_pss_T1", options.dyn_pss_T1 != null ? String(options.dyn_pss_T1) : "");
+    g.setAttribute("dyn_pss_T2", options.dyn_pss_T2 != null ? String(options.dyn_pss_T2) : "");
+    g.setAttribute("dyn_pss_T3", options.dyn_pss_T3 != null ? String(options.dyn_pss_T3) : "");
+    g.setAttribute("dyn_pss_T4", options.dyn_pss_T4 != null ? String(options.dyn_pss_T4) : "");
+    g.setAttribute("dyn_pss_T5", options.dyn_pss_T5 != null ? String(options.dyn_pss_T5) : "");
+    g.setAttribute("dyn_pss_T6", options.dyn_pss_T6 != null ? String(options.dyn_pss_T6) : "");
+    g.setAttribute("dyn_pss_KS", options.dyn_pss_KS != null ? String(options.dyn_pss_KS) : "");
+    g.setAttribute("dyn_pss_LSMAX", options.dyn_pss_LSMAX != null ? String(options.dyn_pss_LSMAX) : "");
+    g.setAttribute("dyn_pss_LSMIN", options.dyn_pss_LSMIN != null ? String(options.dyn_pss_LSMIN) : "");
+    g.setAttribute("dyn_pss_VCU", options.dyn_pss_VCU != null ? String(options.dyn_pss_VCU) : "");
+    g.setAttribute("dyn_pss_VCL", options.dyn_pss_VCL != null ? String(options.dyn_pss_VCL) : "");
 
     // Economic parameters
     g.setAttribute("Economic_parameters", "");

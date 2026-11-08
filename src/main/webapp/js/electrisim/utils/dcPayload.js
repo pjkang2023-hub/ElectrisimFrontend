@@ -257,7 +257,7 @@ export function buildDcPayloadRow(cell, componentType, counters, model) {
         // Its rating, DC link and current limit: for the EMT study.
         const optional = isB2b ? ['cost_per_unit_by_currency']
             : ['rated_mva', 'dc_link_mf', 'dc_link_esr_mohm', 'dc_link_esl_uh', 'current_limit_pu', 'emt_model',
-                'mmc_levels', 'mmc_energy_kj_per_mva', 'mmc_x_arm_pu',
+                'mmc_levels', 'mmc_energy_kj_per_mva', 'mmc_x_arm_pu', 'mmc_cell', 'mmc_submodules', 'mmc_balancing',
                 'spectrum', 'switching_khz', 'current_loop_hz', 'inlet_c', 'altitude_m', 'derate_temp_curve',
                 'derate_altitude_curve', 'overload_curve', 'follow_tau_s', 'soc_balance_gain', 'ease_f_start_hz',
                 'ease_f_end_hz', 'uv_ease_pu', 'uv_floor_pu', 'uv_restore_s', 'cost_per_unit_by_currency'];

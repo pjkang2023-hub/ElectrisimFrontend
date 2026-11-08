@@ -68,6 +68,7 @@ export class EmtResultsDialog {
             this._renderFdLines(body);
             this._renderSheaths(body);
             this._renderScan(body);
+            this._renderMiddlebrook(body);
             this._renderHarmonics(body);
             this._renderConverters(body);
             this._renderDers(body);
@@ -221,8 +222,24 @@ export class EmtResultsDialog {
             { label: 'Q (Mvar)', title: 'At the end', value: m => fmt(m.q_end_mvar) },
             { label: 'Frequency (Hz)', title: 'Its rotor\'s: lowest / highest / at the end', value: m => `${fmt(m.f_min_hz, 3)} / ${fmt(m.f_max_hz, 3)} / ${fmt(m.f_end_hz, 3)}` },
             { label: 'Rotor angle (°)', title: 'How far it moved through the run', value: m => fmt(m.delta_end_deg, 1) },
-            { label: 'E′ (p.u.)', title: 'Its internal voltage at the end', value: m => fmt(m.e_end_pu, 3) }
+            { label: 'E′ (p.u.)', title: 'Its internal voltage at the end', value: m => fmt(m.e_end_pu, 3) },
+            {
+                label: 'Controls', align: 'left', title: 'A detailed machine’s exciter, governor and stabiliser, and when its limiters acted',
+                value: m => [m.exciter_model, m.governor_model, m.pss_model].filter(Boolean).map(x => this._escape(x)).join(', ')
+                    + (m.oel_acted_s != null ? ` · OEL at ${fmt(m.oel_acted_s, 2)} s` : '')
+                    + (m.uel_acted_s != null ? ` · UEL at ${fmt(m.uel_acted_s, 2)} s` : '') || '—'
+            }
         ], rows));
+        const shafts = rows.filter(m => m.shaft);
+        if (shafts.length) {
+            this._h(body, 'Shafts');
+            body.appendChild(this._table([
+                { label: 'Generator', align: 'left', value: m => this._escape(m.label) },
+                { label: 'Torsional modes (Hz)', title: 'Its shaft’s natural frequencies, the generator free', value: m => (m.shaft.modes_hz || []).map(x => fmt(x, 2)).join(', ') },
+                { label: 'Spring torque at the start (pu)', value: m => (m.shaft.torque_start_pu || []).map(x => fmt(x, 3)).join(' / ') },
+                { label: 'Highest spring torque (pu)', title: 'Each section’s highest through the run', value: m => (m.shaft.torque_max_pu || []).map(x => fmt(x, 3)).join(' / ') }
+            ], shafts));
+        }
     }
 
     /** Lines run as frequency-dependent: their travelling waves' times. */
@@ -233,7 +250,7 @@ export class EmtResultsDialog {
         body.appendChild(this._table([
             { label: 'Line', align: 'left', value: l => this._escape(l.label) },
             { label: 'Aerial wave (ms)', title: 'Its travel time end to end, positive sequence', value: l => fmt(l.travel_aerial_ms, 4) },
-            { label: 'Ground wave (ms)', title: 'Its ground mode\'s travel time', value: l => fmt(l.travel_ground_ms, 4) }
+            { label: 'Ground wave (ms)', title: 'Its ground mode\'s travel time (its slowest mode untransposed)', value: l => fmt(l.travel_ground_ms, 4) }
         ], rows));
     }
 
@@ -243,7 +260,7 @@ export class EmtResultsDialog {
         if (!rows.length) return;
         this._h(body, 'Cable sheaths');
         body.appendChild(this._table([
-            { label: 'Cable', align: 'left', value: c => `${this._escape(c.label)} <span style="color:#6c757d;">(${this._escape(c.bonding)}, ${this._escape(c.formation)})</span>` },
+            { label: 'Cable', align: 'left', value: c => `${this._escape(c.label)} <span style="color:#6c757d;">(${this._escape(c.bonding)}, ${this._escape(c.formation)}${c.model === 'wideband' ? ', wideband' : ''})</span>` },
             { label: 'Sheath voltage, peak (kV)', title: 'The highest any sheath reached to earth through the run', value: c => fmt(c.sheath_v_peak_kv, 3) },
             { label: 'Standing voltage (kV rms)', title: 'Over the last cycle, the highest along any sheath', value: c => fmt(c.sheath_v_standing_kv, 3) },
             { label: 'Core current (A rms)', value: c => (c.core_i_a || []).map(x => fmt(x, 0)).join(' / ') },
@@ -262,6 +279,7 @@ export class EmtResultsDialog {
         note.textContent = (neg.length ? `Negative resistance at ${neg.join(', ')} Hz: a possible oscillation there, if it holds at a smaller tone and a longer settling. ` : 'No negative resistance at the tones scanned. ')
             + `Tones ${fmt(s.f_base_hz, 4)} Hz apart, read over ${fmt(s.window_s, 3)} s, ${fmt(s.amp_ka_per_tone, 4)} kA each.`;
         body.appendChild(note);
+        body.appendChild(this._settling(s));
         const host = document.createElement('div');
         host.style.cssText = 'height:280px;margin-bottom:8px;';
         body.appendChild(host);
@@ -274,6 +292,43 @@ export class EmtResultsDialog {
             { label: 'R (Ω)', value: (r) => fmt(r.r, 4), style: '' },
             { label: 'X (Ω)', value: (r) => fmt(r.x, 4) }
         ], s.f_hz.map((f, i) => ({ f, z: s.z_ohm[i], zpu: s.z_pu?.[i], a: s.angle_deg[i], r: s.r_ohm[i], x: s.x_ohm[i] }))));
+    }
+
+    /** Whether a scan's tones had settled: their change between its last two windows. */
+    _settling(s) {
+        const div = document.createElement('div');
+        const bad = s.unsettled_hz || [];
+        div.style.cssText = `padding:6px 12px;border-radius:6px;margin-bottom:8px;${bad.length ? 'background:#fff3cd;color:#664d03;' : 'background:#f8f9fa;color:#495057;'}`;
+        if (s.change == null) {
+            div.textContent = 'Read over one window: run two or more to see whether it had settled.';
+        } else if (bad.length) {
+            div.textContent = `Not settled at ${bad.join(', ')} Hz: they moved by more than ${fmt(100 * (s.settle_tol || 0.02), 1)} % between the last two of its ${s.windows} windows. Raise the settling or the windows.`;
+        } else {
+            div.textContent = `Settled: no tone moved by more than ${fmt(100 * (s.settle_tol || 0.02), 1)} % between the last two of its ${s.windows} windows (at most ${fmt(100 * Math.max(...s.change), 2)} %).`;
+        }
+        return div;
+    }
+
+    /** Middlebrook's criterion: the minor-loop gain Zs / Zl at a line's from end. */
+    _renderMiddlebrook(body) {
+        const m = this.emt.middlebrook;
+        if (!m || !m.f_hz?.length) return;
+        this._h(body, `Middlebrook’s criterion at ${this._escape(m.line)}`);
+        const note = document.createElement('div');
+        const ok = m.sufficient;
+        note.style.cssText = `padding:8px 12px;border-radius:6px;margin-bottom:8px;${ok ? 'background:#d1e7dd;color:#0f5132;' : 'background:#fff3cd;color:#664d03;'}`;
+        note.textContent = (ok ? `|Zs / Zl| stays under 1 at every tone (at most ${fmt(m.ratio_max, 3)}): stable whatever the phases. `
+            : `|Zs / Zl| reaches ${fmt(m.ratio_max, 3)}, over 1 at ${(m.ratio_over_one_hz || []).join(', ')} Hz: the sufficient condition fails there; look at how near −1 it comes. `)
+            + `Closest to −1 at ${fmt(m.closest_hz, 2)} Hz, ${fmt(m.distance_to_minus_one, 3)} away.`;
+        body.appendChild(note);
+        body.appendChild(this._settling(m));
+        body.appendChild(this._table([
+            { label: 'f (Hz)', value: r => fmt(r.f, 2) },
+            { label: '|Zs| (Ω)', title: 'The network behind the bus', value: r => fmt(r.zs, 4) },
+            { label: '|Zl| (Ω)', title: 'The line and all it feeds', value: r => fmt(r.zl, 4) },
+            { label: '|Zs / Zl|', value: r => fmt(r.k, 4), style: r => (r.k >= 1 ? 'color:#842029;font-weight:700;' : '') },
+            { label: 'Angle (°)', value: r => fmt(r.a, 1) }
+        ], m.f_hz.map((f, i) => ({ f, zs: m.z_source_ohm[i], zl: m.z_load_ohm[i], k: m.ratio[i], a: m.ratio_angle_deg[i] }))));
     }
 
     async _scanChart(host, s) {
@@ -354,7 +409,9 @@ export class EmtResultsDialog {
             { label: 'Converter', align: 'left', value: c => `${this._escape(c.label)}${c.kind === 'DC/DC' ? ` <span style="color:#6c757d;">(DC/DC${c.control && !['voltage', 'power'].includes(c.control) ? ', ' + this._escape(c.control) : ''})</span>` : (c.kind === 'PCS' ? ` <span style="color:#6c757d;">(PCS, ${c.control === 'grid_forming' ? 'grid-forming' : 'grid-following'})</span>` : '')}` },
             {
                 label: 'Model', align: 'left',
-                value: c => (c.model === 'switching' ? `Switching, ${fmt(c.switching_khz, 1)} kHz` : 'Average value')
+                value: c => (c.model === 'switching' ? `Switching, ${fmt(c.switching_khz, 1)} kHz`
+                    : c.model === 'mmc' ? `MMC, ${c.cell === 'full' ? 'full' : 'half'}-bridge${c.submodules ? `, ${c.submodules.submodules} submodules per arm (${c.submodules.balancing ? 'balanced' : 'unbalanced'}; spread ${fmt(100 * c.submodules.spread_end, 1)} %, ${fmt(c.submodules.switching_hz, 0)} Hz each)` : ''}`
+                    : 'Average value')
             },
             { label: 'P out (MW)', title: 'Over its first and its last cycle: a VSC\'s into its AC bus (negative draws from it), a DC/DC converter\'s from its output', value: c => `${fmt(c.p_start_mw)} → ${fmt(c.p_end_mw)}` },
             { label: 'Q out (Mvar)', title: 'Into its AC bus at the fundamental, over its first and its last cycle', value: c => (c.kind === 'DC/DC' ? '—' : `${fmt(c.q_start_mvar)} → ${fmt(c.q_end_mvar)}`) },

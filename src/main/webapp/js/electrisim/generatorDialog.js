@@ -70,7 +70,36 @@ export const defaultGeneratorData = {
     dyn_gov_T3: '',
     dyn_pss_model: 'NONE',
     dyn_pss_A1: '',
-    dyn_pss_A2: ''
+    dyn_pss_A2: '',
+    dyn_S10: '',
+    dyn_S12: '',
+    dyn_neutral_ohm: '',
+    dyn_x0: '',
+    dyn_shaft_H: '',
+    dyn_shaft_K: '',
+    dyn_shaft_F: '',
+    dyn_shaft_D: '',
+    dyn_shaft_gen: '',
+    dyn_oel_ifd_pu: '',
+    dyn_oel_k_s: '',
+    dyn_uel_q0_pu: '',
+    dyn_uel_q1_pu: '',
+    dyn_pss_MODE: '1',
+    dyn_pss_A3: '',
+    dyn_pss_A4: '',
+    dyn_pss_A5: '',
+    dyn_pss_A6: '',
+    dyn_pss_T1: '',
+    dyn_pss_T2: '',
+    dyn_pss_T3: '',
+    dyn_pss_T4: '',
+    dyn_pss_T5: '',
+    dyn_pss_T6: '',
+    dyn_pss_KS: '',
+    dyn_pss_LSMAX: '',
+    dyn_pss_LSMIN: '',
+    dyn_pss_VCU: '',
+    dyn_pss_VCL: ''
 };
 
 export class GeneratorDialog extends Dialog {
@@ -446,6 +475,15 @@ export class GeneratorDialog extends Dialog {
                 value: String(this.data.dyn_xd2 ?? '')
             },
             {
+                id: 'dyn_xq2',
+                label: "xq″",
+                symbol: 'dyn_xq2',
+                unit: "pu",
+                description: "q-axis subtransient reactance. EMT detailed machine: its subtransient saliency. ANDES’s GENROU takes xd″ for it. Empty → xd″.",
+                type: 'text',
+                value: String(this.data.dyn_xq2 ?? '')
+            },
+            {
                 id: 'dyn_Td10',
                 label: "Td0'",
                 symbol: 'dyn_Td10',
@@ -550,6 +588,121 @@ export class GeneratorDialog extends Dialog {
                 value: String(this.data.dyn_gov_T3 ?? '')
             },
             {
+                id: 'dyn_S10',
+                label: "Saturation S(1.0)",
+                symbol: 'dyn_S10',
+                unit: "pu",
+                description: "Saturation factor at 1.0 pu flux (GENROU’s quadratic). Empty → none. Used by the ANDES and EMT studies.",
+                type: 'text',
+                value: String(this.data.dyn_S10 ?? '')
+            },
+            {
+                id: 'dyn_S12',
+                label: "Saturation S(1.2)",
+                symbol: 'dyn_S12',
+                unit: "pu",
+                description: "Saturation factor at 1.2 pu flux. Empty → none.",
+                type: 'text',
+                value: String(this.data.dyn_S12 ?? '')
+            },
+            {
+                id: 'dyn_neutral_ohm',
+                label: "Neutral grounding",
+                symbol: 'dyn_neutral_ohm',
+                unit: "Ω",
+                description: "EMT detailed machine: its star point to ground through this resistance (0 = solid). Empty → floating star.",
+                type: 'text',
+                value: String(this.data.dyn_neutral_ohm ?? '')
+            },
+            {
+                id: 'dyn_x0',
+                label: "x0",
+                symbol: 'dyn_x0',
+                unit: "pu",
+                description: "EMT detailed machine: zero-sequence reactance, with a grounded star. Empty → x″.",
+                type: 'text',
+                value: String(this.data.dyn_x0 ?? '')
+            },
+            {
+                id: 'dyn_shaft_H',
+                label: "Shaft masses H",
+                symbol: 'dyn_shaft_H',
+                unit: "s",
+                description: "EMT detailed machine: each mass’s inertia along the shaft, comma-separated (e.g. 0.1, 0.2, 1.2, 0.9, 0.05). Empty → one rigid rotor.",
+                type: 'text',
+                value: String(this.data.dyn_shaft_H ?? '')
+            },
+            {
+                id: 'dyn_shaft_K',
+                label: "Shaft springs K",
+                symbol: 'dyn_shaft_K',
+                unit: "pu/rad",
+                description: "Spring between each pair of neighbouring masses, comma-separated (one fewer than the masses).",
+                type: 'text',
+                value: String(this.data.dyn_shaft_K ?? '')
+            },
+            {
+                id: 'dyn_shaft_F',
+                label: "Shaft torque shares",
+                symbol: 'dyn_shaft_F',
+                description: "Each mass’s share of the turbine torque, comma-separated (generator and exciter 0).",
+                type: 'text',
+                value: String(this.data.dyn_shaft_F ?? '')
+            },
+            {
+                id: 'dyn_shaft_D',
+                label: "Shaft damping",
+                symbol: 'dyn_shaft_D',
+                unit: "pu",
+                description: "Each mass’s damping to its own speed, comma-separated. Empty → none.",
+                type: 'text',
+                value: String(this.data.dyn_shaft_D ?? '')
+            },
+            {
+                id: 'dyn_shaft_gen',
+                label: "Generator mass",
+                symbol: 'dyn_shaft_gen',
+                description: "Which mass is the generator, counting from 0. Empty → the last.",
+                type: 'text',
+                value: String(this.data.dyn_shaft_gen ?? '')
+            },
+            {
+                id: 'dyn_oel_ifd_pu',
+                label: "OEL field current rating",
+                symbol: 'dyn_oel_ifd_pu',
+                unit: "pu",
+                description: "EMT study: over-excitation limiter, its field’s continuous rating as XadIfd. Empty → no OEL. ANDES has no limiter models.",
+                type: 'text',
+                value: String(this.data.dyn_oel_ifd_pu ?? '')
+            },
+            {
+                id: 'dyn_oel_k_s',
+                label: "OEL heating constant",
+                symbol: 'dyn_oel_k_s',
+                unit: "s",
+                description: "The integral of (Ifd/rating)² − 1 at which it acts. Empty → 33.75 s (IEEE C50.13).",
+                type: 'text',
+                value: String(this.data.dyn_oel_k_s ?? '')
+            },
+            {
+                id: 'dyn_uel_q0_pu',
+                label: "UEL Q at no load",
+                symbol: 'dyn_uel_q0_pu',
+                unit: "pu",
+                description: "EMT study: under-excitation limiter’s line, its Q at zero power (negative: absorbing), scaled by V². Empty → no UEL.",
+                type: 'text',
+                value: String(this.data.dyn_uel_q0_pu ?? '')
+            },
+            {
+                id: 'dyn_uel_q1_pu',
+                label: "UEL Q at rated power",
+                symbol: 'dyn_uel_q1_pu',
+                unit: "pu",
+                description: "Its Q at rated power. Empty → as at no load.",
+                type: 'text',
+                value: String(this.data.dyn_uel_q1_pu ?? '')
+            },
+            {
                 id: 'dyn_pss_model',
                 label: 'Power System Stabilizer',
                 symbol: 'dyn_pss_model',
@@ -576,6 +729,157 @@ export class GeneratorDialog extends Dialog {
                 description: 'IEEEST key gain. Empty → ANDES-compatible default.',
                 type: 'text',
                 value: String(this.data.dyn_pss_A2 ?? '')
+            },
+            {
+                id: 'dyn_pss_MODE',
+                label: 'PSS input',
+                symbol: 'dyn_pss_MODE',
+                description: 'IEEEST input signal.',
+                type: 'select',
+                value: String(this.data.dyn_pss_MODE ?? '1'),
+                options: [
+                    { value: '1', label: 'Rotor speed deviation' },
+                    { value: '2', label: 'Bus frequency deviation' },
+                    { value: '3', label: 'Electrical power' },
+                    { value: '4', label: 'Accelerating power' },
+                    { value: '5', label: 'Bus voltage' },
+                    { value: '6', label: 'Bus voltage rate' }
+                ]
+            },
+            {
+                id: 'dyn_pss_A3',
+                label: "PSS A3",
+                symbol: 'dyn_pss_A3',
+                unit: "s",
+                description: "IEEEST filter denominator s term. Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_A3 ?? '')
+            },
+            {
+                id: 'dyn_pss_A4',
+                label: "PSS A4",
+                symbol: 'dyn_pss_A4',
+                unit: "s²",
+                description: "IEEEST filter denominator s² term (0 leaves the filter out). Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_A4 ?? '')
+            },
+            {
+                id: 'dyn_pss_A5',
+                label: "PSS A5",
+                symbol: 'dyn_pss_A5',
+                unit: "s",
+                description: "IEEEST filter numerator s term. Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_A5 ?? '')
+            },
+            {
+                id: 'dyn_pss_A6',
+                label: "PSS A6",
+                symbol: 'dyn_pss_A6',
+                unit: "s²",
+                description: "IEEEST filter numerator s² term. Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_A6 ?? '')
+            },
+            {
+                id: 'dyn_pss_T1',
+                label: "PSS T1",
+                symbol: 'dyn_pss_T1',
+                unit: "s",
+                description: "First lead-lag’s lead. Empty → 0.15 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T1 ?? '')
+            },
+            {
+                id: 'dyn_pss_T2',
+                label: "PSS T2",
+                symbol: 'dyn_pss_T2',
+                unit: "s",
+                description: "First lead-lag’s lag. Empty → 0.05 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T2 ?? '')
+            },
+            {
+                id: 'dyn_pss_T3',
+                label: "PSS T3",
+                symbol: 'dyn_pss_T3',
+                unit: "s",
+                description: "Second lead-lag’s lead. Empty → 0.15 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T3 ?? '')
+            },
+            {
+                id: 'dyn_pss_T4',
+                label: "PSS T4",
+                symbol: 'dyn_pss_T4',
+                unit: "s",
+                description: "Second lead-lag’s lag. Empty → 0.05 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T4 ?? '')
+            },
+            {
+                id: 'dyn_pss_T5',
+                label: "PSS T5",
+                symbol: 'dyn_pss_T5',
+                unit: "s",
+                description: "Washout numerator. Empty → 2 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T5 ?? '')
+            },
+            {
+                id: 'dyn_pss_T6',
+                label: "PSS T6",
+                symbol: 'dyn_pss_T6',
+                unit: "s",
+                description: "Washout denominator. Empty → 2 s.",
+                type: 'text',
+                value: String(this.data.dyn_pss_T6 ?? '')
+            },
+            {
+                id: 'dyn_pss_KS',
+                label: "PSS gain KS",
+                symbol: 'dyn_pss_KS',
+                unit: "pu",
+                description: "Stabiliser gain. Empty → 10.",
+                type: 'text',
+                value: String(this.data.dyn_pss_KS ?? '')
+            },
+            {
+                id: 'dyn_pss_LSMAX',
+                label: "PSS output max",
+                symbol: 'dyn_pss_LSMAX',
+                unit: "pu",
+                description: "Upper limit of its output. Empty → 0.1.",
+                type: 'text',
+                value: String(this.data.dyn_pss_LSMAX ?? '')
+            },
+            {
+                id: 'dyn_pss_LSMIN',
+                label: "PSS output min",
+                symbol: 'dyn_pss_LSMIN',
+                unit: "pu",
+                description: "Lower limit of its output. Empty → −0.1.",
+                type: 'text',
+                value: String(this.data.dyn_pss_LSMIN ?? '')
+            },
+            {
+                id: 'dyn_pss_VCU',
+                label: "PSS cut-out above",
+                symbol: 'dyn_pss_VCU',
+                unit: "pu",
+                description: "Output off above this bus voltage (0 → no bound). Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_VCU ?? '')
+            },
+            {
+                id: 'dyn_pss_VCL',
+                label: "PSS cut-out below",
+                symbol: 'dyn_pss_VCL',
+                unit: "pu",
+                description: "Output off below this bus voltage (0 → no bound). Empty → 0.",
+                type: 'text',
+                value: String(this.data.dyn_pss_VCL ?? '')
             }
         ];
     }
@@ -1034,6 +1338,9 @@ export class GeneratorDialog extends Dialog {
             show('dyn_gov_T3', governor !== 'NONE');
             show('dyn_pss_A1', pss === 'IEEEST');
             show('dyn_pss_A2', pss === 'IEEEST');
+            ['dyn_pss_MODE', 'dyn_pss_A3', 'dyn_pss_A4', 'dyn_pss_A5', 'dyn_pss_A6', 'dyn_pss_T1', 'dyn_pss_T2', 'dyn_pss_T3', 'dyn_pss_T4',
+                'dyn_pss_T5', 'dyn_pss_T6', 'dyn_pss_KS', 'dyn_pss_LSMAX', 'dyn_pss_LSMIN', 'dyn_pss_VCU', 'dyn_pss_VCL'].forEach((id) => show(id, pss === 'IEEEST'));
+            ['dyn_oel_ifd_pu', 'dyn_oel_k_s', 'dyn_uel_q0_pu', 'dyn_uel_q1_pu'].forEach((id) => show(id, exciter !== 'NONE'));
         };
         ['dyn_exciter_model', 'dyn_governor_model', 'dyn_pss_model'].forEach((id) => {
             this.inputs.get(id)?.addEventListener('change', update);

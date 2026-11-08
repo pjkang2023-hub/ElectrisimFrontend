@@ -318,6 +318,12 @@
                 makeChart('Flywheels behind a PCS: speed (%)', series('speed_percent'), 'Speed [%]');
                 makeChart('Grid-forming PCS: frequency (Hz)', series('frequency_hz'), 'f [Hz]');
             }
+            // Running motors as induction machines (motor_model dynamic): each one's slip and power.
+            const motors = this.results.motors || [];
+            if (motors.length) {
+                makeChart('Motors: slip (pu)', motors.map(m => ({ name: `${m.name}${m.stalled ? ' (stalled)' : ''}`, values: m.slip })), 'slip');
+                makeChart('Motors: power drawn (MW)', motors.map(m => ({ name: m.name, values: m.p_mw })), 'P [MW]');
+            }
             // Loads following a profile from the diagram's library, and the power each was set to.
             const followed = this.results.load_profiles || [];
             if (followed.length) {
