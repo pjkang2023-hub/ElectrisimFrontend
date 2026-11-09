@@ -179,6 +179,18 @@ export class MotorStartingDialog extends Dialog {
                 value: '10',
                 min: '0.1',
                 step: '1'
+            },
+            {
+                // Steady-state: what holds the voltage during the locked-rotor
+                // load flow. ETAP's static start (and IEEE 399) puts each source
+                // behind its impedance, so a generator's bus and the grid's dip too.
+                id: 'source_model',
+                label: 'Steady-state: Sources During the Start',
+                type: 'select',
+                options: [
+                    { value: 'fixed_voltage', label: 'Held at their set voltage (load flow)', default: true },
+                    { value: 'behind_impedance', label: 'Behind their impedance (grid: Ssc min; generator: Ra + jX′d)' }
+                ]
             }
         ];
     }
@@ -214,7 +226,8 @@ export class MotorStartingDialog extends Dialog {
                     sn_mva: values[11],
                     thermal_check: values[12],
                     trafo_tau_min: values[13],
-                    line_tau_min: values[14]
+                    line_tau_min: values[14],
+                    source_model: values[15]
                 };
             } else {
                 params = values || {};
