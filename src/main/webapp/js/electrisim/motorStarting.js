@@ -285,7 +285,7 @@ window.motorStartingPandaPower = function (a, b, c) {
                 thermal_check: values.thermal_check || 'short_time',
                 trafo_tau_min: values.trafo_tau_min || '0',
                 line_tau_min: values.line_tau_min || '10',
-                source_model: values.source_model || 'fixed_voltage',
+                source_model: values.source_model || 'behind_impedance',
                 user_email: getUserEmail()
             };
 

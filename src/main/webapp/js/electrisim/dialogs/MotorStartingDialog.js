@@ -188,8 +188,8 @@ export class MotorStartingDialog extends Dialog {
                 label: 'Steady-state: Sources During the Start',
                 type: 'select',
                 options: [
-                    { value: 'fixed_voltage', label: 'Held at their set voltage (load flow)', default: true },
-                    { value: 'behind_impedance', label: 'Behind their impedance (grid: Ssc min; generator: Ra + jX′d)' }
+                    { value: 'behind_impedance', label: 'Behind their impedance (grid: Ssc min; generator: Ra + jX′d)', default: true },
+                    { value: 'fixed_voltage', label: 'Held at their set voltage (load flow)' }
                 ]
             }
         ];
